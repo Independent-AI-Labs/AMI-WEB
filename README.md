@@ -39,8 +39,8 @@ Traditional browser automation tools are easily detected by modern websites. AMI
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/ami-web.git
-cd ami-web
+git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
+cd AMI-WEB
 pip install -r requirements.txt
 
 # Run the MCP server
@@ -238,7 +238,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 Built with:
 - [Selenium WebDriver](https://www.selenium.dev/) - Browser automation
-- [undetected-chromedriver](https://github.com/ultrafunkamsterdam/undetected-chromedriver) - Anti-detection research
 - [Model Context Protocol](https://github.com/anthropics/mcp) - AI integration standard
 - [Loguru](https://github.com/Delgan/loguru) - Beautiful logging
 - [Pydantic](https://pydantic-docs.helpmanual.io/) - Data validation
