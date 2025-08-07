@@ -53,12 +53,12 @@ class HTMLTestServer:
         password = data.get("password")
 
         # Simulate authentication
-        if username == "testuser" and password == "password123":
+        test_password = "password123"  # noqa: S105
+        if username == "testuser" and password == test_password:
             return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
-        else:
-            return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
+        return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
 
-    async def handle_api_data(self, request):
+    async def handle_api_data(self, request):  # noqa: ARG002
         """Handle API data requests."""
         # Simulate delayed response
         await asyncio.sleep(0.5)

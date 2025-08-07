@@ -32,7 +32,7 @@ def test_server(event_loop):
 def browser_instance(event_loop):
     """Create a browser instance for testing."""
     instance = BrowserInstance()
-    driver = event_loop.run_until_complete(instance.launch(headless=True))
+    event_loop.run_until_complete(instance.launch(headless=True))
     yield instance
     event_loop.run_until_complete(instance.terminate())
 
@@ -59,7 +59,8 @@ class TestBrowserNavigation:
 
         assert result.url.endswith("login_form.html")
         assert "Login" in result.title
-        assert result.status_code == 200
+        expected_status = 200
+        assert result.status_code == expected_status
         assert result.load_time > 0
 
     @pytest.mark.asyncio
@@ -92,12 +93,13 @@ class TestBrowserNavigation:
         assert result["remember"] is False
 
         # Execute script to fill form
-        await nav.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", "password123")
+        test_password = "password123"  # noqa: S105
+        await nav.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", test_password)
 
         # Verify form was filled
         result = await nav.execute_script("return window.testHelpers.getFormData()")
         assert result["username"] == "testuser"
-        assert result["password"] == "password123"
+        assert result["password"] == test_password
 
     @pytest.mark.asyncio
     async def test_get_page_content(self, browser_instance, test_server):
@@ -147,12 +149,13 @@ class TestInputSimulation:
         await input_ctrl.type_text("#username", "testuser", clear=True)
 
         # Type into password field
-        await input_ctrl.type_text("#password", "password123", clear=True)
+        test_password = "password123"  # noqa: S105
+        await input_ctrl.type_text("#password", test_password, clear=True)
 
         # Verify input values
         result = await nav.execute_script("return window.testHelpers.getFormData()")
         assert result["username"] == "testuser"
-        assert result["password"] == "password123"
+        assert result["password"] == test_password
 
     @pytest.mark.asyncio
     async def test_checkbox_interaction(self, browser_instance, test_server):
@@ -183,8 +186,9 @@ class TestInputSimulation:
         await nav.navigate(f"{test_server}/login_form.html")
 
         # Fill and submit form
+        test_password = "password123"  # noqa: S105
         await input_ctrl.type_text("#username", "testuser")
-        await input_ctrl.type_text("#password", "password123")
+        await input_ctrl.type_text("#password", test_password)
         await input_ctrl.click("#remember")
         await input_ctrl.click("#submit-btn")
 
@@ -194,7 +198,7 @@ class TestInputSimulation:
         # Check submission data
         data = await nav.execute_script("return window.formInteractions.lastSubmittedData")
         assert data["username"] == "testuser"
-        assert data["password"] == "password123"
+        assert data["password"] == test_password
         assert data["remember"] is True
 
         # Check login status
@@ -375,7 +379,8 @@ class TestBrowserPool:
 
         # List instances
         instances = await chrome_manager.list_instances()
-        assert len(instances) >= 2
+        min_instances = 2
+        assert len(instances) >= min_instances
 
         # Terminate instances
         await chrome_manager.terminate_instance(instance1.id)
@@ -499,7 +504,7 @@ class TestScriptInjection:
         await asyncio.sleep(2)
 
         # Check intercepted requests
-        requests = await nav.execute_script("return window.interceptedRequests")
+        _ = await nav.execute_script("return window.interceptedRequests")
         # Note: The AJAX simulation doesn't use real fetch, so we'd need to modify
         # the test page to actually test this properly
 
