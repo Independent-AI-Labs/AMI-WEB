@@ -146,7 +146,6 @@ def close_all_tabs_except(browser: BrowserInstance, keep_tab: str):
         browser: The browser instance
         keep_tab: The handle of the tab to keep open
     """
-    current_tab = browser.driver.current_window_handle
     all_tabs = browser.driver.window_handles
 
     for tab in all_tabs:
