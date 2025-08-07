@@ -37,7 +37,10 @@
       "Bash(git config:*)",
       "Bash(cat:*)",
       "Bash(sed:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(for i in 1 2 3)",
+      "Bash(do python -m pytest tests/integration/test_antidetection.py::TestAntiDetection::test_second_tab_antidetection -xvs)",
+      "Bash(done)"
     ],
     "deny": []
   }
