@@ -92,10 +92,18 @@ class ChromeManagerMCPServer:
             if not self.manager:
                 logger.info("Initializing Chrome Manager...")
 
-                # Chrome Manager will use defaults from Config which already points to:
-                # - ./chromium-win/chrome.exe for Chrome
-                # - ./chromedriver.exe for ChromeDriver
-                self.manager = ChromeManager()
+                # Look for config file with absolute paths
+                from pathlib import Path
+
+                script_dir = Path(__file__).parent.resolve()
+                config_file = script_dir / "mcp_config.json"
+
+                if config_file.exists():
+                    logger.info(f"Using config file: {config_file}")
+                    self.manager = ChromeManager(config_file=str(config_file))
+                else:
+                    logger.warning(f"Config file not found at {config_file}, using defaults")
+                    self.manager = ChromeManager()
 
                 # Set pool to not create instances on startup
                 self.manager.pool.min_instances = 0
