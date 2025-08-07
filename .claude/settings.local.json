@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git submodule add:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(python test_chrome_manager.py:*)",
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(./chromedriver.exe --version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(pre-commit:*)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)",
+      "Bash(git update-ref:*)"
+    ],
+    "deny": []
+  }
+}
