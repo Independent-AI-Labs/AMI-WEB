@@ -1,4 +1,5 @@
 """Integration tests for MCP server functionality."""
+# ruff: noqa: ARG002
 
 import asyncio
 import contextlib
@@ -140,7 +141,7 @@ class TestMCPServerConnection:
     """Test MCP server connection and capabilities."""
 
     @pytest.mark.asyncio
-    async def test_connect_to_server(self, _mcp_server):
+    async def test_connect_to_server(self, mcp_server):
         """Test connecting to MCP server."""
         # mcp_server is the test server instance
 
@@ -165,7 +166,7 @@ class TestMCPServerConnection:
             logger.info(f"MCP server has {len(tool_names)} tools available")
 
     @pytest.mark.asyncio
-    async def test_ping_pong(self, _mcp_server):
+    async def test_ping_pong(self, mcp_server):
         """Test ping-pong messaging."""
         # mcp_server is the test server instance
 
@@ -183,7 +184,7 @@ class TestMCPServerConnection:
             assert data["type"] == "pong"
 
     @pytest.mark.asyncio
-    async def test_list_tools(self, _mcp_server):
+    async def test_list_tools(self, mcp_server):
         """Test listing available tools."""
         # mcp_server is the test server instance
 
@@ -205,7 +206,7 @@ class TestMCPBrowserOperations:
     """Test MCP browser operations."""
 
     @pytest.mark.asyncio
-    async def test_launch_browser(self, _mcp_server):
+    async def test_launch_browser(self, mcp_server):
         """Test launching browser via MCP."""
         # mcp_server is the test server instance
 
@@ -234,7 +235,7 @@ class TestMCPBrowserOperations:
             assert data["success"] is True
 
     @pytest.mark.asyncio
-    async def test_navigate_and_screenshot(self, _mcp_server, test_html_server):
+    async def test_navigate_and_screenshot(self, mcp_server, test_html_server):
         """Test navigation and screenshot via MCP."""
         # mcp_server is the test server instance
 
@@ -296,7 +297,7 @@ class TestMCPBrowserOperations:
             )
 
     @pytest.mark.asyncio
-    async def test_input_operations(self, _mcp_server, test_html_server):
+    async def test_input_operations(self, mcp_server, test_html_server):
         """Test input operations via MCP."""
         # mcp_server is the test server instance
 
@@ -356,7 +357,7 @@ class TestMCPBrowserOperations:
             )
 
     @pytest.mark.asyncio
-    async def test_script_execution(self, _mcp_server, test_html_server):
+    async def test_script_execution(self, mcp_server, test_html_server):
         """Test script execution via MCP."""
         # mcp_server is the test server instance
 
@@ -418,7 +419,7 @@ class TestMCPCookieManagement:
     """Test cookie management via MCP."""
 
     @pytest.mark.asyncio
-    async def test_get_and_set_cookies(self, _mcp_server, test_html_server):
+    async def test_get_and_set_cookies(self, mcp_server, test_html_server):
         """Test getting and setting cookies via MCP."""
         # mcp_server is the test server instance
 
@@ -491,7 +492,7 @@ class TestMCPTabManagement:
     """Test tab management via MCP."""
 
     @pytest.mark.asyncio
-    async def test_tab_operations(self, _mcp_server, test_html_server):
+    async def test_tab_operations(self, mcp_server, test_html_server):
         """Test tab operations via MCP."""
         # mcp_server is the test server instance
 
@@ -566,7 +567,7 @@ class TestMCPErrorHandling:
     """Test MCP error handling."""
 
     @pytest.mark.asyncio
-    async def test_invalid_tool(self, _mcp_server):
+    async def test_invalid_tool(self, mcp_server):
         """Test calling invalid tool."""
         # mcp_server is the test server instance
 
@@ -585,7 +586,7 @@ class TestMCPErrorHandling:
             assert "Unknown tool" in data["error"]
 
     @pytest.mark.asyncio
-    async def test_invalid_instance(self, _mcp_server):
+    async def test_invalid_instance(self, mcp_server):
         """Test operations on invalid instance."""
         # mcp_server is the test server instance
 
@@ -609,7 +610,7 @@ class TestMCPErrorHandling:
             assert "not found" in data["error"].lower()
 
     @pytest.mark.asyncio
-    async def test_malformed_request(self, _mcp_server):
+    async def test_malformed_request(self, mcp_server):
         """Test handling malformed requests."""
         # mcp_server is the test server instance
 
@@ -629,7 +630,7 @@ class TestMCPConcurrency:
     """Test MCP concurrent operations."""
 
     @pytest.mark.asyncio
-    async def test_multiple_clients(self, _mcp_server):
+    async def test_multiple_clients(self, mcp_server):
         """Test multiple clients connecting simultaneously."""
         # mcp_server is the test server instance
 
@@ -663,7 +664,7 @@ class TestMCPConcurrency:
         assert results == [0, 1, 2]
 
     @pytest.mark.asyncio
-    async def test_concurrent_operations_same_instance(self, _mcp_server, test_html_server):
+    async def test_concurrent_operations_same_instance(self, mcp_server, test_html_server):
         """Test concurrent operations on same browser instance."""
         # mcp_server is the test server instance
 

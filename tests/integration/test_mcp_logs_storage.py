@@ -1,4 +1,5 @@
 """Integration tests for MCP console logs, network logs, and storage functionality."""
+# ruff: noqa: ARG002
 
 import json
 import os
@@ -8,6 +9,7 @@ import pytest
 import websockets
 
 # Import the MCP server fixture from test_mcp_server
+from tests.integration.test_mcp_server import mcp_server, test_html_server  # noqa: F401
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
@@ -17,7 +19,7 @@ class TestMCPLogsAndStorage:
     """Test MCP logs and storage operations."""
 
     @pytest.mark.asyncio
-    async def test_console_logs(self, _mcp_server, test_html_server):
+    async def test_console_logs(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving console logs via MCP."""
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -87,7 +89,7 @@ class TestMCPLogsAndStorage:
             )
 
     @pytest.mark.asyncio
-    async def test_network_logs(self, _mcp_server, test_html_server):
+    async def test_network_logs(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving network logs via MCP."""
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -134,7 +136,7 @@ class TestMCPLogsAndStorage:
             )
 
     @pytest.mark.asyncio
-    async def test_local_storage_operations(self, _mcp_server, test_html_server):
+    async def test_local_storage_operations(self, mcp_server, test_html_server):  # noqa: F811
         """Test local storage operations via MCP."""
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -273,7 +275,7 @@ class TestMCPLogsAndStorage:
             )
 
     @pytest.mark.asyncio
-    async def test_session_storage_operations(self, _mcp_server, test_html_server):
+    async def test_session_storage_operations(self, mcp_server, test_html_server):  # noqa: F811
         """Test session storage operations via MCP."""
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
