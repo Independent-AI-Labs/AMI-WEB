@@ -441,3 +441,123 @@ class NavigationController:
             results.append({"selector": selector, "tag": elem.name, "text": elem.get_text(strip=True)})
 
         return results
+
+    async def get_local_storage(self, key: str | None = None) -> dict[str, str] | str | None:
+        """Get local storage data.
+
+        Args:
+            key: Optional key to get specific value. If None, returns all items.
+
+        Returns:
+            If key is provided: the value for that key or None if not found
+            If key is None: dictionary of all local storage items
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            if key:
+                script = f"return localStorage.getItem('{key}')"
+                return await self.execute_script(script)
+            script = """
+            const items = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                items[key] = localStorage.getItem(key);
+            }
+            return items;
+            """
+            return await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to get local storage: {e}") from e
+
+    async def set_local_storage(self, key: str, value: str) -> None:
+        """Set a local storage item.
+
+        Args:
+            key: The key to set
+            value: The value to store
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            # Escape single quotes in the value
+            escaped_value = value.replace("'", "\\'")
+            script = f"localStorage.setItem('{key}', '{escaped_value}')"
+            await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to set local storage: {e}") from e
+
+    async def remove_local_storage(self, key: str) -> None:
+        """Remove a local storage item.
+
+        Args:
+            key: The key to remove
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            script = f"localStorage.removeItem('{key}')"
+            await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to remove local storage item: {e}") from e
+
+    async def clear_local_storage(self) -> None:
+        """Clear all local storage items."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            script = "localStorage.clear()"
+            await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to clear local storage: {e}") from e
+
+    async def get_session_storage(self, key: str | None = None) -> dict[str, str] | str | None:
+        """Get session storage data.
+
+        Args:
+            key: Optional key to get specific value. If None, returns all items.
+
+        Returns:
+            If key is provided: the value for that key or None if not found
+            If key is None: dictionary of all session storage items
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            if key:
+                script = f"return sessionStorage.getItem('{key}')"
+                return await self.execute_script(script)
+            script = """
+            const items = {};
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                items[key] = sessionStorage.getItem(key);
+            }
+            return items;
+            """
+            return await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to get session storage: {e}") from e
+
+    async def set_session_storage(self, key: str, value: str) -> None:
+        """Set a session storage item.
+
+        Args:
+            key: The key to set
+            value: The value to store
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            # Escape single quotes in the value
+            escaped_value = value.replace("'", "\\'")
+            script = f"sessionStorage.setItem('{key}', '{escaped_value}')"
+            await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to set session storage: {e}") from e
