@@ -60,11 +60,16 @@ class Config:
         return default
 
     def _get_defaults(self) -> dict[str, Any]:
+        # Get absolute paths for Chrome and ChromeDriver
+        base_dir = Path(__file__).parent.parent.parent  # Project root
+        chrome_path = base_dir / "chromium-win" / "chrome.exe"
+        driver_path = base_dir / "chromedriver.exe"
+
         return {
             "chrome_manager": {
                 "browser": {
-                    "chrome_binary_path": "./chromium-win/chrome.exe",
-                    "chromedriver_path": "./chromedriver.exe",
+                    "chrome_binary_path": str(chrome_path.absolute()) if chrome_path.exists() else "./chromium-win/chrome.exe",
+                    "chromedriver_path": str(driver_path.absolute()) if driver_path.exists() else "./chromedriver.exe",
                     "executable_path": None,
                     "default_headless": True,
                     "default_window_size": [1920, 1080],

@@ -1,5 +1,15 @@
 # CRITICAL INSTRUCTIONS FOR CLAUDE - MUST READ
 
+## CHROME AND CHROMEDRIVER PATHS - ALWAYS CONFIGURED
+
+**NEVER ASK WHERE CHROME IS - IT'S ALWAYS HERE:**
+- Chrome binary: `./chromium-win/chrome.exe` (relative to project root)
+- ChromeDriver: `./chromedriver.exe` (relative to project root)
+- These are automatically configured in `chrome_manager/utils/config.py`
+- The Config class automatically converts these to absolute paths
+- Tests will use these paths automatically
+- STOP LOOKING FOR CHROME - IT'S FUCKING CONFIGURED
+
 ## ABSOLUTE REQUIREMENTS - NO EXCEPTIONS
 
 ### 1. NEVER SKIP VERIFICATIONS
