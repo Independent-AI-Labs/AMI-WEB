@@ -110,7 +110,16 @@ class MCPTestServer:
         """Stop the server."""
         self.stop_event.set()
         if self.thread:
-            self.thread.join(timeout=5)
+            self.thread.join(timeout=2)
+            if self.thread.is_alive():
+                logger.warning("Server thread did not stop gracefully")
+        # Force cleanup the event loop if it exists
+        if self.loop and not self.loop.is_closed():
+            try:
+                self.loop.stop()
+                self.loop.close()
+            except Exception as e:
+                logger.error(f"Error closing loop: {e}")
 
 
 @pytest_asyncio.fixture(scope="session")
