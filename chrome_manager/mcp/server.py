@@ -191,6 +191,101 @@ class MCPServer:
                     "required": ["instance_id"],
                 },
             ),
+            "browser_get_console_logs": MCPTool(
+                name="browser_get_console_logs",
+                description="Get browser console logs",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_get_network_logs": MCPTool(
+                name="browser_get_network_logs",
+                description="Get network activity logs",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_get_local_storage": MCPTool(
+                name="browser_get_local_storage",
+                description="Get local storage data",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "key": {"type": "string", "description": "Optional key to get specific value"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_set_local_storage": MCPTool(
+                name="browser_set_local_storage",
+                description="Set a local storage item",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "key": {"type": "string"},
+                        "value": {"type": "string"},
+                    },
+                    "required": ["instance_id", "key", "value"],
+                },
+            ),
+            "browser_remove_local_storage": MCPTool(
+                name="browser_remove_local_storage",
+                description="Remove a local storage item",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "key": {"type": "string"},
+                    },
+                    "required": ["instance_id", "key"],
+                },
+            ),
+            "browser_clear_local_storage": MCPTool(
+                name="browser_clear_local_storage",
+                description="Clear all local storage items",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_get_session_storage": MCPTool(
+                name="browser_get_session_storage",
+                description="Get session storage data",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "key": {"type": "string", "description": "Optional key to get specific value"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_set_session_storage": MCPTool(
+                name="browser_set_session_storage",
+                description="Set a session storage item",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "key": {"type": "string"},
+                        "value": {"type": "string"},
+                    },
+                    "required": ["instance_id", "key", "value"],
+                },
+            ),
         }
 
     async def start(self):
@@ -461,7 +556,7 @@ class MCPServer:
         result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
         return {"result": result}
 
-    async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
+    async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:  # noqa: C901
         # Lifecycle operations
         if tool_name == "browser_launch":
             result = await self._execute_launch(parameters)
@@ -494,10 +589,82 @@ class MCPServer:
             result = await self._execute_cookies(tool_name, parameters)
         elif tool_name in ["browser_get_tabs", "browser_switch_tab"]:
             result = await self._execute_tabs(tool_name, parameters)
+        elif tool_name in ["browser_get_console_logs", "browser_get_network_logs"]:
+            result = await self._execute_logs(tool_name, parameters)
+        elif tool_name in [
+            "browser_get_local_storage",
+            "browser_set_local_storage",
+            "browser_remove_local_storage",
+            "browser_clear_local_storage",
+            "browser_get_session_storage",
+            "browser_set_session_storage",
+        ]:
+            result = await self._execute_storage(tool_name, parameters)
         else:
             raise MCPError(f"Tool {tool_name} not implemented")
 
         return result
+
+    async def _execute_logs(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+
+        if tool_name == "browser_get_console_logs":
+            logs = await instance.get_console_logs()
+            return {
+                "logs": [
+                    {
+                        "timestamp": log.timestamp.isoformat(),
+                        "level": log.level,
+                        "message": log.message,
+                        "source": log.source,
+                    }
+                    for log in logs
+                ]
+            }
+        # browser_get_network_logs
+        from ..facade.devtools import DevToolsController
+
+        devtools = DevToolsController(instance)
+        network_logs = await devtools.get_network_logs()
+        return {
+            "logs": [
+                {
+                    "timestamp": log.timestamp.isoformat(),
+                    "method": log.method,
+                    "url": log.url,
+                    "status_code": log.status_code,
+                    "response_time": log.response_time,
+                    "size": log.size,
+                    "headers": log.headers,
+                }
+                for log in network_logs
+            ]
+        }
+
+    async def _execute_storage(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        nav = NavigationController(instance)
+
+        if tool_name == "browser_get_local_storage":
+            key = parameters.get("key")
+            data = await nav.get_local_storage(key)
+            return {"data": data}
+        if tool_name == "browser_set_local_storage":
+            await nav.set_local_storage(parameters["key"], parameters["value"])
+            return {"success": True}
+        if tool_name == "browser_remove_local_storage":
+            await nav.remove_local_storage(parameters["key"])
+            return {"success": True}
+        if tool_name == "browser_clear_local_storage":
+            await nav.clear_local_storage()
+            return {"success": True}
+        if tool_name == "browser_get_session_storage":
+            key = parameters.get("key")
+            data = await nav.get_session_storage(key)
+            return {"data": data}
+        # browser_set_session_storage
+        await nav.set_session_storage(parameters["key"], parameters["value"])
+        return {"success": True}
 
     async def broadcast_event(self, event: MCPEvent):
         event_data = {
