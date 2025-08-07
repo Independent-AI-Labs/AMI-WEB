@@ -105,11 +105,20 @@ class BrowserInstance:
         if "prefs" in exp_options:
             chrome_options.add_experimental_option("prefs", exp_options["prefs"])
 
+    def _add_antidetect_extension(self, chrome_options: Options) -> None:
+        """Add the anti-detection extension if it exists."""
+        from pathlib import Path
+
+        ext_path = Path(__file__).parent.parent / "extensions" / "antidetect"
+        if ext_path.exists():
+            chrome_options.add_argument(f"--load-extension={ext_path.resolve()}")
+
     def _build_chrome_options(self, headless: bool, profile: str | None, extensions: list[str], anti_detect: bool = False) -> Options:
         chrome_options = Options()
 
         if anti_detect:
             self._apply_anti_detection_options(chrome_options)
+            self._add_antidetect_extension(chrome_options)
             # Don't disable GPU features in anti-detect mode - WebGL needs them
             # Also add headless check for anti-detect mode
             if headless:
@@ -179,7 +188,7 @@ class BrowserInstance:
         if chrome_binary_path and Path(chrome_binary_path).exists():
             chrome_options.binary_location = str(chrome_binary_path)
 
-        # Patch ChromeDriver if needed
+        # Patch ChromeDriver but more carefully
         patched_driver_path = chromedriver_path
         if chromedriver_path and Path(chromedriver_path).exists():
             from .antidetect import ChromeDriverPatcher
@@ -205,14 +214,7 @@ class BrowserInstance:
             raise InstanceError("ChromeDriver path not found for anti-detection mode")
 
         # Launch Chrome
-        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
-
-        # Execute additional anti-detection scripts
-        from .antidetect import execute_anti_detection_scripts
-
-        execute_anti_detection_scripts(driver)
-
-        return driver
+        return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
         loop = asyncio.get_event_loop()
@@ -353,9 +355,10 @@ class BrowserInstance:
 
             paint_timing = self.driver.execute_script(
                 """
-                const entries = performance.getEntriesByType('paint');
-                const result = {};
-                for (const entry of entries) {
+                var entries = performance.getEntriesByType('paint');
+                var result = {};
+                for (var i = 0; i < entries.length; i++) {
+                    var entry = entries[i];
                     result[entry.name] = entry.startTime;
                 }
                 return result;
