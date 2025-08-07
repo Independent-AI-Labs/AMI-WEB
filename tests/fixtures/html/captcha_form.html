@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPTCHA Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .captcha-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .captcha-box {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .captcha-image {
+            display: block;
+            margin: 0 auto 15px;
+            border: 1px solid #ccc;
+            background: white;
+            padding: 10px;
+            user-select: none;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            letter-spacing: 5px;
+            font-weight: bold;
+            color: #333;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50"><line x1="0" y1="25" x2="200" y2="25" stroke="gray" stroke-width="1" opacity="0.3"/><line x1="50" y1="0" x2="50" y2="50" stroke="gray" stroke-width="1" opacity="0.3"/><line x1="100" y1="0" x2="100" y2="50" stroke="gray" stroke-width="1" opacity="0.3"/><line x1="150" y1="0" x2="150" y2="50" stroke="gray" stroke-width="1" opacity="0.3"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 200px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+        }
+        .captcha-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        .captcha-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .verify-btn {
+            background: #4CAF50;
+            color: white;
+            flex: 1;
+        }
+        .verify-btn:hover {
+            background: #45a049;
+        }
+        .refresh-btn {
+            background: #2196F3;
+            color: white;
+        }
+        .refresh-btn:hover {
+            background: #0b7dda;
+        }
+        .audio-btn {
+            background: #ff9800;
+            color: white;
+        }
+        .audio-btn:hover {
+            background: #e68900;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.hidden {
+            display: none;
+        }
+        .math-captcha {
+            font-size: 20px;
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .checkbox-captcha {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .checkbox-captcha input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.5);
+        }
+        .puzzle-captcha {
+            position: relative;
+            height: 200px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .puzzle-piece {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: #4CAF50;
+            cursor: move;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .puzzle-target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border: 2px dashed #4CAF50;
+            border-radius: 5px;
+            right: 20px;
+            top: 75px;
+        }
+        #captcha-attempts {
+            text-align: center;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="captcha-container">
+        <h1>CAPTCHA Test Page</h1>
+        
+        <!-- Text CAPTCHA -->
+        <div class="captcha-box">
+            <h3>Text CAPTCHA</h3>
+            <div id="text-captcha" class="captcha-image" data-testid="text-captcha">A7X9M2</div>
+            <input type="text" id="text-captcha-input" class="captcha-input" 
+                   placeholder="Enter the text above" data-testid="text-captcha-input">
+            <div class="captcha-controls">
+                <button class="verify-btn" onclick="verifyTextCaptcha()" data-testid="verify-text-btn">Verify</button>
+                <button class="refresh-btn" onclick="refreshTextCaptcha()" data-testid="refresh-text-btn">↻ Refresh</button>
+                <button class="audio-btn" onclick="playAudio()" data-testid="audio-btn">🔊 Audio</button>
+            </div>
+        </div>
+
+        <!-- Math CAPTCHA -->
+        <div class="captcha-box">
+            <h3>Math CAPTCHA</h3>
+            <div id="math-captcha" class="math-captcha" data-testid="math-captcha">
+                What is 7 + 5 = ?
+            </div>
+            <input type="text" id="math-captcha-input" class="captcha-input" 
+                   placeholder="Enter the answer" data-testid="math-captcha-input">
+            <div class="captcha-controls">
+                <button class="verify-btn" onclick="verifyMathCaptcha()" data-testid="verify-math-btn">Verify</button>
+                <button class="refresh-btn" onclick="refreshMathCaptcha()" data-testid="refresh-math-btn">↻ New Problem</button>
+            </div>
+        </div>
+
+        <!-- Checkbox CAPTCHA -->
+        <div class="captcha-box">
+            <h3>Checkbox CAPTCHA</h3>
+            <div class="checkbox-captcha">
+                <input type="checkbox" id="robot-checkbox" data-testid="robot-checkbox">
+                <label for="robot-checkbox">I'm not a robot</label>
+            </div>
+            <button class="verify-btn" onclick="verifyCheckbox()" data-testid="verify-checkbox-btn">Continue</button>
+        </div>
+
+        <!-- Puzzle CAPTCHA -->
+        <div class="captcha-box">
+            <h3>Slide Puzzle CAPTCHA</h3>
+            <div class="puzzle-captcha" id="puzzle-container" data-testid="puzzle-captcha">
+                <div class="puzzle-piece" id="puzzle-piece" data-testid="puzzle-piece" 
+                     style="left: 20px; top: 75px;">→</div>
+                <div class="puzzle-target" data-testid="puzzle-target"></div>
+            </div>
+            <button class="verify-btn" onclick="verifyPuzzle()" data-testid="verify-puzzle-btn">Verify Position</button>
+        </div>
+
+        <div id="status" class="status hidden" data-testid="status"></div>
+        <div id="captcha-attempts" data-testid="attempts">Attempts: 0</div>
+    </div>
+
+    <script>
+        // Global state for testing
+        window.captchaState = {
+            textCaptcha: 'A7X9M2',
+            mathAnswer: 12,
+            mathProblem: '7 + 5',
+            attempts: 0,
+            solved: {
+                text: false,
+                math: false,
+                checkbox: false,
+                puzzle: false
+            },
+            puzzlePosition: { x: 20, y: 75 }
+        };
+
+        // Text CAPTCHA functions
+        function generateRandomText() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function refreshTextCaptcha() {
+            window.captchaState.textCaptcha = generateRandomText();
+            document.getElementById('text-captcha').textContent = window.captchaState.textCaptcha;
+            document.getElementById('text-captcha-input').value = '';
+            hideStatus();
+        }
+
+        function verifyTextCaptcha() {
+            const input = document.getElementById('text-captcha-input').value.toUpperCase();
+            window.captchaState.attempts++;
+            updateAttempts();
+            
+            if (input === window.captchaState.textCaptcha) {
+                showStatus('Text CAPTCHA verified successfully!', 'success');
+                window.captchaState.solved.text = true;
+            } else {
+                showStatus('Incorrect text. Please try again.', 'error');
+            }
+        }
+
+        // Math CAPTCHA functions
+        function generateMathProblem() {
+            const a = Math.floor(Math.random() * 10) + 1;
+            const b = Math.floor(Math.random() * 10) + 1;
+            const operators = ['+', '-', '*'];
+            const op = operators[Math.floor(Math.random() * operators.length)];
+            
+            let answer;
+            switch(op) {
+                case '+': answer = a + b; break;
+                case '-': answer = a - b; break;
+                case '*': answer = a * b; break;
+            }
+            
+            window.captchaState.mathProblem = `${a} ${op} ${b}`;
+            window.captchaState.mathAnswer = answer;
+            return `What is ${a} ${op} ${b} = ?`;
+        }
+
+        function refreshMathCaptcha() {
+            const problem = generateMathProblem();
+            document.getElementById('math-captcha').textContent = problem;
+            document.getElementById('math-captcha-input').value = '';
+            hideStatus();
+        }
+
+        function verifyMathCaptcha() {
+            const input = parseInt(document.getElementById('math-captcha-input').value);
+            window.captchaState.attempts++;
+            updateAttempts();
+            
+            if (input === window.captchaState.mathAnswer) {
+                showStatus('Math CAPTCHA solved correctly!', 'success');
+                window.captchaState.solved.math = true;
+            } else {
+                showStatus('Incorrect answer. Please try again.', 'error');
+            }
+        }
+
+        // Checkbox CAPTCHA
+        function verifyCheckbox() {
+            const checked = document.getElementById('robot-checkbox').checked;
+            window.captchaState.attempts++;
+            updateAttempts();
+            
+            if (checked) {
+                // Simulate additional verification
+                setTimeout(() => {
+                    showStatus('Checkbox verification complete!', 'success');
+                    window.captchaState.solved.checkbox = true;
+                }, 500);
+            } else {
+                showStatus('Please check the box to continue.', 'error');
+            }
+        }
+
+        // Puzzle CAPTCHA
+        let isDragging = false;
+        const puzzlePiece = document.getElementById('puzzle-piece');
+
+        puzzlePiece.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            
+            const container = document.getElementById('puzzle-container');
+            const rect = container.getBoundingClientRect();
+            const x = Math.max(0, Math.min(e.clientX - rect.left - 25, rect.width - 50));
+            const y = Math.max(0, Math.min(e.clientY - rect.top - 25, rect.height - 50));
+            
+            puzzlePiece.style.left = x + 'px';
+            puzzlePiece.style.top = y + 'px';
+            
+            window.captchaState.puzzlePosition = { x, y };
+        }
+
+        function endDrag() {
+            isDragging = false;
+        }
+
+        function verifyPuzzle() {
+            const targetX = 230; // Right position
+            const targetY = 75;  // Middle position
+            const tolerance = 30;
+            
+            const { x, y } = window.captchaState.puzzlePosition;
+            window.captchaState.attempts++;
+            updateAttempts();
+            
+            if (Math.abs(x - targetX) < tolerance && Math.abs(y - targetY) < tolerance) {
+                showStatus('Puzzle positioned correctly!', 'success');
+                window.captchaState.solved.puzzle = true;
+                puzzlePiece.style.background = '#4CAF50';
+            } else {
+                showStatus('Not quite right. Try sliding the piece to the target.', 'error');
+                puzzlePiece.style.background = '#f44336';
+                setTimeout(() => {
+                    puzzlePiece.style.background = '#4CAF50';
+                }, 1000);
+            }
+        }
+
+        // Audio simulation
+        function playAudio() {
+            showStatus('Audio: ' + window.captchaState.textCaptcha.split('').join(' . '), 'success');
+            
+            // Simulate audio playback
+            const utterance = new SpeechSynthesisUtterance(
+                window.captchaState.textCaptcha.split('').join(' ')
+            );
+            utterance.rate = 0.7;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Utility functions
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        function hideStatus() {
+            const status = document.getElementById('status');
+            status.className = 'status hidden';
+        }
+
+        function updateAttempts() {
+            document.getElementById('captcha-attempts').textContent = 
+                'Attempts: ' + window.captchaState.attempts;
+        }
+
+        // Test helpers
+        window.testHelpers = {
+            solveCaptcha: function(type) {
+                switch(type) {
+                    case 'text':
+                        document.getElementById('text-captcha-input').value = window.captchaState.textCaptcha;
+                        verifyTextCaptcha();
+                        break;
+                    case 'math':
+                        document.getElementById('math-captcha-input').value = window.captchaState.mathAnswer;
+                        verifyMathCaptcha();
+                        break;
+                    case 'checkbox':
+                        document.getElementById('robot-checkbox').checked = true;
+                        verifyCheckbox();
+                        break;
+                    case 'puzzle':
+                        // Move to correct position
+                        puzzlePiece.style.left = '230px';
+                        puzzlePiece.style.top = '75px';
+                        window.captchaState.puzzlePosition = { x: 230, y: 75 };
+                        verifyPuzzle();
+                        break;
+                }
+            },
+            getCaptchaState: function() {
+                return window.captchaState;
+            },
+            resetAll: function() {
+                refreshTextCaptcha();
+                refreshMathCaptcha();
+                document.getElementById('robot-checkbox').checked = false;
+                puzzlePiece.style.left = '20px';
+                puzzlePiece.style.top = '75px';
+                window.captchaState.puzzlePosition = { x: 20, y: 75 };
+                window.captchaState.attempts = 0;
+                window.captchaState.solved = {
+                    text: false,
+                    math: false,
+                    checkbox: false,
+                    puzzle: false
+                };
+                updateAttempts();
+                hideStatus();
+            }
+        };
+    </script>
+</body>
+</html>

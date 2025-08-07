@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Content Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #1a1a1a;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: black;
+        }
+        #content-area {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .ajax-content {
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .close:hover {
+            color: #000;
+        }
+        #infinite-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 20px 0;
+        }
+        .scroll-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        #live-data {
+            font-family: monospace;
+            background: #2d2d2d;
+            color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            height: 150px;
+            overflow-y: auto;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 2000;
+        }
+        .tab-container {
+            margin: 20px 0;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: 2px solid white;
+            position: relative;
+            top: 2px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic Content Test Page</h1>
+        
+        <div class="controls">
+            <h3>Content Controls</h3>
+            <button class="btn-primary" onclick="loadAjaxContent()" data-testid="load-ajax-btn">Load AJAX Content</button>
+            <button class="btn-success" onclick="addDynamicElement()" data-testid="add-element-btn">Add Element</button>
+            <button class="btn-danger" onclick="clearContent()" data-testid="clear-btn">Clear Content</button>
+            <button class="btn-warning" onclick="startLiveUpdates()" data-testid="start-live-btn">Start Live Updates</button>
+            <button class="btn-danger" onclick="stopLiveUpdates()" data-testid="stop-live-btn">Stop Live Updates</button>
+            <button class="btn-primary" onclick="showModal()" data-testid="show-modal-btn">Show Modal</button>
+            <button class="btn-success" onclick="showNotification()" data-testid="notify-btn">Show Notification</button>
+        </div>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab(1)" data-testid="tab-1">Tab 1</div>
+                <div class="tab" onclick="switchTab(2)" data-testid="tab-2">Tab 2</div>
+                <div class="tab" onclick="switchTab(3)" data-testid="tab-3">Tab 3</div>
+            </div>
+            <div id="tab-content-1" class="tab-content active" data-testid="tab-content-1">
+                <h3>Content Area</h3>
+                <div id="content-area" data-testid="content-area">
+                    <p>Initial content. Click buttons above to load dynamic content.</p>
+                </div>
+            </div>
+            <div id="tab-content-2" class="tab-content" data-testid="tab-content-2">
+                <h3>Infinite Scroll</h3>
+                <div id="infinite-scroll" data-testid="infinite-scroll">
+                    <div class="scroll-item">Item 1</div>
+                    <div class="scroll-item">Item 2</div>
+                    <div class="scroll-item">Item 3</div>
+                </div>
+            </div>
+            <div id="tab-content-3" class="tab-content" data-testid="tab-content-3">
+                <h3>Live Data Stream</h3>
+                <div id="live-data" data-testid="live-data">
+                    <div>Waiting for live updates...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div id="modal" class="modal" data-testid="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()" data-testid="modal-close">&times;</span>
+                <h2>Modal Dialog</h2>
+                <p>This is a dynamically shown modal dialog.</p>
+                <input type="text" id="modal-input" placeholder="Enter something..." data-testid="modal-input" style="width: 100%; padding: 10px; margin: 10px 0;">
+                <button class="btn-primary" onclick="submitModal()" data-testid="modal-submit">Submit</button>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" class="notification" data-testid="notification">
+            <span id="notification-text">Operation completed successfully!</span>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        window.dynamicState = {
+            elementCount: 0,
+            ajaxCallCount: 0,
+            liveUpdateInterval: null,
+            scrollItemCount: 3,
+            liveDataCount: 0,
+            currentTab: 1,
+            modalData: null
+        };
+
+        // AJAX content loading simulation
+        function loadAjaxContent() {
+            const contentArea = document.getElementById('content-area');
+            
+            // Show loading
+            contentArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading content...</p></div>';
+            
+            // Simulate AJAX delay
+            setTimeout(() => {
+                window.dynamicState.ajaxCallCount++;
+                const content = `
+                    <div class="ajax-content" data-ajax-id="${window.dynamicState.ajaxCallCount}">
+                        <h4>AJAX Content #${window.dynamicState.ajaxCallCount}</h4>
+                        <p>This content was loaded via AJAX at ${new Date().toLocaleTimeString()}</p>
+                        <ul>
+                            <li>Dynamic item 1</li>
+                            <li>Dynamic item 2</li>
+                            <li>Dynamic item 3</li>
+                        </ul>
+                    </div>
+                `;
+                contentArea.innerHTML = content;
+                
+                // Trigger custom event
+                window.dispatchEvent(new CustomEvent('ajaxContentLoaded', {
+                    detail: { count: window.dynamicState.ajaxCallCount }
+                }));
+            }, 1500);
+        }
+
+        // Add dynamic elements
+        function addDynamicElement() {
+            window.dynamicState.elementCount++;
+            const contentArea = document.getElementById('content-area');
+            const newElement = document.createElement('div');
+            newElement.className = 'item';
+            newElement.setAttribute('data-testid', `dynamic-item-${window.dynamicState.elementCount}`);
+            newElement.innerHTML = `
+                <strong>Dynamic Element #${window.dynamicState.elementCount}</strong>
+                <p>Created at ${new Date().toLocaleTimeString()}</p>
+                <button onclick="this.parentElement.remove()">Remove</button>
+            `;
+            contentArea.appendChild(newElement);
+            
+            // Animate entry
+            newElement.style.opacity = '0';
+            newElement.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                newElement.style.transition = 'all 0.3s';
+                newElement.style.opacity = '1';
+                newElement.style.transform = 'translateY(0)';
+            }, 10);
+        }
+
+        // Clear content
+        function clearContent() {
+            document.getElementById('content-area').innerHTML = '<p>Content cleared. Add new content using the buttons above.</p>';
+            window.dynamicState.elementCount = 0;
+        }
+
+        // Live updates
+        function startLiveUpdates() {
+            if (window.dynamicState.liveUpdateInterval) return;
+            
+            window.dynamicState.liveUpdateInterval = setInterval(() => {
+                window.dynamicState.liveDataCount++;
+                const liveData = document.getElementById('live-data');
+                const newData = document.createElement('div');
+                newData.textContent = `[${new Date().toLocaleTimeString()}] Data packet #${window.dynamicState.liveDataCount}: ${Math.random().toString(36).substring(7)}`;
+                liveData.appendChild(newData);
+                
+                // Keep only last 10 entries
+                while (liveData.children.length > 10) {
+                    liveData.removeChild(liveData.firstChild);
+                }
+                
+                // Auto scroll to bottom
+                liveData.scrollTop = liveData.scrollHeight;
+            }, 1000);
+            
+            showNotification('Live updates started');
+        }
+
+        function stopLiveUpdates() {
+            if (window.dynamicState.liveUpdateInterval) {
+                clearInterval(window.dynamicState.liveUpdateInterval);
+                window.dynamicState.liveUpdateInterval = null;
+                showNotification('Live updates stopped');
+            }
+        }
+
+        // Modal functions
+        function showModal() {
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('modal-input').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function submitModal() {
+            const input = document.getElementById('modal-input').value;
+            window.dynamicState.modalData = input;
+            showNotification(`Modal submitted with: ${input}`);
+            closeModal();
+        }
+
+        // Notification
+        function showNotification(text = 'Operation completed successfully!') {
+            const notification = document.getElementById('notification');
+            document.getElementById('notification-text').textContent = text;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Tab switching
+        function switchTab(tabNumber) {
+            // Update tab states
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                if (index + 1 === tabNumber) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            // Update content visibility
+            document.querySelectorAll('.tab-content').forEach((content, index) => {
+                if (index + 1 === tabNumber) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+            
+            window.dynamicState.currentTab = tabNumber;
+        }
+
+        // Infinite scroll
+        const infiniteScroll = document.getElementById('infinite-scroll');
+        infiniteScroll.addEventListener('scroll', function() {
+            if (this.scrollTop + this.clientHeight >= this.scrollHeight - 5) {
+                // Load more items
+                for (let i = 0; i < 3; i++) {
+                    window.dynamicState.scrollItemCount++;
+                    const item = document.createElement('div');
+                    item.className = 'scroll-item';
+                    item.textContent = `Item ${window.dynamicState.scrollItemCount}`;
+                    item.setAttribute('data-testid', `scroll-item-${window.dynamicState.scrollItemCount}`);
+                    this.appendChild(item);
+                }
+            }
+        });
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        // Test helpers
+        window.testHelpers = {
+            getState: function() {
+                return window.dynamicState;
+            },
+            waitForElement: function(selector, timeout = 5000) {
+                return new Promise((resolve, reject) => {
+                    const interval = setInterval(() => {
+                        const element = document.querySelector(selector);
+                        if (element) {
+                            clearInterval(interval);
+                            resolve(element);
+                        }
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        reject(new Error(`Element ${selector} not found after ${timeout}ms`));
+                    }, timeout);
+                });
+            },
+            triggerInfiniteScroll: function() {
+                infiniteScroll.scrollTop = infiniteScroll.scrollHeight;
+            },
+            getAllDynamicElements: function() {
+                return document.querySelectorAll('[data-testid^="dynamic-item-"]');
+            }
+        };
+
+        // Listen for page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopLiveUpdates();
+            }
+        });
+    </script>
+</body>
+</html>
