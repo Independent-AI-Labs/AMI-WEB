@@ -85,6 +85,7 @@ class TestMCPLogsAndStorage:
             await websocket.send(
                 json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
             )
+            await websocket.recv()  # Wait for close response
 
     @pytest.mark.asyncio
     async def test_console_logs(self, mcp_server, test_html_server):  # noqa: F811
@@ -155,6 +156,7 @@ class TestMCPLogsAndStorage:
             await websocket.send(
                 json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
             )
+            await websocket.recv()  # Wait for close response
 
     @pytest.mark.asyncio
     async def test_network_logs(self, mcp_server, test_html_server):  # noqa: F811
@@ -202,6 +204,7 @@ class TestMCPLogsAndStorage:
             await websocket.send(
                 json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
             )
+            await websocket.recv()  # Wait for close response
 
     @pytest.mark.asyncio
     async def test_local_storage_operations(self, mcp_server, test_html_server):  # noqa: F811
@@ -341,6 +344,7 @@ class TestMCPLogsAndStorage:
             await websocket.send(
                 json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
             )
+            await websocket.recv()  # Wait for close response
 
     @pytest.mark.asyncio
     async def test_session_storage_operations(self, mcp_server, test_html_server):  # noqa: F811
@@ -412,6 +416,7 @@ class TestMCPLogsAndStorage:
             await websocket.send(
                 json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
             )
+            await websocket.recv()  # Wait for close response
 
 
 if __name__ == "__main__":
