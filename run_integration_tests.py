@@ -2,7 +2,6 @@
 """Run integration tests with proper setup and teardown."""
 
 import argparse
-import asyncio
 import sys
 from pathlib import Path
 
@@ -90,8 +89,26 @@ def main():
             pytest_args.extend(["-m", args.markers])
         exit_code = pytest.main(pytest_args)
     else:
-        # Run tests with server
-        exit_code = asyncio.run(run_tests_with_server(args))
+        # Run tests with server - start a new server in the background
+        # This will be handled by the pytest fixtures instead
+        pytest_args = ["tests/integration", "-v", "--tb=short"]
+
+        if args.markers:
+            pytest_args.extend(["-m", args.markers])
+
+        if args.coverage:
+            pytest_args.extend(["--cov=chrome_manager", "--cov-report=term-missing", "--cov-report=html:htmlcov"])
+
+        if args.verbose:
+            pytest_args.append("-vv")
+
+        if args.specific_test:
+            pytest_args.append(f"-k={args.specific_test}")
+
+        if args.stop_on_failure:
+            pytest_args.append("-x")
+
+        exit_code = pytest.main(pytest_args)
 
     sys.exit(exit_code)
 

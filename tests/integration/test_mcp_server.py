@@ -3,49 +3,114 @@
 import asyncio
 import base64
 import json
+import threading
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+import pytest_asyncio
 import websockets
+from loguru import logger
 
 from chrome_manager.core.manager import ChromeManager
 from chrome_manager.mcp.server import MCPServer
 from tests.fixtures.test_server import HTMLTestServer
 
 
-@pytest.fixture(scope="session")
-def test_html_server(event_loop):
+@pytest_asyncio.fixture(scope="session")
+async def test_html_server():
     """Start test HTML server."""
-
-    async def _start_server():
-        server = HTMLTestServer(port=8889)
-        base_url = await server.start()
-        return server, base_url
-
-    server, base_url = event_loop.run_until_complete(_start_server())
+    server = HTMLTestServer(port=8889)
+    base_url = await server.start()
     yield base_url
-    event_loop.run_until_complete(server.stop())
+    await server.stop()
 
 
-@pytest.fixture
-def mcp_server(event_loop):
-    """Start MCP server for testing."""
+class MCPTestServer:
+    """Test MCP server that runs properly for testing."""
+    
+    def __init__(self, port=8766):
+        self.port = port
+        self.server = None
+        self.manager = None
+        self.loop = None
+        self.thread = None
+        self.ready_event = threading.Event()
+        self.stop_event = threading.Event()
+    
+    def _run_server(self):
+        """Run server with its own event loop."""
+        # Create new event loop for this thread
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        
+        try:
+            # Initialize manager and server synchronously in the thread
+            self.loop.run_until_complete(self._setup_server())
+            self.ready_event.set()
+            
+            # Keep the server running
+            self.loop.run_until_complete(self._serve_forever())
+            
+        except Exception as e:
+            logger.error(f"Server error: {e}")
+            self.ready_event.set()  # Signal even on error
+        finally:
+            self.loop.run_until_complete(self._cleanup())
+            self.loop.close()
+    
+    async def _setup_server(self):
+        """Set up the server components."""
+        self.manager = ChromeManager()
+        await self.manager.start()
+        
+        config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10}
+        self.server = MCPServer(self.manager, config)
+        await self.server.start()
+        
+        logger.info(f"Test MCP server started on port {self.port}")
+    
+    async def _serve_forever(self):
+        """Keep server running until stop is signaled."""
+        while not self.stop_event.is_set():
+            await asyncio.sleep(0.1)
+    
+    async def _cleanup(self):
+        """Clean up server resources."""
+        if self.server:
+            await self.server.stop()
+        if self.manager:
+            await self.manager.stop()
+    
+    def start(self):
+        """Start the server in a thread."""
+        self.thread = threading.Thread(target=self._run_server, daemon=True)
+        self.thread.start()
+        
+        # Wait for server to be ready
+        if not self.ready_event.wait(timeout=10):
+            raise TimeoutError("Server failed to start")
+        
+        # Extra wait for socket binding
+        time.sleep(0.5)
+    
+    def stop(self):
+        """Stop the server."""
+        self.stop_event.set()
+        if self.thread:
+            self.thread.join(timeout=5)
 
-    async def _start_mcp():
-        manager = ChromeManager()
-        await manager.start()
 
-        config = {"server_host": "localhost", "server_port": 8766, "max_connections": 10}
-
-        server = MCPServer(manager, config)
-        await server.start()
-        return server, manager
-
-    server, manager = event_loop.run_until_complete(_start_mcp())
-    yield server, manager
-
-    event_loop.run_until_complete(server.stop())
-    event_loop.run_until_complete(manager.stop())
+@pytest_asyncio.fixture()
+async def mcp_server():
+    """Start MCP test server."""
+    server = MCPTestServer(port=8766)
+    server.start()
+    
+    yield server
+    
+    server.stop()
 
 
 class TestMCPServerConnection:
@@ -54,28 +119,32 @@ class TestMCPServerConnection:
     @pytest.mark.asyncio
     async def test_connect_to_server(self, mcp_server):
         """Test connecting to MCP server."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
-        # Connect to server
-        async with websockets.connect("ws://localhost:8766") as websocket:
-            # Receive capabilities
-            message = await websocket.recv()
+        # Connect to the server
+        async with websockets.connect("ws://localhost:8766", open_timeout=5) as websocket:
+            # Server should send capabilities immediately
+            message = await asyncio.wait_for(websocket.recv(), timeout=5)
             data = json.loads(message)
 
             assert data["type"] == "capabilities"
             assert "tools" in data
             assert len(data["tools"]) > 0
 
-            # Check for expected tools
+            # Verify expected tools are registered
             tool_names = [tool["name"] for tool in data["tools"]]
             assert "browser_launch" in tool_names
             assert "browser_navigate" in tool_names
             assert "browser_screenshot" in tool_names
+            assert "browser_click" in tool_names
+            assert "browser_type" in tool_names
+
+            logger.info(f"MCP server has {len(tool_names)} tools available")
 
     @pytest.mark.asyncio
     async def test_ping_pong(self, mcp_server):
         """Test ping-pong messaging."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             # Skip capabilities message
@@ -93,7 +162,7 @@ class TestMCPServerConnection:
     @pytest.mark.asyncio
     async def test_list_tools(self, mcp_server):
         """Test listing available tools."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -115,7 +184,7 @@ class TestMCPBrowserOperations:
     @pytest.mark.asyncio
     async def test_launch_browser(self, mcp_server):
         """Test launching browser via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -144,16 +213,16 @@ class TestMCPBrowserOperations:
     @pytest.mark.asyncio
     async def test_navigate_and_screenshot(self, mcp_server, test_html_server):
         """Test navigation and screenshot via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect("ws://localhost:8766", ping_interval=None) as websocket:
             await websocket.recv()  # Skip capabilities
 
             # Launch browser
             launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}
 
             await websocket.send(json.dumps(launch_request))
-            response = await websocket.recv()
+            response = await asyncio.wait_for(websocket.recv(), timeout=30)
             launch_data = json.loads(response)
             instance_id = launch_data["result"]["instance_id"]
 
@@ -166,7 +235,7 @@ class TestMCPBrowserOperations:
             }
 
             await websocket.send(json.dumps(nav_request))
-            response = await websocket.recv()
+            response = await asyncio.wait_for(websocket.recv(), timeout=30)
             nav_data = json.loads(response)
 
             assert nav_data["success"] is True
@@ -201,7 +270,7 @@ class TestMCPBrowserOperations:
     @pytest.mark.asyncio
     async def test_input_operations(self, mcp_server, test_html_server):
         """Test input operations via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -261,7 +330,7 @@ class TestMCPBrowserOperations:
     @pytest.mark.asyncio
     async def test_script_execution(self, mcp_server, test_html_server):
         """Test script execution via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -323,7 +392,7 @@ class TestMCPCookieManagement:
     @pytest.mark.asyncio
     async def test_get_and_set_cookies(self, mcp_server, test_html_server):
         """Test getting and setting cookies via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -396,7 +465,7 @@ class TestMCPTabManagement:
     @pytest.mark.asyncio
     async def test_tab_operations(self, mcp_server, test_html_server):
         """Test tab operations via MCP."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -471,7 +540,7 @@ class TestMCPErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_tool(self, mcp_server):
         """Test calling invalid tool."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -490,7 +559,7 @@ class TestMCPErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_instance(self, mcp_server):
         """Test operations on invalid instance."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -514,7 +583,7 @@ class TestMCPErrorHandling:
     @pytest.mark.asyncio
     async def test_malformed_request(self, mcp_server):
         """Test handling malformed requests."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities
@@ -534,7 +603,7 @@ class TestMCPConcurrency:
     @pytest.mark.asyncio
     async def test_multiple_clients(self, mcp_server):
         """Test multiple clients connecting simultaneously."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async def client_task(client_id):
             async with websockets.connect("ws://localhost:8766") as websocket:
@@ -568,7 +637,7 @@ class TestMCPConcurrency:
     @pytest.mark.asyncio
     async def test_concurrent_operations_same_instance(self, mcp_server, test_html_server):
         """Test concurrent operations on same browser instance."""
-        server, manager = mcp_server
+        # mcp_server is the test server instance
 
         async with websockets.connect("ws://localhost:8766") as websocket:
             await websocket.recv()  # Skip capabilities

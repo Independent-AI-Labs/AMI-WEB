@@ -1,13 +1,2 @@
-# Testing dependencies
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.1.0
-pytest-timeout>=2.1.0
-pytest-mock>=3.11.0
-
-# Test server
-aiohttp>=3.8.0
-
-# Additional testing tools
-faker>=19.0.0
-factory-boy>=3.3.0
+pytest==8.4.1
+pytest-asyncio==1.1.0
