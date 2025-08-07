@@ -131,8 +131,8 @@ def cleanup_processes():
     with contextlib.suppress(Exception):
         if sys.platform == "win32":
             # Kill Chrome and ChromeDriver processes on Windows
-            os.system("taskkill /F /IM chrome.exe 2>nul")  # noqa: S605
-            os.system("taskkill /F /IM chromedriver.exe 2>nul")  # noqa: S605
+            subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], capture_output=True, check=False)
+            subprocess.run(["taskkill", "/F", "/IM", "chromedriver.exe"], capture_output=True, check=False)
         else:
             # Kill Chrome and ChromeDriver processes on Unix
             subprocess.run(["pkill", "-f", "chrome"], capture_output=True, check=False)

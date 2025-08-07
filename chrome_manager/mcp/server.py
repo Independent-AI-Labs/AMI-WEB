@@ -547,7 +547,7 @@ class MCPServer:
         instance.driver.switch_to.window(parameters["tab_id"])
         return {"success": True}
 
-    async def _execute_navigation(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_navigation(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: C901, PLR0912
         if tool_name == "browser_navigate":
             return await self._execute_navigate(parameters)
 
@@ -578,8 +578,8 @@ class MCPServer:
             collapse_depth = parameters.get("collapse_depth")
 
             # Token limit is 25000 (roughly 4 chars per token)
-            MAX_TOKENS = 25000
-            MAX_CHARS = MAX_TOKENS * 4  # Rough approximation
+            max_tokens = 25000
+            max_chars = max_tokens * 4  # Rough approximation
 
             # Try to get HTML with progressively more aggressive limits
             html = None
@@ -589,11 +589,11 @@ class MCPServer:
                 # Specific element requested
                 html = await nav.get_element_html(selector)
                 token_count = len(html) // 4  # Rough token estimate
-                if token_count > MAX_TOKENS:
+                if token_count > max_tokens:
                     # Even the specific element is too large
                     html = (
-                        html[:MAX_CHARS]
-                        + f"\n<!-- Response limited to {MAX_TOKENS} tokens. Element too large - try a more specific selector or child elements. -->"
+                        html[:max_chars]
+                        + f"\n<!-- Response limited to {max_tokens} tokens. Element too large - try a more specific selector or child elements. -->"
                     )
             else:
                 # Try different depth limits to fit within token limit
@@ -604,9 +604,10 @@ class MCPServer:
                 if max_depth:
                     depths_to_try.append((max_depth, None, "user-specified max_depth"))
 
-                # Auto-adjust depths if needed
+                # Try raw HTML first, then auto-adjust depths if needed
                 depths_to_try.extend(
                     [
+                        (None, None, "raw HTML"),  # Try raw HTML first
                         (None, 3, "collapse_depth=3"),
                         (None, 2, "collapse_depth=2"),
                         (None, 1, "collapse_depth=1"),
@@ -625,18 +626,18 @@ class MCPServer:
                     token_count = len(html) // 4
                     tried_approaches.append(f"{description}: ~{token_count} tokens")
 
-                    if token_count <= MAX_TOKENS:
+                    if token_count <= max_tokens:
                         if len(tried_approaches) > 1:
-                            html = f"<!-- Auto-adjusted to {description} to fit within {MAX_TOKENS} token limit -->\n" + html
+                            html = f"<!-- Auto-adjusted to {description} to fit within {max_tokens} token limit -->\n" + html
                         break
                 else:
                     # Nothing worked, return most collapsed version with message
                     html = await nav.get_html_with_depth_limit(max_depth=1, collapse_depth=1)
                     token_count = len(html) // 4
-                    if token_count > MAX_TOKENS:
-                        html = html[:MAX_CHARS]
+                    if token_count > max_tokens:
+                        html = html[:max_chars]
                     html = (
-                        f"<!-- WARNING: Response limited to {MAX_TOKENS} tokens. Page too large even at minimum depth. \n"
+                        f"<!-- WARNING: Response limited to {max_tokens} tokens. Page too large even at minimum depth. \n"
                         f"Tried approaches: {', '.join(tried_approaches)}\n"
                         f"Please use a specific selector to target the content you need. -->\n" + html
                     )

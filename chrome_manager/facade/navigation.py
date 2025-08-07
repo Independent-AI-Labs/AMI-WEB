@@ -399,7 +399,7 @@ class NavigationController:
 
             // Add attributes
             for (let attr of element.attributes) {
-                html += ` ${attr.name}="${attr.value.replace(/"/g, '&quot;')}"`;
+                html += ` ${attr.name}="${attr.value}"`;
             }
             html += '>';
 
