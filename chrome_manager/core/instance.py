@@ -18,7 +18,7 @@ from ..utils.config import Config
 from ..utils.exceptions import InstanceError
 
 if TYPE_CHECKING:
-    from .cdp_injector import CDPInjector
+    from .simple_tab_injector import SimpleTabInjector
 
 
 class BrowserInstance:
@@ -34,7 +34,7 @@ class BrowserInstance:
         self._logs: list[ConsoleEntry] = []
         self._network_logs: list[NetworkEntry] = []
         self._config = config or Config()
-        self.window_monitor: "CDPInjector | None" = None
+        self.window_monitor: "SimpleTabInjector | None" = None
 
     async def launch(
         self,
@@ -226,10 +226,10 @@ class BrowserInstance:
 
         execute_anti_detection_scripts(driver)
 
-        # Start CDP-based monitoring for new tabs
-        from .cdp_injector import CDPInjector
+        # Start simple tab monitoring for new tabs
+        from .simple_tab_injector import SimpleTabInjector
 
-        self.window_monitor = CDPInjector(driver)
+        self.window_monitor = SimpleTabInjector(driver)
         self.window_monitor.start_monitoring()
 
         return driver
