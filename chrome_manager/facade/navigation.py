@@ -366,6 +366,68 @@ class NavigationController:
         except Exception as e:
             raise NavigationError(f"Failed to get element HTML: {e}") from e
 
+    async def get_html_with_depth_limit(self, max_depth: int | None = None, collapse_depth: int | None = None) -> str:
+        """Get HTML with depth limitations to reduce size.
+
+        Args:
+            max_depth: Maximum depth to traverse (stops at this depth)
+            collapse_depth: Depth at which to collapse elements to placeholders
+
+        Returns:
+            HTML string with depth limitations applied
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        script = """
+        function getHtmlWithDepth(element, currentDepth, maxDepth, collapseDepth) {
+            if (maxDepth && currentDepth > maxDepth) {
+                return '';
+            }
+
+            if (collapseDepth && currentDepth >= collapseDepth) {
+                // Collapse to placeholder
+                const tag = element.tagName.toLowerCase();
+                const id = element.id ? ` id="${element.id}"` : '';
+                const className = element.className ? ` class="${element.className}"` : '';
+                const childCount = element.children.length;
+                return `<${tag}${id}${className}><!-- ${childCount} child elements collapsed --></${tag}>`;
+            }
+
+            // Build the HTML string
+            let html = '<' + element.tagName.toLowerCase();
+
+            // Add attributes
+            for (let attr of element.attributes) {
+                html += ` ${attr.name}="${attr.value.replace(/"/g, '&quot;')}"`;
+            }
+            html += '>';
+
+            // Add text content if it's a text node
+            if (element.childNodes.length > 0) {
+                for (let child of element.childNodes) {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        html += child.textContent;
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        html += getHtmlWithDepth(child, currentDepth + 1, maxDepth, collapseDepth);
+                    }
+                }
+            }
+
+            html += '</' + element.tagName.toLowerCase() + '>';
+            return html;
+        }
+
+        const maxD = arguments[0];
+        const collapseD = arguments[1];
+        return getHtmlWithDepth(document.documentElement, 0, maxD, collapseD);
+        """
+
+        try:
+            return await self.execute_script(script, max_depth, collapse_depth)
+        except Exception as e:
+            raise NavigationError(f"Failed to get HTML with depth limit: {e}") from e
+
     async def extract_text(self, preserve_structure: bool = True, **kwargs) -> str:
         """Extract human-readable text from the current page.
 

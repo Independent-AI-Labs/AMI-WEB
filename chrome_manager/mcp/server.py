@@ -193,12 +193,18 @@ class MCPServer:
             ),
             "browser_get_html": MCPTool(
                 name="browser_get_html",
-                description="Get the raw HTML source of the current page",
+                description="Get HTML with automatic token limiting (max 25000 tokens). Use selector for specific elements or let it auto-adjust depth.",
                 parameters={
                     "type": "object",
                     "properties": {
                         "instance_id": {"type": "string"},
-                        "selector": {"type": "string", "description": "Optional CSS selector to get HTML of specific element"},
+                        "selector": {"type": "string", "description": "CSS selector for specific element (recommended for large pages)"},
+                        "max_depth": {"type": "integer", "description": "Maximum DOM depth (auto-adjusted if response too large)", "minimum": 1},
+                        "collapse_depth": {
+                            "type": "integer",
+                            "description": "Depth to collapse elements (auto-adjusted if needed)",
+                            "minimum": 1,
+                        },
                     },
                     "required": ["instance_id"],
                 },
@@ -568,7 +574,73 @@ class MCPServer:
             result = {"links": links}
         elif tool_name == "browser_get_html":
             selector = parameters.get("selector")
-            html = await nav.get_element_html(selector) if selector else await nav.get_page_content()
+            max_depth = parameters.get("max_depth")
+            collapse_depth = parameters.get("collapse_depth")
+
+            # Token limit is 25000 (roughly 4 chars per token)
+            MAX_TOKENS = 25000
+            MAX_CHARS = MAX_TOKENS * 4  # Rough approximation
+
+            # Try to get HTML with progressively more aggressive limits
+            html = None
+            tried_approaches = []
+
+            if selector:
+                # Specific element requested
+                html = await nav.get_element_html(selector)
+                token_count = len(html) // 4  # Rough token estimate
+                if token_count > MAX_TOKENS:
+                    # Even the specific element is too large
+                    html = (
+                        html[:MAX_CHARS]
+                        + f"\n<!-- Response limited to {MAX_TOKENS} tokens. Element too large - try a more specific selector or child elements. -->"
+                    )
+            else:
+                # Try different depth limits to fit within token limit
+                depths_to_try = []
+
+                if collapse_depth:
+                    depths_to_try.append((max_depth, collapse_depth, "user-specified collapse_depth"))
+                if max_depth:
+                    depths_to_try.append((max_depth, None, "user-specified max_depth"))
+
+                # Auto-adjust depths if needed
+                depths_to_try.extend(
+                    [
+                        (None, 3, "collapse_depth=3"),
+                        (None, 2, "collapse_depth=2"),
+                        (None, 1, "collapse_depth=1"),
+                        (3, None, "max_depth=3"),
+                        (2, None, "max_depth=2"),
+                        (1, None, "max_depth=1"),
+                    ]
+                )
+
+                for md, cd, description in depths_to_try:
+                    if md or cd:
+                        html = await nav.get_html_with_depth_limit(md, cd)
+                    else:
+                        html = await nav.get_page_content()
+
+                    token_count = len(html) // 4
+                    tried_approaches.append(f"{description}: ~{token_count} tokens")
+
+                    if token_count <= MAX_TOKENS:
+                        if len(tried_approaches) > 1:
+                            html = f"<!-- Auto-adjusted to {description} to fit within {MAX_TOKENS} token limit -->\n" + html
+                        break
+                else:
+                    # Nothing worked, return most collapsed version with message
+                    html = await nav.get_html_with_depth_limit(max_depth=1, collapse_depth=1)
+                    token_count = len(html) // 4
+                    if token_count > MAX_TOKENS:
+                        html = html[:MAX_CHARS]
+                    html = (
+                        f"<!-- WARNING: Response limited to {MAX_TOKENS} tokens. Page too large even at minimum depth. \n"
+                        f"Tried approaches: {', '.join(tried_approaches)}\n"
+                        f"Please use a specific selector to target the content you need. -->\n" + html
+                    )
+
             result = {"html": html}
         else:  # browser_execute_script
             script_result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
