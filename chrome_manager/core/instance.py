@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import psutil
 import undetected_chromedriver as uc
@@ -16,6 +16,9 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
 from ..utils.config import Config
 from ..utils.exceptions import InstanceError
+
+if TYPE_CHECKING:
+    from .cdp_injector import CDPInjector
 
 
 class BrowserInstance:
@@ -31,6 +34,7 @@ class BrowserInstance:
         self._logs: list[ConsoleEntry] = []
         self._network_logs: list[NetworkEntry] = []
         self._config = config or Config()
+        self.window_monitor: "CDPInjector | None" = None
 
     async def launch(
         self,
@@ -222,6 +226,12 @@ class BrowserInstance:
 
         execute_anti_detection_scripts(driver)
 
+        # Start CDP-based monitoring for new tabs
+        from .cdp_injector import CDPInjector
+
+        self.window_monitor = CDPInjector(driver)
+        self.window_monitor.start_monitoring()
+
         return driver
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
@@ -267,6 +277,10 @@ class BrowserInstance:
     async def terminate(self, force: bool = False) -> None:
         try:
             self.status = BrowserStatus.TERMINATED
+
+            # Stop window monitoring if active
+            if self.window_monitor:
+                self.window_monitor.stop_monitoring()
 
             if self.driver:
                 try:

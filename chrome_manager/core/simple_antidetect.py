@@ -1,14 +1,15 @@
 """Simple working anti-detection scripts."""
 
+
 def inject_antidetect(driver):
     """Inject working anti-detection scripts."""
-    
+
     # Simple script that actually works - no const, no arrow functions, just ES5
     script = """
     (function() {
         // Remove webdriver
         delete navigator.webdriver;
-        
+
         // Fix H264 codec
         HTMLMediaElement.prototype.canPlayType = function(type) {
             if (!type) return '';
@@ -17,7 +18,7 @@ def inject_antidetect(driver):
             }
             return 'probably';
         };
-        
+
         // Fix createElement for video/audio
         var originalCreateElement = document.createElement;
         document.createElement = function(tagName) {
@@ -33,7 +34,7 @@ def inject_antidetect(driver):
             }
             return element;
         };
-        
+
         // Add plugins
         var pluginArray = [];
         pluginArray.push({
@@ -58,13 +59,13 @@ def inject_antidetect(driver):
             0: {type: 'application/x-nacl', suffixes: '', description: 'Native Client Executable'},
             1: {type: 'application/x-pnacl', suffixes: '', description: 'Portable Native Client Executable'}
         });
-        
+
         // Add methods to plugins
         for (var i = 0; i < pluginArray.length; i++) {
             pluginArray[i].item = function(index) { return this[index]; };
             pluginArray[i].namedItem = function() { return this[0]; };
         }
-        
+
         pluginArray.item = function(index) { return this[index]; };
         pluginArray.namedItem = function(name) {
             for (var i = 0; i < this.length; i++) {
@@ -73,13 +74,13 @@ def inject_antidetect(driver):
             return null;
         };
         pluginArray.refresh = function() {};
-        
+
         Object.defineProperty(navigator, 'plugins', {
             get: function() { return pluginArray; },
             configurable: true,
             enumerable: true
         });
-        
+
         // Add mimeTypes
         var mimeArray = [
             {type: 'application/pdf', suffixes: 'pdf', description: 'Portable Document Format'},
@@ -92,7 +93,7 @@ def inject_antidetect(driver):
             }
             return null;
         };
-        
+
         Object.defineProperty(navigator, 'mimeTypes', {
             get: function() { return mimeArray; },
             configurable: true,
@@ -100,29 +101,28 @@ def inject_antidetect(driver):
         });
     })();
     """
-    
+
     try:
         # Enable CDP
         driver.execute_cdp_cmd("Page.enable", {})
         driver.execute_cdp_cmd("Runtime.enable", {})
-        
+
         # Add script to run on EVERY new document (including new tabs)
-        result = driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-            "source": script,
-            "worldName": "",  # Empty means main world
-            "includeCommandLineAPI": False,
-            "runImmediately": True
-        })
-        
+        result = driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": script,
+                "worldName": "",  # Empty means main world
+                "includeCommandLineAPI": False,
+                "runImmediately": True,
+            },
+        )
+
         print(f"Script registered with ID: {result.get('identifier', 'unknown')}")
-        
+
         # Also execute immediately for current page
-        driver.execute_cdp_cmd("Runtime.evaluate", {
-            "expression": script,
-            "userGesture": True,
-            "awaitPromise": False
-        })
-        
+        driver.execute_cdp_cmd("Runtime.evaluate", {"expression": script, "userGesture": True, "awaitPromise": False})
+
         print("Anti-detection scripts injected successfully")
     except Exception as e:
         print(f"Failed to inject: {e}")
