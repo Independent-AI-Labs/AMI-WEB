@@ -190,7 +190,8 @@ class TestMCPBrowserOperations:
             # Decode and verify screenshot
             image_data = base64.b64decode(screenshot_data["result"]["image"])
             assert len(image_data) > 0
-            assert image_data[:8] == b"\x89PNG\r\n\x1a\n"  # PNG header
+            png_header = b"\x89PNG\r\n\x1a\n"
+            assert image_data[:8] == png_header  # PNG header
 
             # Cleanup
             await websocket.send(
@@ -296,7 +297,8 @@ class TestMCPBrowserOperations:
 
             assert script_data["success"] is True
             assert isinstance(script_data["result"]["result"], str)
-            assert len(script_data["result"]["result"]) == 6  # CAPTCHA length
+            captcha_length = 6
+            assert len(script_data["result"]["result"]) == captcha_length  # CAPTCHA length
 
             # Execute script with arguments
             script_with_args = {
@@ -439,7 +441,8 @@ class TestMCPTabManagement:
 
             assert tabs_data["success"] is True
             tabs = tabs_data["result"]["tabs"]
-            assert len(tabs) == 2
+            expected_tabs = 2
+            assert len(tabs) == expected_tabs
 
             # Switch tab
             other_tab = tabs[1] if tabs[0]["active"] else tabs[0]
@@ -556,9 +559,10 @@ class TestMCPConcurrency:
                 return client_id
 
         # Run multiple clients concurrently
-        results = await asyncio.gather(*[client_task(i) for i in range(3)])
+        num_clients = 3
+        results = await asyncio.gather(*[client_task(i) for i in range(num_clients)])
 
-        assert len(results) == 3
+        assert len(results) == num_clients
         assert results == [0, 1, 2]
 
     @pytest.mark.asyncio
@@ -609,7 +613,7 @@ class TestMCPConcurrency:
                 responses.append(json.loads(response))
 
             # Verify all succeeded
-            for i, resp in enumerate(responses):
+            for resp in responses:
                 assert resp["success"] is True
                 # Results might be in different order
 
