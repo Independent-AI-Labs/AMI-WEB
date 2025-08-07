@@ -6,13 +6,13 @@ import asyncio
 import sys
 from pathlib import Path
 
-import pytest
-from loguru import logger
-
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from tests.fixtures.test_server import HTMLTestServer
+import pytest  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 
 
 async def run_tests_with_server(args):
