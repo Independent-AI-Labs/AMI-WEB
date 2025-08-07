@@ -1,12 +1,16 @@
 """Integration tests for browser functionality."""
 
 import asyncio
+import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
 
 import pytest
 from loguru import logger
+
+# Test configuration
+HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
 
 from chrome_manager.core.instance import BrowserInstance
 from chrome_manager.core.manager import ChromeManager
@@ -64,7 +68,7 @@ def setup_module():
     # Start browser
     loop = asyncio.new_event_loop()
     _browser = BrowserInstance()
-    loop.run_until_complete(_browser.launch(headless=True))
+    loop.run_until_complete(_browser.launch(headless=HEADLESS))
 
     # Start chrome manager for pool tests
     _chrome_manager = ChromeManager()
@@ -526,8 +530,8 @@ class TestBrowserPool:
     async def test_create_multiple_instances(self):
         """Test creating multiple browser instances."""
         # Create multiple instances
-        instance1 = await _chrome_manager.get_or_create_instance(headless=True)
-        instance2 = await _chrome_manager.get_or_create_instance(headless=True)
+        instance1 = await _chrome_manager.get_or_create_instance(headless=HEADLESS)
+        instance2 = await _chrome_manager.get_or_create_instance(headless=HEADLESS)
 
         assert instance1.id != instance2.id
 
@@ -580,8 +584,8 @@ class TestBrowserPool:
             logger.info(f"Pool before parallel test: {initial_stats}")
 
             # Create instances with shorter timeout
-            instance1 = await _chrome_manager.get_or_create_instance(headless=True)
-            instance2 = await _chrome_manager.get_or_create_instance(headless=True)
+            instance1 = await _chrome_manager.get_or_create_instance(headless=HEADLESS)
+            instance2 = await _chrome_manager.get_or_create_instance(headless=HEADLESS)
 
             # Instead of navigating to actual pages (which can timeout),
             # test parallel JavaScript execution which is faster and more reliable

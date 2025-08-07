@@ -16,6 +16,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 logger.remove()
 logger.add(sys.stderr, level="INFO")
 
+# Test configuration - can be overridden by environment variable
+import os
+HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
+logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
+
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
 
@@ -50,7 +55,7 @@ async def test_server():
 async def browser():
     """Create a browser instance shared by all tests in a class."""
     instance = BrowserInstance()
-    await instance.launch(headless=True)
+    await instance.launch(headless=HEADLESS)
     logger.info(f"Browser instance {instance.id} launched for test class")
 
     # Keep only the initial tab

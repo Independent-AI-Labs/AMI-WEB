@@ -388,7 +388,27 @@ class MCPServer:
         else:
             image_data = await screenshot_ctrl.capture_viewport()
 
-        return {"image": base64.b64encode(image_data).decode("utf-8"), "format": parameters.get("format", "png")}
+        # Save screenshot to disk instead of returning base64
+        import os
+        from pathlib import Path
+        
+        # Create screenshots directory if it doesn't exist
+        screenshots_dir = Path("screenshots")
+        screenshots_dir.mkdir(exist_ok=True)
+        
+        # Generate filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshot_{instance.id[:8]}_{timestamp}.png"
+        filepath = screenshots_dir / filename
+        
+        # Save the image
+        with open(filepath, "wb") as f:
+            f.write(image_data)
+        
+        logger.info(f"Screenshot saved to {filepath}")
+        
+        return {"path": str(filepath), "format": parameters.get("format", "png")}
 
     async def _execute_input(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
         instance = await self._get_instance_or_error(parameters["instance_id"])
