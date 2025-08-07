@@ -70,11 +70,28 @@ class TestAntiDetection:
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(2)
 
+            # Get current window handle before opening new tab
+            original_handles = set(driver.window_handles)
+
             # Open second tab via window.open
             driver.execute_script("window.open('https://bot.sannysoft.com', '_blank');")
-            driver.switch_to.window(driver.window_handles[1])
+
+            # Wait for new window and switch to it
+            time.sleep(0.5)  # Give window.open time to create the tab
+            new_handles = set(driver.window_handles) - original_handles
+
+            assert len(new_handles) == 1, f"Expected 1 new window, got {len(new_handles)}"
+            new_window = new_handles.pop()
+
+            # Switch to the NEW tab specifically
+            driver.switch_to.window(new_window)
+
+            # Wait for page to load
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(3)  # Give injection time to work
+
+            # Verify we're on the right page
+            assert "bot.sannysoft.com" in driver.current_url, f"Not on correct page: {driver.current_url}"
 
             # Check second tab
             rows = driver.find_elements(By.CSS_SELECTOR, "table tr")
