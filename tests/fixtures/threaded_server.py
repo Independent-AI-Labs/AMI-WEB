@@ -109,11 +109,11 @@ class ThreadedHTMLServer:
         username = data.get("username")
         password = data.get("password")
 
-        if username == "testuser" and password == "password123":
+        if username == "testuser" and password == "password123":  # noqa: S105
             return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
         return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
 
-    async def _handle_api_data(self, request):
+    async def _handle_api_data(self, _request):
         """Handle API data requests."""
         await asyncio.sleep(0.1)  # Simulate delay
 

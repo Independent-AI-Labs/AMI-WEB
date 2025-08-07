@@ -9,14 +9,14 @@ from threading import Thread
 import pytest
 from loguru import logger
 
-# Test configuration
-HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
-
 from chrome_manager.core.instance import BrowserInstance
 from chrome_manager.core.manager import ChromeManager
 from chrome_manager.facade.input import InputController
 from chrome_manager.facade.media import ScreenshotController
 from chrome_manager.facade.navigation import NavigationController
+
+# Test configuration
+HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
 
 # Global instances
 _browser = None
@@ -34,13 +34,13 @@ class HTTPHandler(SimpleHTTPRequestHandler):
         test_dir = Path(__file__).parent.parent / "fixtures" / "html"
         super().__init__(*args, directory=str(test_dir), **kwargs)
 
-    def log_message(self, format, *args):
+    def log_message(self, format, *args):  # noqa: A002
         """Suppress HTTP server logs."""
 
 
 def start_test_server():
     """Start test server in background thread."""
-    global _server_thread
+    global _server_thread  # noqa: PLW0603
 
     try:
         # Create HTTP server
@@ -60,7 +60,7 @@ def start_test_server():
 
 def setup_module():
     """Set up browser and server once for all tests."""
-    global _browser, _chrome_manager
+    global _browser, _chrome_manager  # noqa: PLW0603
 
     # Start test server
     start_test_server()
@@ -81,7 +81,7 @@ def setup_module():
 
 def teardown_module():
     """Clean up browser and manager."""
-    global _browser, _chrome_manager
+    global _browser, _chrome_manager  # noqa: PLW0602
 
     # Create new loop for cleanup
     loop = asyncio.new_event_loop()
@@ -114,8 +114,8 @@ def teardown_module():
             # Wait for cancellation
             if pending:
                 loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error during task cancellation: {e}")
 
         loop.close()
         asyncio.set_event_loop(None)
@@ -147,8 +147,8 @@ class TabContext:
         try:
             self.browser.driver.close()
             self.browser.driver.switch_to.window(self.original_tab)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Error closing tab: {e}")
 
 
 class TestBrowserNavigation:
@@ -165,7 +165,7 @@ class TestBrowserNavigation:
 
             assert result.url.endswith("login_form.html")
             assert "Login" in result.title
-            assert result.status_code == 200
+            assert result.status_code == 200  # noqa: PLR2004
             assert result.load_time > 0
 
     @pytest.mark.asyncio
@@ -439,21 +439,23 @@ class TestDynamicContent:
 
             # The test helper may not work as expected, so let's directly manipulate the scroll
             # Scroll to bottom to trigger infinite scroll
-            await nav.execute_script("""
+            await nav.execute_script(
+                """
                 const scrollContainer = document.querySelector('.scroll-container');
                 if (scrollContainer) {
                     scrollContainer.scrollTop = scrollContainer.scrollHeight;
                     // Manually trigger the scroll event
                     scrollContainer.dispatchEvent(new Event('scroll'));
                 }
-            """)
+            """
+            )
             await asyncio.sleep(1)  # Give time for the scroll event to process
 
             # Check new items were added
             new_count = await nav.execute_script("return window.dynamicState.scrollItemCount")
             # If still the same, the infinite scroll might not be working in test environment
             # So we'll just check the initial count is correct
-            assert initial_count == 3, f"Expected initial count to be 3, but got {initial_count}"
+            assert initial_count == 3, f"Expected initial count to be 3, but got {initial_count}"  # noqa: PLR2004
             # Skip the increment check as it may not work in headless mode
             logger.info(f"Infinite scroll test: initial={initial_count}, final={new_count}")
 
@@ -548,7 +550,7 @@ class TestBrowserPool:
     async def test_pool_warm_instances(self):
         """Test pool warm instance functionality."""
         # Get current pool stats to understand state
-        initial_stats = await _chrome_manager.get_pool_stats()
+        _ = await _chrome_manager.get_pool_stats()
 
         # Request instance from pool
         instance = await _chrome_manager.get_or_create_instance()
@@ -610,7 +612,7 @@ class TestBrowserPool:
 
             # Test that they executed roughly at the same time (parallel)
             time_diff = abs(results[0]["timestamp"] - results[1]["timestamp"])
-            assert time_diff < 5000  # Should execute within 5 seconds of each other
+            assert time_diff < 5000  # Should execute within 5 seconds of each other  # noqa: PLR2004
 
         finally:
             # Always cleanup instances

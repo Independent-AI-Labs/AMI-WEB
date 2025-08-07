@@ -87,9 +87,9 @@ class ScreenshotController:
             else:
                 # Normal async operation
                 loop = asyncio.get_event_loop()
-                screenshot_base64: str = await loop.run_in_executor(None, lambda: element.screenshot_as_base64)
+                element_screenshot_base64: str = await loop.run_in_executor(None, lambda: element.screenshot_as_base64)
 
-                screenshot_bytes = base64.b64decode(screenshot_base64)
+                screenshot_bytes = base64.b64decode(element_screenshot_base64)
 
                 if image_format != ImageFormat.PNG:
                     screenshot_bytes = await self._convert_image(screenshot_bytes, image_format, quality)

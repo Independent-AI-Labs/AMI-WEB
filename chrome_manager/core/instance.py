@@ -175,12 +175,11 @@ class BrowserInstance:
                     try:
                         # Kill via service
                         service = getattr(self.driver, "service", None)
-                        if service and hasattr(service, "process") and service.process:
+                        if service and hasattr(service, "process") and service.process and service.process.poll() is None:
+                            service.process.terminate()
+                            await asyncio.sleep(0.1)
                             if service.process.poll() is None:
-                                service.process.terminate()
-                                await asyncio.sleep(0.1)
-                                if service.process.poll() is None:
-                                    service.process.kill()
+                                service.process.kill()
 
                         # Kill via psutil process
                         if self.process and self.process.is_running():

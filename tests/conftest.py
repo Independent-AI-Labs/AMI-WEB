@@ -1,6 +1,8 @@
 """Pytest configuration and shared fixtures."""
 
 import atexit
+import contextlib
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,20 +14,20 @@ from loguru import logger
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from chrome_manager.core.instance import BrowserInstance  # noqa: E402
+from chrome_manager.core.manager import ChromeManager  # noqa: E402
+from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
+
 # Configure logging
 logger.remove()
 logger.add(sys.stderr, level="INFO")
 
 # Test configuration - can be overridden by environment variable
-import os
-HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
+HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
 logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
-
-from chrome_manager.core.instance import BrowserInstance
-from tests.fixtures.test_server import HTMLTestServer
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -82,8 +84,6 @@ async def browser():
 @pytest_asyncio.fixture(scope="class")
 async def chrome_manager():
     """Create a Chrome manager for testing - one per test class."""
-    from chrome_manager.core.manager import ChromeManager
-
     manager = ChromeManager()
     await manager.start()
 
@@ -124,24 +124,19 @@ def pytest_configure(config):
 
 def cleanup_processes():
     """Kill any remaining browser or server processes."""
-    try:
+    with contextlib.suppress(Exception):
         # Only log if logger is still available
         logger.info("Cleaning up browser and server processes")
-    except:
-        pass
-    
-    try:
+
+    with contextlib.suppress(Exception):
         if sys.platform == "win32":
-            # Kill Chrome and ChromeDriver processes on Windows  
-            import os
-            os.system("taskkill /F /IM chrome.exe 2>nul")
-            os.system("taskkill /F /IM chromedriver.exe 2>nul")
+            # Kill Chrome and ChromeDriver processes on Windows
+            os.system("taskkill /F /IM chrome.exe 2>nul")  # noqa: S605
+            os.system("taskkill /F /IM chromedriver.exe 2>nul")  # noqa: S605
         else:
             # Kill Chrome and ChromeDriver processes on Unix
-            subprocess.run(["pkill", "-f", "chrome"], capture_output=True)
-            subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True)
-    except:
-        pass  # Ignore errors during cleanup
+            subprocess.run(["pkill", "-f", "chrome"], capture_output=True, check=False)
+            subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True, check=False)
 
 
 # Register cleanup at exit
