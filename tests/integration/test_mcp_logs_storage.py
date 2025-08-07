@@ -19,6 +19,74 @@ class TestMCPLogsAndStorage:
     """Test MCP logs and storage operations."""
 
     @pytest.mark.asyncio
+    async def test_get_html(self, mcp_server, test_html_server):  # noqa: F811
+        """Test retrieving raw HTML via MCP."""
+        async with websockets.connect("ws://localhost:8766") as websocket:
+            await websocket.recv()  # Skip capabilities
+
+            # Launch browser
+            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}))
+            response = await websocket.recv()
+            instance_id = json.loads(response)["result"]["instance_id"]
+
+            # Navigate to a page
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "tool",
+                        "tool": "browser_navigate",
+                        "parameters": {"instance_id": instance_id, "url": f"{test_html_server}/login_form.html"},
+                        "request_id": str(uuid.uuid4()),
+                    }
+                )
+            )
+            await websocket.recv()
+
+            # Get full page HTML
+            await websocket.send(
+                json.dumps({"type": "tool", "tool": "browser_get_html", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
+            )
+            response = await websocket.recv()
+            data = json.loads(response)
+
+            assert data["success"] is True
+            assert "html" in data["result"]
+            html = data["result"]["html"]
+
+            # Verify it's actual HTML
+            assert "<html" in html.lower()
+            assert "<body" in html.lower()
+            assert "Login Form" in html  # Page title
+            assert 'id="username"' in html  # Form element
+
+            # Get HTML of specific element
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "tool",
+                        "tool": "browser_get_html",
+                        "parameters": {"instance_id": instance_id, "selector": "#login-form"},
+                        "request_id": str(uuid.uuid4()),
+                    }
+                )
+            )
+            response = await websocket.recv()
+            data = json.loads(response)
+
+            assert data["success"] is True
+            element_html = data["result"]["html"]
+
+            # Verify we got just the form HTML
+            assert 'id="username"' in element_html
+            assert 'id="password"' in element_html
+            assert "<html" not in element_html.lower()  # Should not have the full page
+
+            # Cleanup
+            await websocket.send(
+                json.dumps({"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": str(uuid.uuid4())})
+            )
+
+    @pytest.mark.asyncio
     async def test_console_logs(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving console logs via MCP."""
         async with websockets.connect("ws://localhost:8766") as websocket:
