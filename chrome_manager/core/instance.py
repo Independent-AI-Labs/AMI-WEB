@@ -10,6 +10,7 @@ from loguru import logger
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.service import utils
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
@@ -37,15 +38,21 @@ class BrowserInstance:
         profile: str | None = None,
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
+        anti_detect: bool = False,
     ) -> WebDriver:
         try:
             self.status = BrowserStatus.STARTING
             self._options = options or ChromeOptions()
+            self._anti_detect = anti_detect
 
-            chrome_options = self._build_chrome_options(headless=headless, profile=profile, extensions=extensions or [])
+            chrome_options = self._build_chrome_options(headless=headless, profile=profile, extensions=extensions or [], anti_detect=anti_detect)
 
-            # Use standard driver with our ChromeDriver 141
-            self.driver = await self._launch_standard(chrome_options)
+            if anti_detect:
+                # Use undetected mode with patched ChromeDriver
+                self.driver = await self._launch_undetected_mode(chrome_options)
+            else:
+                # Use standard driver with our ChromeDriver 141
+                self.driver = await self._launch_standard(chrome_options)
 
             if self.driver and hasattr(self.driver, "service") and self.driver.service.process:  # type: ignore[attr-defined]
                 self.process = psutil.Process(self.driver.service.process.pid)  # type: ignore[attr-defined]
@@ -80,11 +87,32 @@ class BrowserInstance:
         if self._options.disable_dev_shm_usage:
             chrome_options.add_argument("--disable-dev-shm-usage")
 
-    def _build_chrome_options(self, headless: bool, profile: str | None, extensions: list[str]) -> Options:
+    def _apply_anti_detection_options(self, chrome_options: Options) -> None:
+        """Apply anti-detection options to Chrome."""
+        from .antidetect import get_anti_detection_arguments, get_anti_detection_experimental_options
+
+        # Add anti-detection arguments
+        for arg in get_anti_detection_arguments():
+            chrome_options.add_argument(arg)
+
+        # Add experimental options for anti-detection
+        exp_options = get_anti_detection_experimental_options()
+        for key, value in exp_options.items():
+            if key != "prefs":
+                chrome_options.add_experimental_option(key, value)
+
+        # Add anti-detection prefs
+        if "prefs" in exp_options:
+            chrome_options.add_experimental_option("prefs", exp_options["prefs"])
+
+    def _build_chrome_options(self, headless: bool, profile: str | None, extensions: list[str], anti_detect: bool = False) -> Options:
         chrome_options = Options()
 
-        self._add_basic_options(chrome_options, headless)
-        self._add_conditional_options(chrome_options)
+        if anti_detect:
+            self._apply_anti_detection_options(chrome_options)
+        else:
+            self._add_basic_options(chrome_options, headless)
+            self._add_conditional_options(chrome_options)
 
         # Disable features that cause GCM/sync errors and slow down tests
         chrome_options.add_argument("--disable-background-networking")
@@ -131,6 +159,53 @@ class BrowserInstance:
             if chrome_path.exists():
                 chrome_options.binary_location = str(chrome_path)
         return await loop.run_in_executor(None, lambda: uc.Chrome(options=chrome_options, version_main=None, use_subprocess=True, driver_executable_path=None))
+
+    async def _launch_undetected_mode(self, chrome_options: Options) -> WebDriver:
+        """Launch Chrome with anti-detection features."""
+        loop = asyncio.get_event_loop()
+
+        # Get Chrome and ChromeDriver paths
+        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
+        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path")
+
+        # Set Chrome binary location
+        if chrome_binary_path and Path(chrome_binary_path).exists():
+            chrome_options.binary_location = str(chrome_binary_path)
+
+        # Patch ChromeDriver if needed
+        patched_driver_path = chromedriver_path
+        if chromedriver_path and Path(chromedriver_path).exists():
+            from .antidetect import ChromeDriverPatcher
+
+            patcher = ChromeDriverPatcher(chromedriver_path)
+            if not patcher.is_patched():
+                logger.info("Patching ChromeDriver for anti-detection...")
+                if patcher.patch():
+                    patched_driver_path = str(patcher.get_patched_path())
+                    logger.info(f"Using patched ChromeDriver: {patched_driver_path}")
+            else:
+                patched_driver_path = str(patcher.get_patched_path())
+
+        # Set up remote debugging
+        debug_port = utils.free_port()
+        chrome_options.add_argument(f"--remote-debugging-port={debug_port}")
+        chrome_options.add_argument("--remote-debugging-host=127.0.0.1")
+
+        # Create service with patched ChromeDriver
+        if patched_driver_path and Path(patched_driver_path).exists():
+            service = Service(executable_path=patched_driver_path)
+        else:
+            raise InstanceError("ChromeDriver path not found for anti-detection mode")
+
+        # Launch Chrome
+        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+
+        # Execute additional anti-detection scripts
+        from .antidetect import execute_anti_detection_scripts
+
+        execute_anti_detection_scripts(driver)
+
+        return driver
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
         loop = asyncio.get_event_loop()
