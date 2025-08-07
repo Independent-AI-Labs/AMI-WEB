@@ -212,8 +212,20 @@ def execute_anti_detection_scripts(driver) -> None:
         with script_path.open("r", encoding="utf-8") as f:
             script_content = f.read()
 
-        # Enable Target domain to track all new tabs/windows
-        driver.execute_cdp_cmd("Target.setAutoAttach", {"autoAttach": True, "waitForDebuggerOnStart": False, "flatten": True})
+        # Enable Target domain to track all new tabs/windows with better settings
+        driver.execute_cdp_cmd(
+            "Target.setAutoAttach",
+            {
+                "autoAttach": True,
+                "waitForDebuggerOnStart": True,  # Wait so we can inject
+                "flatten": True,
+                "filter": [{"type": "page", "exclude": False}],  # Only attach to pages
+            },
+        )
+
+        # Enable Runtime and Page domains
+        driver.execute_cdp_cmd("Runtime.enable", {})
+        driver.execute_cdp_cmd("Page.enable", {})
 
         # Inject script on main page
         driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script_content})
@@ -224,25 +236,10 @@ def execute_anti_detection_scripts(driver) -> None:
         except Exception:
             logger.debug("Script injection failed on current page (likely about:blank)")
 
-        logger.debug("Complete anti-detection script injected")
+        logger.debug("Complete anti-detection script injected into main target")
 
-        # Set up listener for new targets (tabs/windows)
-        def inject_on_new_target(target_info):
-            """Inject scripts into new tabs/windows"""
-            try:
-                target_id = target_info.get("targetId")
-                if target_id:
-                    # Attach to the new target
-                    session_id = driver.execute_cdp_cmd("Target.attachToTarget", {"targetId": target_id, "flatten": True}).get("sessionId")
-
-                    if session_id:
-                        # Inject script into the new target
-                        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script_content}, session_id=session_id)
-            except Exception:
-                logger.debug("Failed to inject into new target (might not be a page)")
-
-        # Note: Can't directly set up CDP event listeners in Selenium,
-        # but the flatten: true option should help with new tabs
+        # Store the script in driver for later use
+        driver._antidetect_script = script_content
 
     except Exception as e:
         logger.warning(f"Failed to inject complete anti-detection script: {e}")

@@ -96,3 +96,14 @@ The user has made it EXTREMELY clear that:
 This is not a suggestion - this is a REQUIREMENT.
 
 P.S. NEVER ADD SHIT LIKE 2>nul TO SHELL COMMANDS!!! This creates a write-protected file in the repo...
+
+COMMIT!!! COMMIT!! COMMIT!! COMMIT AS OFTEN AS YOU CAN!!!
+
+I FORBID YOU TO PUT JS IN PYTHON
+
+SEPARATE JS FILES - LINTED ALWAYS!!!!!!!!!
+
+NO FUCKING EXCEPTION SWALLOWING ALWAYS LOG THEM OR PROPAGATE
+
+
+
