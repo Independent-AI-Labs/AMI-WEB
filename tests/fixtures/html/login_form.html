@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Form Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .remember-me input {
+            margin-right: 0.5rem;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #e53e3e;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+        .success-message {
+            color: #38a169;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+        .links {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .links a:hover {
+            text-decoration: underline;
+        }
+        #login-status {
+            text-align: center;
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2 id="login-title">Login</h2>
+        <form id="login-form" action="/login" method="POST">
+            <div class="form-group">
+                <label for="username">Username or Email</label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="Enter your username" 
+                       data-testid="username-input">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="Enter your password"
+                       data-testid="password-input">
+            </div>
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember" data-testid="remember-checkbox">
+                <label for="remember">Remember me</label>
+            </div>
+            <button type="submit" id="submit-btn" data-testid="submit-button">Login</button>
+            <div id="error-message" class="error-message" data-testid="error-message"></div>
+            <div id="success-message" class="success-message" data-testid="success-message"></div>
+        </form>
+        <div class="links">
+            <a href="#" id="forgot-password" data-testid="forgot-password-link">Forgot Password?</a>
+            <span> | </span>
+            <a href="#" id="register" data-testid="register-link">Register</a>
+        </div>
+        <div id="login-status" data-testid="login-status"></div>
+    </div>
+
+    <script>
+        // Track form interactions for testing
+        window.formInteractions = {
+            submitCount: 0,
+            focusedFields: [],
+            lastSubmittedData: null,
+            validationErrors: []
+        };
+
+        // Add focus tracking
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('focus', function() {
+                if (!window.formInteractions.focusedFields.includes(this.id)) {
+                    window.formInteractions.focusedFields.push(this.id);
+                }
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('error-message');
+            const successMsg = document.getElementById('success-message');
+            const loginStatus = document.getElementById('login-status');
+            
+            // Clear previous messages
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            errorMsg.textContent = '';
+            successMsg.textContent = '';
+            
+            // Track submission
+            window.formInteractions.submitCount++;
+            window.formInteractions.lastSubmittedData = {
+                username: username,
+                password: password,
+                remember: remember,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Validate
+            const errors = [];
+            if (username.length < 3) {
+                errors.push('Username must be at least 3 characters');
+            }
+            if (password.length < 6) {
+                errors.push('Password must be at least 6 characters');
+            }
+            
+            window.formInteractions.validationErrors = errors;
+            
+            if (errors.length > 0) {
+                errorMsg.textContent = errors.join('. ');
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            // Simulate login process
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+            
+            setTimeout(() => {
+                // Simulate successful login for specific credentials
+                if (username === 'testuser' && password === 'password123') {
+                    successMsg.textContent = 'Login successful! Redirecting...';
+                    successMsg.style.display = 'block';
+                    loginStatus.textContent = 'Status: Logged in as ' + username;
+                    loginStatus.style.color = '#38a169';
+                    
+                    // Store in sessionStorage for testing
+                    sessionStorage.setItem('loggedInUser', username);
+                    sessionStorage.setItem('loginTime', new Date().toISOString());
+                    
+                    // Simulate redirect
+                    setTimeout(() => {
+                        window.location.hash = '#dashboard';
+                    }, 1500);
+                } else {
+                    errorMsg.textContent = 'Invalid username or password';
+                    errorMsg.style.display = 'block';
+                    loginStatus.textContent = 'Status: Login failed';
+                    loginStatus.style.color = '#e53e3e';
+                }
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }, 1000);
+        });
+
+        // Handle forgot password link
+        document.getElementById('forgot-password').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-title').textContent = 'Password Reset';
+            document.getElementById('login-status').textContent = 'Password reset form would appear here';
+        });
+
+        // Handle register link
+        document.getElementById('register').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-title').textContent = 'Register';
+            document.getElementById('login-status').textContent = 'Registration form would appear here';
+        });
+
+        // Expose test helpers
+        window.testHelpers = {
+            fillForm: function(username, password) {
+                document.getElementById('username').value = username;
+                document.getElementById('password').value = password;
+            },
+            submitForm: function() {
+                document.getElementById('login-form').dispatchEvent(new Event('submit'));
+            },
+            getFormData: function() {
+                return {
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                    remember: document.getElementById('remember').checked
+                };
+            },
+            resetForm: function() {
+                document.getElementById('login-form').reset();
+                document.getElementById('error-message').style.display = 'none';
+                document.getElementById('success-message').style.display = 'none';
+                document.getElementById('login-status').textContent = '';
+            }
+        };
+    </script>
+</body>
+</html>
