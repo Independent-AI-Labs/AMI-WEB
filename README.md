@@ -247,5 +247,3 @@ Built with:
 **⭐ Star us on GitHub if this helps you bypass bot detection!**
 
 **🐛 Found a detection issue? Open an issue with the site URL!**
-
-**💬 Join our Discord for tips and tricks!**
