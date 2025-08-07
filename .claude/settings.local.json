@@ -20,7 +20,13 @@
       "Bash(ruff format:*)",
       "Bash(git reset:*)",
       "Bash(git rm:*)",
-      "Bash(git update-ref:*)"
+      "Bash(git update-ref:*)",
+      "Bash(python run_integration_tests.py:*)",
+      "Bash(python test_basic_chrome.py)",
+      "Bash(python test:*)",
+      "Bash(python -m pytest tests/integration/test_browser_integration.py::TestBrowserNavigation::test_navigate_to_page -v)",
+      "Bash(python:*)",
+      "Bash(true)"
     ],
     "deny": []
   }
