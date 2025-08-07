@@ -9,7 +9,7 @@ import pytest
 import websockets
 
 # Import the MCP server fixture from test_mcp_server
-from tests.integration.test_mcp_server import mcp_server, test_html_server  # noqa: F401
+from tests.integration.test_mcp_server import mcp_server  # noqa: F401
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
