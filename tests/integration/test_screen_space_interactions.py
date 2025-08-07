@@ -5,24 +5,22 @@ import asyncio
 import pytest
 import pytest_asyncio
 
-pytestmark = pytest.mark.skip(reason="All tests hang due to navigation in thread context - needs refactoring")
-
 from chrome_manager.core.instance import BrowserInstance
 from chrome_manager.facade.input import InputController
 from chrome_manager.facade.navigation import NavigationController
-from tests.fixtures.test_server import HTMLTestServer
+from tests.fixtures.threaded_server import ThreadedHTMLServer
 
 
 @pytest_asyncio.fixture
-async def test_server():
+def test_server():
     """Start test HTTP server for the test."""
     import random
     # Use random port to avoid conflicts
     port = random.randint(9000, 9999)
-    server = HTMLTestServer(port=port)
-    base_url = await server.start()
+    server = ThreadedHTMLServer(port=port)
+    base_url = server.start()  # Synchronous start for threaded server
     yield base_url
-    await server.stop()
+    server.stop()  # Synchronous stop
 
 
 @pytest_asyncio.fixture
@@ -61,12 +59,13 @@ class TestScreenSpaceClicks:
 
         # Check if click was registered
         await asyncio.sleep(0.5)
-        error_shown = await nav.execute_script(
+        status = await nav.execute_script(
             """
-            return document.querySelector('#text-captcha-error').style.display === 'block';
+            const status = document.querySelector('#status');
+            return status ? status.textContent : null;
         """
         )
-        assert error_shown is True  # Should show error because no text entered
+        assert status == 'Incorrect text. Please try again.'  # Should show error because no text entered
 
     @pytest.mark.asyncio
     async def test_double_click_at_coordinates(self, browser_instance, test_server):
