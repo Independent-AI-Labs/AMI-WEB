@@ -54,3 +54,5 @@ config.local.yaml
 .coverage
 htmlcov/
 .pytest_cache/
+
+nul

@@ -68,7 +68,7 @@ class Config:
                     "executable_path": None,
                     "default_headless": True,
                     "default_window_size": [1920, 1080],
-                    "user_agent": None
+                    "user_agent": None,
                 },
                 "pool": {"min_instances": 1, "max_instances": 10, "warm_instances": 2, "instance_ttl": 3600, "health_check_interval": 30},
                 "performance": {"max_memory_per_instance": 512, "max_cpu_per_instance": 25, "page_load_timeout": 30, "script_timeout": 10},
