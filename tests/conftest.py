@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from chrome_manager.core.instance import BrowserInstance  # noqa: E402
 from chrome_manager.core.manager import ChromeManager  # noqa: E402
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
+from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
 # Configure logging
 logger.remove()
@@ -28,6 +29,15 @@ logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
+
+
+@pytest.fixture(scope="session")
+def test_html_server():
+    """Start test HTML server in a separate thread for all tests."""
+    server = ThreadedHTMLServer(port=8889)
+    base_url = server.start()  # Starts in thread
+    yield base_url
+    server.stop()  # Stops the thread
 
 
 @pytest_asyncio.fixture(scope="session")
