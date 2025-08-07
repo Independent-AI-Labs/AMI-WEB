@@ -1,0 +1,19 @@
+{
+  "env": {
+    "browser": true,
+    "es5": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 5
+  },
+  "rules": {
+    "no-var": "off",
+    "prefer-const": "off",
+    "prefer-arrow-callback": "off",
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "no-empty": "off",
+    "no-redeclare": "off"
+  }
+}

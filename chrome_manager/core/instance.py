@@ -118,6 +118,7 @@ class BrowserInstance:
 
         if anti_detect:
             self._apply_anti_detection_options(chrome_options)
+            # Extension now ONLY removes webdriver flag - no conflicts
             self._add_antidetect_extension(chrome_options)
             # Don't disable GPU features in anti-detect mode - WebGL needs them
             # Also add headless check for anti-detect mode
@@ -214,7 +215,14 @@ class BrowserInstance:
             raise InstanceError("ChromeDriver path not found for anti-detection mode")
 
         # Launch Chrome
-        return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+
+        # Apply anti-detection scripts via CDP BEFORE any navigation
+        from .antidetect import execute_anti_detection_scripts
+
+        execute_anti_detection_scripts(driver)
+
+        return driver
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
         loop = asyncio.get_event_loop()

@@ -1,12 +1,12 @@
 /* eslint-env browser */
 
-// Content script - injects our anti-detection code into the page
-// This runs at document_start before any page scripts
+// MINIMAL content script - ONLY injects webdriver removal
+// ALL OTHER SPOOFING IS DONE VIA CDP
 
 (function() {
     'use strict';
     
-    // Create a script element to inject our code into the page context
+    // Inject ONLY the webdriver removal script
     var script = document.createElement('script');
     script.src = chrome.runtime.getURL('inject.js');
     script.onload = function() {
@@ -15,5 +15,4 @@
     
     // Inject as early as possible
     (document.head || document.documentElement).appendChild(script);
-    // Empty - all logic is in inject.js
 })();

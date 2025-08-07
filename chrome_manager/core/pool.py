@@ -124,7 +124,8 @@ class InstancePool:
     async def _create_instance(self, options: ChromeOptions | None = None) -> BrowserInstance:
         instance = BrowserInstance(config=self._config)
         opts = options or ChromeOptions()
-        await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts)
+        # Always enable anti-detect for pooled instances
+        await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=True)
         return instance
 
     async def _wait_for_instance(self, timeout: int, options: ChromeOptions | None) -> BrowserInstance:
