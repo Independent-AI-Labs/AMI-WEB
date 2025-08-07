@@ -7,16 +7,18 @@ from datetime import datetime
 from loguru import logger
 
 from ..models.browser import ChromeOptions
+from ..utils.config import Config
 from .instance import BrowserInstance
 
 
 class InstancePool:
-    def __init__(self, min_instances: int = 1, max_instances: int = 10, warm_instances: int = 2, instance_ttl: int = 3600, health_check_interval: int = 30):
+    def __init__(self, min_instances: int = 1, max_instances: int = 10, warm_instances: int = 2, instance_ttl: int = 3600, health_check_interval: int = 30, config: Config | None = None):
         self.min_instances = min_instances
         self.max_instances = max_instances
         self.warm_instances = warm_instances
         self.instance_ttl = instance_ttl
         self.health_check_interval = health_check_interval
+        self._config = config or Config()
 
         self.available: deque[BrowserInstance] = deque()
         self.in_use: dict[str, BrowserInstance] = {}
@@ -34,11 +36,26 @@ class InstancePool:
 
     async def shutdown(self):
         logger.info("Shutting down instance pool")
-        if self._health_check_task:
-            self._health_check_task.cancel()
-        if self._warmup_task:
-            self._warmup_task.cancel()
 
+        # Cancel background tasks properly
+        tasks_to_cancel = []
+
+        if self._health_check_task and not self._health_check_task.done():
+            self._health_check_task.cancel()
+            tasks_to_cancel.append(self._health_check_task)
+
+        if self._warmup_task and not self._warmup_task.done():
+            self._warmup_task.cancel()
+            tasks_to_cancel.append(self._warmup_task)
+
+        # Wait for all tasks to actually cancel
+        if tasks_to_cancel:
+            await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+
+        self._health_check_task = None
+        self._warmup_task = None
+
+        # Terminate all instances
         for instance in self.all_instances.values():
             await instance.terminate()
 
@@ -71,8 +88,11 @@ class InstancePool:
         async with self._lock:
             instance = self.in_use.pop(instance_id, None)
             if not instance:
-                logger.warning(f"Instance {instance_id} not found in use")
-                return
+                # Try to find in all_instances if not in use
+                instance = self.all_instances.get(instance_id)
+                if not instance:
+                    logger.warning(f"Instance {instance_id} not found in pool")
+                    return
 
             if await self._is_healthy(instance):
                 self.available.append(instance)
@@ -92,7 +112,7 @@ class InstancePool:
         return None
 
     async def _create_instance(self, options: ChromeOptions | None = None) -> BrowserInstance:
-        instance = BrowserInstance()
+        instance = BrowserInstance(config=self._config)
         opts = options or ChromeOptions()
         await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts)
         return instance

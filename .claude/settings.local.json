@@ -26,7 +26,15 @@
       "Bash(python test:*)",
       "Bash(python -m pytest tests/integration/test_browser_integration.py::TestBrowserNavigation::test_navigate_to_page -v)",
       "Bash(python:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(taskkill:*)",
+      "Bash(powershell:*)",
+      "Bash(.chromedriver.exe --version)",
+      "Bash(cmd /c:*)",
+      "Bash(pytest:*)",
+      "Bash(pip show:*)",
+      "Bash(conda activate:*)",
+      "Bash(git config:*)"
     ],
     "deny": []
   }
