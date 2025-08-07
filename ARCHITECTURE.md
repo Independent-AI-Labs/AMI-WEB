@@ -20,39 +20,66 @@ AMI-WEB is a sophisticated Chrome automation platform built with a layered archi
 
 ### High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     External Clients                         │
-│         (AI Agents, Web Apps, Testing Frameworks)           │
-└────────────────┬─────────────────────────────────────────────┘
-                 │ WebSocket Protocol
-┌────────────────▼─────────────────────────────────────────────┐
-│                    MCP Server Layer                          │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ WebSocket Handler | Tool Registry | Event Emitter   │    │
-│  └─────────────────────────────────────────────────────┘    │
-└────────────────┬─────────────────────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────────────────────┐
-│                 Chrome Manager (Orchestration)               │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Instance Pool | Session Manager | Health Monitor    │    │
-│  └─────────────────────────────────────────────────────┘    │
-└────────────────┬─────────────────────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────────────────────┐
-│              Browser Instance (Core Engine)                  │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ WebDriver | CDP Client | Anti-Detect | Tab Manager  │    │
-│  └─────────────────────────────────────────────────────┘    │
-└────────────────┬─────────────────────────────────────────────┘
-                 │
-┌────────────────▼─────────────────────────────────────────────┐
-│                   Facade Controllers                         │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ Navigation | Input | Screenshot | DevTools | Media  │    │
-│  └─────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "External Layer"
+        Clients["External Clients<br/>AI Agents, Web Apps, Testing Frameworks"]
+    end
+    
+    subgraph "MCP Server Layer"
+        MCP[MCP Server]
+        WSHandler[WebSocket Handler]
+        ToolReg[Tool Registry]  
+        EventEmit[Event Emitter]
+        MCP --- WSHandler
+        MCP --- ToolReg
+        MCP --- EventEmit
+    end
+    
+    subgraph "Orchestration Layer"
+        CM[Chrome Manager]
+        Pool[Instance Pool]
+        SessionMgr[Session Manager]
+        HealthMon[Health Monitor]
+        CM --- Pool
+        CM --- SessionMgr
+        CM --- HealthMon
+    end
+    
+    subgraph "Core Engine"
+        BI[Browser Instance]
+        WebDriver[Selenium WebDriver]
+        CDP[CDP Client]
+        AntiDetect[Anti-Detect System]
+        TabMgr[Tab Manager]
+        BI --- WebDriver
+        BI --- CDP
+        BI --- AntiDetect
+        BI --- TabMgr
+    end
+    
+    subgraph "Facade Layer"
+        Nav[Navigation Controller]
+        Input[Input Controller]
+        Screen[Screenshot Controller]
+        DevTools[DevTools Controller]
+        Media[Media Controller]
+    end
+    
+    Clients ==>|WebSocket Protocol| MCP
+    MCP ==>|Commands| CM
+    CM ==>|Manages| BI
+    BI ==>|Uses| Nav
+    BI ==>|Uses| Input
+    BI ==>|Uses| Screen
+    BI ==>|Uses| DevTools
+    BI ==>|Uses| Media
+    
+    style Clients fill:#e1f5fe
+    style MCP fill:#fff3e0
+    style CM fill:#f3e5f5
+    style BI fill:#e8f5e9
+    style Nav fill:#fce4ec
 ```
 
 ## Core Components
@@ -109,11 +136,34 @@ Efficient resource pooling for browser instances.
 - **Health Check Interval**: Periodic validation frequency
 
 **Pool Algorithm:**
-1. Check for available warm instance
-2. If none available, create new instance (if under max)
-3. If at max capacity, queue request or reject
-4. Return instance to pool after use
-5. Periodic cleanup of stale instances
+
+```mermaid
+flowchart TD
+    Start([Request Instance]) --> CheckWarm{Warm Instance<br/>Available?}
+    CheckWarm -->|Yes| ReturnWarm[Return Warm Instance]
+    CheckWarm -->|No| CheckMax{Under Max<br/>Capacity?}
+    CheckMax -->|Yes| CreateNew[Create New Instance]
+    CheckMax -->|No| CheckQueue{Queue<br/>Enabled?}
+    CheckQueue -->|Yes| QueueRequest[Queue Request]
+    CheckQueue -->|No| RejectRequest[Reject Request]
+    CreateNew --> ReturnInstance[Return Instance]
+    QueueRequest --> WaitQueue[Wait in Queue]
+    WaitQueue --> CheckWarm
+    ReturnWarm --> UseInstance[Use Instance]
+    ReturnInstance --> UseInstance
+    UseInstance --> ReturnPool[Return to Pool]
+    ReturnPool --> Cleanup{Cleanup<br/>Needed?}
+    Cleanup -->|Yes| CleanStale[Clean Stale Instances]
+    Cleanup -->|No| End([End])
+    CleanStale --> End
+    RejectRequest --> End
+    
+    style Start fill:#e8f5e9
+    style End fill:#ffebee
+    style ReturnWarm fill:#fff3e0
+    style CreateNew fill:#e3f2fd
+    style RejectRequest fill:#ffcdd2
+```
 
 ### 4. Facade Controllers
 
@@ -237,6 +287,23 @@ class SimpleTabInjector:
             time.sleep(0.02)  # 20ms polling interval
 ```
 
+```mermaid
+flowchart LR
+    subgraph "Tab Monitoring System"
+        Monitor[Monitor Thread] -->|20ms interval| Check{New Tab?}
+        Check -->|Yes| Switch[Switch to Tab]
+        Check -->|No| Monitor
+        Switch --> Inject[Inject Script]
+        Inject --> CDP[CDP Evaluate]
+        CDP --> Success[Tab Protected]
+        Success --> Monitor
+    end
+    
+    style Monitor fill:#e3f2fd
+    style Inject fill:#fff3e0
+    style Success fill:#e8f5e9
+```
+
 ### Detection Tests Passed
 
 ✅ **bot.sannysoft.com** - All tests pass:
@@ -328,6 +395,57 @@ async def get_html_with_token_limit(html):
 
 ## Design Patterns
 
+```mermaid
+classDiagram
+    class ChromeManager {
+        +initialize()
+        +get_or_create_instance()
+        +terminate_instance()
+        +shutdown()
+    }
+    
+    class BrowserInstance {
+        +launch()
+        +navigate()
+        +execute_script()
+        +terminate()
+    }
+    
+    class InstancePool {
+        +acquire()
+        +release()
+        +cleanup()
+        -warm_instances[]
+    }
+    
+    class NavigationController {
+        <<Facade>>
+        +navigate()
+        +wait_for_element()
+        +extract_text()
+    }
+    
+    class ScreenshotStrategy {
+        <<Interface>>
+        +capture()
+    }
+    
+    class ViewportStrategy {
+        +capture()
+    }
+    
+    class FullPageStrategy {
+        +capture()
+    }
+    
+    ChromeManager --> InstancePool : manages
+    ChromeManager --> BrowserInstance : creates
+    BrowserInstance --> NavigationController : uses
+    NavigationController --> BrowserInstance : controls
+    ScreenshotStrategy <|-- ViewportStrategy : implements
+    ScreenshotStrategy <|-- FullPageStrategy : implements
+```
+
 ### 1. Facade Pattern
 Simplifies complex browser operations behind clean interfaces:
 ```python
@@ -378,27 +496,52 @@ class MCPEventEmitter:
 
 ### Request Lifecycle
 
-1. **Client Request** → WebSocket message received
-2. **Validation** → Schema validation and parameter checking
-3. **Tool Resolution** → Map tool name to handler
-4. **Instance Acquisition** → Get browser from pool
-5. **Execution** → Perform browser operation
-6. **Response Construction** → Format result
-7. **Client Response** → Send WebSocket message
-8. **Cleanup** → Return instance to pool
+```mermaid
+sequenceDiagram
+    participant Client
+    participant WebSocket
+    participant MCPServer
+    participant ChromeManager
+    participant Pool
+    participant BrowserInstance
+    participant Controller
+    
+    Client->>WebSocket: Send Request
+    WebSocket->>MCPServer: Parse Message
+    MCPServer->>MCPServer: Validate Schema
+    MCPServer->>MCPServer: Resolve Tool
+    MCPServer->>ChromeManager: Request Instance
+    ChromeManager->>Pool: Acquire Instance
+    Pool-->>ChromeManager: Return Instance
+    ChromeManager-->>MCPServer: Instance Ready
+    MCPServer->>BrowserInstance: Execute Command
+    BrowserInstance->>Controller: Delegate Operation
+    Controller-->>BrowserInstance: Operation Result
+    BrowserInstance-->>MCPServer: Command Result
+    MCPServer->>MCPServer: Format Response
+    MCPServer->>WebSocket: Send Response
+    WebSocket-->>Client: Return Result
+    MCPServer->>Pool: Release Instance
+```
 
 ### State Management
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Idle
-    Idle --> Busy: Request received
-    Busy --> Idle: Request completed
-    Busy --> Error: Exception
-    Error --> Idle: Recovery
-    Idle --> Terminated: Shutdown
-    Error --> Terminated: Fatal error
-    Terminated --> [*]
+    [*] --> Idle: Initialize
+    Idle --> Busy: Request Received
+    Busy --> Idle: Request Completed
+    Busy --> Error: Exception Thrown
+    Error --> Idle: Recovery Success
+    Error --> Terminated: Fatal Error
+    Idle --> Terminated: Shutdown Command
+    Busy --> Terminated: Force Terminate
+    Terminated --> [*]: Cleanup Complete
+    
+    Idle: Instance ready for use
+    Busy: Processing request
+    Error: Handling exception
+    Terminated: Cleaning up resources
 ```
 
 ## Security Architecture
