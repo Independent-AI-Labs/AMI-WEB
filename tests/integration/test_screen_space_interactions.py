@@ -1,9 +1,13 @@
 """Integration tests for screen-space interactions."""
 
 import asyncio
+import os
 
 import pytest
 import pytest_asyncio
+
+# Test configuration
+HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
 
 from chrome_manager.core.instance import BrowserInstance
 from chrome_manager.facade.input import InputController
@@ -28,7 +32,7 @@ async def browser_instance():
     """Create a browser instance for testing."""
     instance = BrowserInstance()
     try:
-        await instance.launch(headless=True)
+        await instance.launch(headless=HEADLESS)
         yield instance
     finally:
         await instance.terminate(force=True)

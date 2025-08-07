@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+import os
 import threading
 import time
 import uuid
@@ -11,6 +12,9 @@ import pytest
 import pytest_asyncio
 import websockets
 from loguru import logger
+
+# Test configuration
+HEADLESS = os.environ.get('TEST_HEADLESS', 'false').lower() == 'true'
 
 from chrome_manager.core.manager import ChromeManager
 from chrome_manager.mcp.server import MCPServer
@@ -210,7 +214,7 @@ class TestMCPBrowserOperations:
             await websocket.recv()  # Skip capabilities
 
             # Launch browser
-            request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}
+            request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}
 
             await websocket.send(json.dumps(request))
             response = await websocket.recv()
@@ -239,7 +243,7 @@ class TestMCPBrowserOperations:
             await websocket.recv()  # Skip capabilities
 
             # Launch browser
-            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}
+            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}
 
             await websocket.send(json.dumps(launch_request))
             response = await asyncio.wait_for(websocket.recv(), timeout=30)
@@ -274,13 +278,19 @@ class TestMCPBrowserOperations:
             screenshot_data = json.loads(response)
 
             assert screenshot_data["success"] is True
-            assert "image" in screenshot_data["result"]
+            assert "path" in screenshot_data["result"]
 
-            # Decode and verify screenshot
-            image_data = base64.b64decode(screenshot_data["result"]["image"])
-            assert len(image_data) > 0
-            png_header = b"\x89PNG\r\n\x1a\n"
-            assert image_data[:8] == png_header  # PNG header
+            # Verify screenshot file was created
+            from pathlib import Path
+            screenshot_path = Path(screenshot_data["result"]["path"])
+            assert screenshot_path.exists()
+            assert screenshot_path.suffix == ".png"
+            
+            # Verify it's a valid PNG file
+            with open(screenshot_path, "rb") as f:
+                header = f.read(8)
+                png_header = b"\x89PNG\r\n\x1a\n"
+                assert header == png_header  # PNG header
 
             # Cleanup
             await websocket.send(
@@ -296,7 +306,7 @@ class TestMCPBrowserOperations:
             await websocket.recv()  # Skip capabilities
 
             # Launch and navigate
-            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}
+            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}
 
             await websocket.send(json.dumps(launch_request))
             response = await websocket.recv()
@@ -356,7 +366,7 @@ class TestMCPBrowserOperations:
             await websocket.recv()  # Skip capabilities
 
             # Launch and navigate
-            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}))
+            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}))
             response = await websocket.recv()
             instance_id = json.loads(response)["result"]["instance_id"]
 
@@ -418,7 +428,7 @@ class TestMCPCookieManagement:
             await websocket.recv()  # Skip capabilities
 
             # Launch and navigate
-            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}))
+            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}))
             response = await websocket.recv()
             instance_id = json.loads(response)["result"]["instance_id"]
 
@@ -491,7 +501,7 @@ class TestMCPTabManagement:
             await websocket.recv()  # Skip capabilities
 
             # Launch browser
-            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}))
+            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}))
             response = await websocket.recv()
             instance_id = json.loads(response)["result"]["instance_id"]
 
@@ -631,7 +641,7 @@ class TestMCPConcurrency:
 
                 # Each client launches a browser
                 await websocket.send(
-                    json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": f"client-{client_id}"})
+                    json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": f"client-{client_id}"})
                 )
 
                 response = await websocket.recv()
@@ -663,7 +673,7 @@ class TestMCPConcurrency:
             await websocket.recv()  # Skip capabilities
 
             # Launch browser
-            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}, "request_id": str(uuid.uuid4())}))
+            await websocket.send(json.dumps({"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": str(uuid.uuid4())}))
             response = await websocket.recv()
             instance_id = json.loads(response)["result"]["instance_id"]
 
