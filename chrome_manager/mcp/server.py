@@ -161,6 +161,32 @@ class MCPServer:
                     "required": ["instance_id"],
                 },
             ),
+            "browser_extract_text": MCPTool(
+                name="browser_extract_text",
+                description="Extract human-readable text from the current page",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "preserve_structure": {"type": "boolean", "default": True},
+                        "remove_scripts": {"type": "boolean", "default": True},
+                        "remove_styles": {"type": "boolean", "default": True},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_extract_links": MCPTool(
+                name="browser_extract_links",
+                description="Extract all links from the current page",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "absolute": {"type": "boolean", "default": True},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
         }
 
     async def start(self):
@@ -336,6 +362,16 @@ class MCPServer:
         if tool_name == "browser_wait_for_element":
             found = await nav.wait_for_element(parameters["selector"], timeout=parameters.get("timeout", 30))
             return {"found": found}
+        if tool_name == "browser_extract_text":
+            text = await nav.extract_text(
+                preserve_structure=parameters.get("preserve_structure", True),
+                remove_scripts=parameters.get("remove_scripts", True),
+                remove_styles=parameters.get("remove_styles", True),
+            )
+            return {"text": text}
+        if tool_name == "browser_extract_links":
+            links = await nav.extract_links(absolute=parameters.get("absolute", True))
+            return {"links": links}
         # browser_execute_script
         result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
         return {"result": result}
@@ -355,7 +391,14 @@ class MCPServer:
                 ]
             }
         # Delegate to specific handlers
-        elif tool_name in ["browser_navigate", "browser_scroll", "browser_wait_for_element", "browser_execute_script"]:
+        elif tool_name in [
+            "browser_navigate",
+            "browser_scroll",
+            "browser_wait_for_element",
+            "browser_execute_script",
+            "browser_extract_text",
+            "browser_extract_links",
+        ]:
             result = await self._execute_navigation(tool_name, parameters)
         elif tool_name in ["browser_click", "browser_type"]:
             result = await self._execute_input(tool_name, parameters)

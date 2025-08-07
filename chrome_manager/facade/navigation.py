@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from ..core.instance import BrowserInstance
 from ..models.browser import PageResult, WaitCondition
 from ..utils.exceptions import NavigationError
+from ..utils.parser import HTMLParser
 
 
 class NavigationController:
@@ -200,3 +201,101 @@ class NavigationController:
         if selector.startswith("."):
             return (By.CLASS_NAME, selector[1:])
         return (By.CSS_SELECTOR, selector)
+
+    async def get_page_content(self) -> str:
+        """Get the full HTML content of the page."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.driver.page_source)
+        except Exception as e:
+            raise NavigationError(f"Failed to get page content: {e}") from e
+
+    async def get_element_html(self, selector: str) -> str:
+        """Get the inner HTML of a specific element."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        try:
+            script = f"return document.querySelector('{selector}').innerHTML"
+            return await self.execute_script(script)
+        except Exception as e:
+            raise NavigationError(f"Failed to get element HTML: {e}") from e
+
+    async def extract_text(self, preserve_structure: bool = True, **kwargs) -> str:
+        """Extract human-readable text from the current page.
+
+        Args:
+            preserve_structure: Keep paragraph/line breaks
+            **kwargs: Additional options for text extraction
+
+        Returns:
+            Cleaned, human-readable text from the page
+        """
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        return parser.extract_text(preserve_structure=preserve_structure, **kwargs)
+
+    async def extract_links(self, absolute: bool = True) -> list[dict[str, str]]:
+        """Extract all links from the current page.
+
+        Args:
+            absolute: Convert relative URLs to absolute
+
+        Returns:
+            List of link dictionaries with text, href, and title
+        """
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        base_url = self.driver.current_url if absolute else ""
+        return parser.extract_links(absolute=absolute, base_url=base_url)
+
+    async def extract_forms(self) -> list[dict[str, Any]]:
+        """Extract form information from the current page."""
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        return parser.extract_forms()
+
+    async def extract_tables(self) -> list[dict[str, Any]]:
+        """Extract table data from the current page."""
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        return parser.extract_tables()
+
+    async def extract_images(self) -> list[dict[str, str]]:
+        """Extract all images from the current page."""
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        return parser.extract_images()
+
+    async def find_elements_by_text(self, text: str, tag: str | None = None) -> list[dict[str, str]]:
+        """Find elements containing specific text.
+
+        Args:
+            text: Text to search for
+            tag: Optional tag name to limit search
+
+        Returns:
+            List of matching element selectors
+        """
+        html = await self.get_page_content()
+        parser = HTMLParser(html)
+        elements = parser.find_by_text(text, tag)
+
+        # Convert elements to selectors
+        results = []
+        for elem in elements:
+            selector = ""
+            if elem.get("id"):
+                selector = f"#{elem['id']}"
+            elif elem.get("class"):
+                classes = elem["class"]
+                selector = f".{'.'.join(classes)}" if isinstance(classes, list) else f".{classes}"
+            else:
+                selector = elem.name
+
+            results.append({"selector": selector, "tag": elem.name, "text": elem.get_text(strip=True)})
+
+        return results
