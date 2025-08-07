@@ -6,7 +6,6 @@ import json
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 import pytest_asyncio
@@ -15,21 +14,21 @@ from loguru import logger
 
 from chrome_manager.core.manager import ChromeManager
 from chrome_manager.mcp.server import MCPServer
-from tests.fixtures.test_server import HTMLTestServer
+from tests.fixtures.threaded_server import ThreadedHTMLServer
 
 
-@pytest_asyncio.fixture(scope="session")
-async def test_html_server():
-    """Start test HTML server."""
-    server = HTMLTestServer(port=8889)
-    base_url = await server.start()
+@pytest.fixture(scope="session")
+def test_html_server():
+    """Start test HTML server in a separate thread."""
+    server = ThreadedHTMLServer(port=8889)
+    base_url = server.start()  # Starts in thread
     yield base_url
-    await server.stop()
+    server.stop()  # Stops the thread
 
 
 class MCPTestServer:
     """Test MCP server that runs properly for testing."""
-    
+
     def __init__(self, port=8766):
         self.port = port
         self.server = None
@@ -38,63 +37,75 @@ class MCPTestServer:
         self.thread = None
         self.ready_event = threading.Event()
         self.stop_event = threading.Event()
-    
+
     def _run_server(self):
         """Run server with its own event loop."""
         # Create new event loop for this thread
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        
+
         try:
             # Initialize manager and server synchronously in the thread
             self.loop.run_until_complete(self._setup_server())
             self.ready_event.set()
-            
+
             # Keep the server running
             self.loop.run_until_complete(self._serve_forever())
-            
+
         except Exception as e:
             logger.error(f"Server error: {e}")
             self.ready_event.set()  # Signal even on error
         finally:
             self.loop.run_until_complete(self._cleanup())
             self.loop.close()
-    
+
     async def _setup_server(self):
         """Set up the server components."""
         self.manager = ChromeManager()
+        # Override pool settings for efficient test reuse
+        self.manager.pool.min_instances = 1  # Keep 1 instance ready
+        self.manager.pool.warm_instances = 1  # Keep 1 warm for reuse
+        self.manager.pool.max_instances = 3  # Limit max instances (for concurrent tests)
         await self.manager.start()
-        
+
         config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10}
         self.server = MCPServer(self.manager, config)
         await self.server.start()
-        
+
         logger.info(f"Test MCP server started on port {self.port}")
-    
+
     async def _serve_forever(self):
         """Keep server running until stop is signaled."""
         while not self.stop_event.is_set():
             await asyncio.sleep(0.1)
-    
+
     async def _cleanup(self):
         """Clean up server resources."""
         if self.server:
             await self.server.stop()
         if self.manager:
-            await self.manager.stop()
-    
+            # Force shutdown of all browser instances and pool
+            await self.manager.shutdown()
+            # Extra cleanup - ensure all instances are terminated
+            for instance in list(self.manager._instances.values()):
+                try:
+                    await instance.terminate()
+                except Exception:
+                    pass
+            self.manager._instances.clear()
+
     def start(self):
         """Start the server in a thread."""
         self.thread = threading.Thread(target=self._run_server, daemon=True)
         self.thread.start()
-        
+
         # Wait for server to be ready
         if not self.ready_event.wait(timeout=10):
             raise TimeoutError("Server failed to start")
-        
+
         # Extra wait for socket binding
         time.sleep(0.5)
-    
+
     def stop(self):
         """Stop the server."""
         self.stop_event.set()
@@ -102,14 +113,14 @@ class MCPTestServer:
             self.thread.join(timeout=5)
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session")
 async def mcp_server():
-    """Start MCP test server."""
+    """Start MCP test server once for the entire test session."""
     server = MCPTestServer(port=8766)
     server.start()
-    
+
     yield server
-    
+
     server.stop()
 
 
@@ -421,8 +432,8 @@ class TestMCPCookieManagement:
                 "parameters": {
                     "instance_id": instance_id,
                     "cookies": [
-                        {"name": "test_cookie", "value": "test_value", "domain": "localhost"},
-                        {"name": "session_id", "value": "abc123", "domain": "localhost"},
+                        {"name": "test_cookie", "value": "test_value", "domain": "127.0.0.1"},
+                        {"name": "session_id", "value": "abc123", "domain": "127.0.0.1"},
                     ],
                 },
                 "request_id": str(uuid.uuid4()),
@@ -438,7 +449,7 @@ class TestMCPCookieManagement:
             get_cookies_request = {
                 "type": "tool",
                 "tool": "browser_get_cookies",
-                "parameters": {"instance_id": instance_id, "domain": "localhost"},
+                "parameters": {"instance_id": instance_id, "domain": "127.0.0.1"},
                 "request_id": str(uuid.uuid4()),
             }
 

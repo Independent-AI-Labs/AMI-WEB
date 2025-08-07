@@ -32,11 +32,12 @@ class HTMLTestServer:
         # Start server
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, "localhost", self.port)
+        # Use 127.0.0.1 instead of localhost to avoid threading issues
+        self.site = web.TCPSite(self.runner, "127.0.0.1", self.port)
         await self.site.start()
 
-        logger.info(f"Test server started on http://localhost:{self.port}")
-        return f"http://localhost:{self.port}"
+        logger.info(f"Test server started on http://127.0.0.1:{self.port}")
+        return f"http://127.0.0.1:{self.port}"
 
     async def stop(self):
         """Stop the test server."""

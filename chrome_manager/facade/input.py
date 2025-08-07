@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime
 
 from loguru import logger
@@ -18,6 +19,46 @@ class InputController:
     def __init__(self, instance: BrowserInstance):
         self.instance = instance
         self.driver = instance.driver
+
+    def _is_in_thread_context(self) -> bool:
+        """Check if we're running in a non-main thread with its own event loop."""
+        try:
+            if threading.current_thread() is not threading.main_thread():
+                try:
+                    loop = asyncio.get_event_loop()
+                    return loop.is_running()
+                except RuntimeError:
+                    return False
+            return False
+        except Exception:
+            return False
+
+    def _perform_click_sync(self, element: WebElement, options: ClickOptions) -> None:
+        """Synchronous version of click for thread context."""
+        import time
+
+        if options.offset_x is not None or options.offset_y is not None:
+            actions = ActionChains(self.driver)
+            actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
+            for _ in range(options.click_count):
+                if options.button == "right":
+                    actions.context_click()
+                elif options.button == "middle":
+                    actions.click(on_element=None)
+                else:
+                    actions.click()
+                if options.delay > 0:
+                    actions.pause(options.delay / 1000)
+            actions.perform()
+        else:
+            for i in range(options.click_count):
+                if options.button == "right":
+                    actions = ActionChains(self.driver)
+                    actions.context_click(element).perform()
+                else:
+                    element.click()
+                if i < options.click_count - 1 and options.delay > 0:
+                    time.sleep(options.delay / 1000)
 
     async def _perform_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
         if options.offset_x is not None or options.offset_y is not None:
@@ -58,11 +99,19 @@ class InputController:
             if not element:
                 raise InputError(f"Element not found: {selector}")
 
-            loop = asyncio.get_event_loop()
-            await self._perform_click(element, options, loop)
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                import time
 
-            if options.wait_after > 0:
-                await asyncio.sleep(options.wait_after / 1000)
+                self._perform_click_sync(element, options)
+                if options.wait_after > 0:
+                    time.sleep(options.wait_after / 1000)
+            else:
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                await self._perform_click(element, options, loop)
+                if options.wait_after > 0:
+                    await asyncio.sleep(options.wait_after / 1000)
 
             self.instance.last_activity = datetime.now()
             logger.debug(f"Clicked element: {selector}")
@@ -80,17 +129,32 @@ class InputController:
             if not element:
                 raise InputError(f"Element not found: {selector}")
 
-            loop = asyncio.get_event_loop()
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                import time
 
-            if clear:
-                await loop.run_in_executor(None, element.clear)
+                if clear:
+                    element.clear()
 
-            if delay > 0:
-                for char in text:
-                    await loop.run_in_executor(None, element.send_keys, char)
-                    await asyncio.sleep(delay / 1000)
+                if delay > 0:
+                    for char in text:
+                        element.send_keys(char)
+                        time.sleep(delay / 1000)
+                else:
+                    element.send_keys(text)
             else:
-                await loop.run_in_executor(None, element.send_keys, text)
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+
+                if clear:
+                    await loop.run_in_executor(None, element.clear)
+
+                if delay > 0:
+                    for char in text:
+                        await loop.run_in_executor(None, element.send_keys, char)
+                        await asyncio.sleep(delay / 1000)
+                else:
+                    await loop.run_in_executor(None, element.send_keys, text)
 
             self.instance.last_activity = datetime.now()
             logger.debug(f"Typed text into: {selector}")
@@ -278,6 +342,10 @@ class InputController:
 
             if wait:
                 wait_obj = WebDriverWait(self.driver, timeout)
+                if self._is_in_thread_context():
+                    # Synchronous operation in thread context
+                    return wait_obj.until(EC.presence_of_element_located((by, value)))
+                # Normal async operation
                 loop = asyncio.get_event_loop()
                 return await loop.run_in_executor(None, wait_obj.until, EC.presence_of_element_located((by, value)))
             return self.driver.find_element(by, value)

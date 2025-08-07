@@ -13,7 +13,7 @@ from ..core.manager import ChromeManager
 from ..facade.input import InputController
 from ..facade.media import ScreenshotController
 from ..facade.navigation import NavigationController
-from ..models.browser import ClickOptions, WaitCondition
+from ..models.browser import ClickOptions
 from ..models.mcp import MCPEvent, MCPTool
 from ..utils.exceptions import MCPError
 
@@ -210,7 +210,7 @@ class MCPServer:
             host,  # Use the configured host
             port,
             ping_interval=30,
-            ping_timeout=10
+            ping_timeout=10,
         )
 
         logger.info(f"MCP server started successfully on {host}:{port}")
@@ -239,13 +239,18 @@ class MCPServer:
             async for message in websocket:
                 try:
                     data = json.loads(message)
+                    logger.info(f"Received request: {data.get('type')} - {data.get('tool', '')} - request_id: {data.get('request_id', 'none')}")
                     response = await self._handle_request(data)
-                    await websocket.send(json.dumps(response))
+                    logger.info(f"Got response to send: success={response.get('success')}, request_id={response.get('request_id', '')}, keys={response.keys()}")
+                    response_json = json.dumps(response)
+                    logger.info(f"Sending response JSON (first 200 chars): {response_json[:200]}")
+                    await websocket.send(response_json)
+                    logger.info(f"Response sent successfully for request_id: {response.get('request_id', '')}")
                 except json.JSONDecodeError as e:
                     error_response = {"error": "Invalid JSON", "details": str(e)}
                     await websocket.send(json.dumps(error_response))
                 except Exception as e:
-                    logger.error(f"Error handling request: {e}")
+                    logger.error(f"Error handling request: {e}", exc_info=True)
                     error_response = {"error": "Internal server error", "details": str(e)}
                     await websocket.send(json.dumps(error_response))
 
@@ -280,18 +285,28 @@ class MCPServer:
         parameters = data.get("parameters", {})
         request_id = data.get("request_id", str(uuid.uuid4()))
 
+        logger.info(f"_handle_tool_request: {tool_name} with request_id: {request_id}")
+
         if tool_name not in self.tools:
             return {"success": False, "error": f"Unknown tool: {tool_name}", "request_id": request_id}
 
         start_time = asyncio.get_event_loop().time()
 
         try:
+            logger.info(f"Executing tool: {tool_name} with parameters: {parameters}")
             result = await self._execute_tool(tool_name, parameters)
             execution_time = asyncio.get_event_loop().time() - start_time
+            logger.info(
+                f"Tool {tool_name} executed successfully in {execution_time:.2f}s, result keys: {result.keys() if isinstance(result, dict) else type(result)}"
+            )
 
-            return {"success": True, "result": result, "request_id": request_id, "execution_time": execution_time}
+            response = {"success": True, "result": result, "request_id": request_id, "execution_time": execution_time}
+            logger.info(f"Returning response for {tool_name}: success=True, request_id={request_id}")
+            return response
         except Exception as e:
-            logger.error(f"Tool execution failed for {tool_name}: {e}")
+            import traceback
+
+            logger.error(f"Tool execution failed for {tool_name}: {e}\n{traceback.format_exc()}")
             execution_time = asyncio.get_event_loop().time() - start_time
 
             return {"success": False, "error": str(e), "request_id": request_id, "execution_time": execution_time}
@@ -309,12 +324,55 @@ class MCPServer:
         return {"instance_id": instance.id}
 
     async def _execute_navigate(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        logger.info(f"_execute_navigate called with URL: {parameters.get('url')}")
         instance = await self._get_instance_or_error(parameters["instance_id"])
-        nav = NavigationController(instance)
-        wait_for = parameters.get("wait_for")
-        wait_condition = WaitCondition(type=wait_for) if wait_for else None
-        result = await nav.navigate(parameters["url"], wait_for=wait_condition)
-        return {"url": result.url, "title": result.title, "load_time": result.load_time}
+        logger.info(f"Got instance {instance.id}")
+
+        # WebDriver operations must happen in the same thread/event loop where it was created
+        # Since we're already in the correct thread (MCP server thread), we can do direct sync operations
+        import time
+        from datetime import datetime
+
+        from selenium.webdriver.support.ui import WebDriverWait
+
+        from ..models.browser import PageResult
+
+        url = parameters["url"]
+        logger.info(f"Starting navigation to {url}")
+
+        try:
+            start_time = time.time()
+
+            # Direct synchronous navigation - no threading needed since we're in the right thread
+            logger.info("Executing driver.get")
+            instance.driver.get(url)
+            logger.info("driver.get completed")
+
+            # Wait for page to load
+            logger.info("Waiting for page load")
+            wait = WebDriverWait(instance.driver, 30)
+
+            # Wait for document ready state
+            wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+            logger.info("Document ready")
+
+            # Get page info
+            title = instance.driver.title
+            current_url = instance.driver.current_url
+            content_length = instance.driver.execute_script("return document.documentElement.innerHTML.length")
+
+            load_time = time.time() - start_time
+            instance.last_activity = datetime.now()
+
+            logger.info(f"Navigation successful - Title: {title}, URL: {current_url}, Load time: {load_time:.2f}s")
+
+            result = PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
+
+            return {"url": result.url, "title": result.title, "load_time": result.load_time}
+
+        except Exception as e:
+            logger.error(f"Navigation failed: {e}", exc_info=True)
+            raise
 
     async def _execute_screenshot(self, parameters: dict[str, Any]) -> dict[str, Any]:
         instance = await self._get_instance_or_error(parameters["instance_id"])
@@ -397,7 +455,8 @@ class MCPServer:
         if tool_name == "browser_launch":
             result = await self._execute_launch(parameters)
         elif tool_name == "browser_close":
-            result = {"success": await self.manager.terminate_instance(parameters["instance_id"])}
+            # Return to pool for reuse instead of terminating
+            result = {"success": await self.manager.return_to_pool(parameters["instance_id"])}
         elif tool_name == "browser_list":
             instances = await self.manager.list_instances()
             result = {

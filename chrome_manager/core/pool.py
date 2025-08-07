@@ -12,7 +12,15 @@ from .instance import BrowserInstance
 
 
 class InstancePool:
-    def __init__(self, min_instances: int = 1, max_instances: int = 10, warm_instances: int = 2, instance_ttl: int = 3600, health_check_interval: int = 30, config: Config | None = None):
+    def __init__(
+        self,
+        min_instances: int = 1,
+        max_instances: int = 10,
+        warm_instances: int = 2,
+        instance_ttl: int = 3600,
+        health_check_interval: int = 30,
+        config: Config | None = None,
+    ):
         self.min_instances = min_instances
         self.max_instances = max_instances
         self.warm_instances = warm_instances
@@ -95,6 +103,8 @@ class InstancePool:
                     return
 
             if await self._is_healthy(instance):
+                # Reset browser state before returning to pool
+                await self._reset_instance(instance)
                 self.available.append(instance)
                 logger.debug(f"Released instance {instance_id} back to pool")
             else:
@@ -135,6 +145,24 @@ class InstancePool:
             return health["healthy"]
         except Exception:
             return False
+
+    async def _reset_instance(self, instance: BrowserInstance):
+        """Reset browser instance to clean state for reuse."""
+        try:
+            # Navigate to blank page
+            instance.driver.get("about:blank")
+            # Clear cookies
+            instance.driver.delete_all_cookies()
+            # Close any extra tabs
+            handles = instance.driver.window_handles
+            if len(handles) > 1:
+                for handle in handles[1:]:
+                    instance.driver.switch_to.window(handle)
+                    instance.driver.close()
+                instance.driver.switch_to.window(handles[0])
+            logger.debug(f"Reset instance {instance.id} to clean state")
+        except Exception as e:
+            logger.warning(f"Failed to reset instance {instance.id}: {e}")
 
     async def _remove_instance(self, instance: BrowserInstance):
         with contextlib.suppress(builtins.BaseException):

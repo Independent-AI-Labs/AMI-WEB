@@ -197,11 +197,7 @@ class TestBrowserNavigation:
 
             # Execute script to fill form
             test_password = "password123"  # noqa: S105
-            await nav.execute_script(
-                "window.testHelpers.fillForm(arguments[0], arguments[1])",
-                "testuser",
-                test_password
-            )
+            await nav.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", test_password)
 
             # Verify form was filled
             result = await nav.execute_script("return window.testHelpers.getFormData()")
@@ -288,16 +284,12 @@ class TestInputSimulation:
             await input_ctrl.click("#robot-checkbox")
 
             # Verify it's checked
-            is_checked = await nav.execute_script(
-                "return document.getElementById('robot-checkbox').checked"
-            )
+            is_checked = await nav.execute_script("return document.getElementById('robot-checkbox').checked")
             assert is_checked is True
 
             # Click again to uncheck
             await input_ctrl.click("#robot-checkbox")
-            is_checked = await nav.execute_script(
-                "return document.getElementById('robot-checkbox').checked"
-            )
+            is_checked = await nav.execute_script("return document.getElementById('robot-checkbox').checked")
             assert is_checked is False
 
     @pytest.mark.asyncio
@@ -412,9 +404,7 @@ class TestDynamicContent:
             await asyncio.sleep(0.5)
 
             # Check modal is visible
-            is_visible = await nav.execute_script(
-                "return document.getElementById('modal').style.display === 'block'"
-            )
+            is_visible = await nav.execute_script("return document.getElementById('modal').style.display === 'block'")
             assert is_visible is True
 
             # Type in modal input
@@ -605,7 +595,7 @@ class TestBrowserPool:
             # Execute parallel JavaScript operations
             results = await asyncio.gather(
                 nav1.execute_script("return {result: 'instance1', timestamp: Date.now()}"),
-                nav2.execute_script("return {result: 'instance2', timestamp: Date.now()}")
+                nav2.execute_script("return {result: 'instance2', timestamp: Date.now()}"),
             )
 
             # Verify both instances executed scripts
@@ -692,9 +682,7 @@ class TestScriptInjection:
             assert exists is True
 
             # Get element text
-            text = await nav.execute_script(
-                "return document.getElementById('injected-element').textContent"
-            )
+            text = await nav.execute_script("return document.getElementById('injected-element').textContent")
             assert text == "Injected via script"
 
     @pytest.mark.asyncio

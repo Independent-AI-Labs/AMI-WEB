@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime
 from typing import Any
 
@@ -18,44 +19,114 @@ class NavigationController:
         self.instance = instance
         self.driver = instance.driver
 
+    def _is_in_thread_context(self) -> bool:
+        """Check if we're running in a non-main thread with its own event loop."""
+        try:
+            # Check if we're in the main thread
+            current_thread = threading.current_thread()
+            main_thread = threading.main_thread()
+
+            # Log the thread info for debugging
+            logger.debug(f"Thread check: current={current_thread.name}, main={main_thread.name}, is_main={current_thread is main_thread}")
+
+            if current_thread is not main_thread:
+                # Check if this thread has an event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                    is_running = loop.is_running()
+                    logger.debug(f"Thread has event loop, running={is_running}")
+                    return is_running
+                except RuntimeError as e:
+                    logger.debug(f"Thread has no event loop: {e}")
+                    return False
+            return False
+        except Exception as e:
+            logger.debug(f"Error in thread check: {e}")
+            return False
+
     async def navigate(self, url: str, wait_for: WaitCondition | None = None, timeout: int = 30) -> PageResult:
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
-        start_time = asyncio.get_event_loop().time()
+        # Detect if we're in a thread context
+        in_thread = self._is_in_thread_context()
+        logger.debug(f"NavigationController.navigate: in_thread={in_thread}, url={url}")
 
-        try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.driver.get, url)
+        if in_thread:
+            # Use synchronous operations directly when in thread context
+            import time
 
-            if wait_for:
-                await self._wait_for_condition(wait_for, timeout)
-            else:
-                await self._wait_for_load(timeout)
+            start_time = time.time()
 
-            load_time = asyncio.get_event_loop().time() - start_time
+            try:
+                # Navigate synchronously
+                logger.debug(f"Calling driver.get synchronously for {url}")
+                self.driver.get(url)
+                logger.debug(f"driver.get completed for {url}")
 
-            title = self.driver.title
-            current_url = self.driver.current_url
+                if wait_for:
+                    # Synchronous wait
+                    self._wait_for_condition_sync(wait_for, timeout)
+                else:
+                    self._wait_for_load_sync(timeout)
 
-            content_length = await loop.run_in_executor(None, self.driver.execute_script, "return document.documentElement.innerHTML.length")
+                load_time = time.time() - start_time
 
-            self.instance.last_activity = datetime.now()
+                title = self.driver.title
+                current_url = self.driver.current_url
+                content_length = self.driver.execute_script("return document.documentElement.innerHTML.length")
 
-            return PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
+                self.instance.last_activity = datetime.now()
 
-        except Exception as e:
-            logger.error(f"Navigation failed for {url}: {e}")
-            raise NavigationError(f"Failed to navigate to {url}: {e}") from e
+                result = PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
+                logger.debug(f"Navigation result: {result}")
+                return result
+
+            except Exception as e:
+                logger.error(f"Navigation failed for {url}: {e}")
+                raise NavigationError(f"Failed to navigate to {url}: {e}") from e
+        else:
+            # Normal async operation
+            start_time = asyncio.get_event_loop().time()
+
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.driver.get, url)
+
+                if wait_for:
+                    await self._wait_for_condition(wait_for, timeout)
+                else:
+                    await self._wait_for_load(timeout)
+
+                load_time = asyncio.get_event_loop().time() - start_time
+
+                title = self.driver.title
+                current_url = self.driver.current_url
+
+                content_length = await loop.run_in_executor(None, self.driver.execute_script, "return document.documentElement.innerHTML.length")
+
+                self.instance.last_activity = datetime.now()
+
+                return PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
+
+            except Exception as e:
+                logger.error(f"Navigation failed for {url}: {e}")
+                raise NavigationError(f"Failed to navigate to {url}: {e}") from e
 
     async def back(self) -> None:
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.driver.back)
-            await self._wait_for_load()
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                self.driver.back()
+                self._wait_for_load_sync()
+            else:
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.driver.back)
+                await self._wait_for_load()
         except Exception as e:
             raise NavigationError(f"Failed to go back: {e}") from e
 
@@ -64,9 +135,15 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.driver.forward)
-            await self._wait_for_load()
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                self.driver.forward()
+                self._wait_for_load_sync()
+            else:
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.driver.forward)
+                await self._wait_for_load()
         except Exception as e:
             raise NavigationError(f"Failed to go forward: {e}") from e
 
@@ -75,13 +152,22 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-            if force:
-                await loop.run_in_executor(None, self.driver.execute_script, "location.reload(true)")
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                if force:
+                    self.driver.execute_script("location.reload(true)")
+                else:
+                    self.driver.refresh()
+                self._wait_for_load_sync()
             else:
-                await loop.run_in_executor(None, self.driver.refresh)
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                if force:
+                    await loop.run_in_executor(None, self.driver.execute_script, "location.reload(true)")
+                else:
+                    await loop.run_in_executor(None, self.driver.refresh)
 
-            await self._wait_for_load()
+                await self._wait_for_load()
         except Exception as e:
             raise NavigationError(f"Failed to refresh: {e}") from e
 
@@ -94,13 +180,16 @@ class NavigationController:
 
         try:
             wait = WebDriverWait(self.driver, timeout)
-
             by, value = self._parse_selector(selector)
-
             condition = EC.visibility_of_element_located((by, value)) if visible else EC.presence_of_element_located((by, value))
 
-            loop = asyncio.get_event_loop()
-            element = await loop.run_in_executor(None, wait.until, condition)
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                element = wait.until(condition)
+            else:
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                element = await loop.run_in_executor(None, wait.until, condition)
 
             return element is not None
 
@@ -113,8 +202,6 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-
             if element:
                 script = f"""
                 const element = document.querySelector('{element}');
@@ -129,8 +216,17 @@ class NavigationController:
                 behavior = "smooth" if smooth else "auto"
                 script = f"window.scrollTo({{left: {x or 0}, top: {y or 0}, behavior: '{behavior}'}})"
 
-            await loop.run_in_executor(None, self.driver.execute_script, script)
-            await asyncio.sleep(0.5 if smooth else 0.1)
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                import time
+
+                self.driver.execute_script(script)
+                time.sleep(0.5 if smooth else 0.1)
+            else:
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.driver.execute_script, script)
+                await asyncio.sleep(0.5 if smooth else 0.1)
 
         except Exception as e:
             raise NavigationError(f"Failed to scroll: {e}") from e
@@ -140,6 +236,10 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                return self.driver.page_source
+            # Normal async operation
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, lambda: self.driver.page_source)
         except Exception as e:
@@ -150,6 +250,12 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                if async_script:
+                    return self.driver.execute_async_script(script, *args)
+                return self.driver.execute_script(script, *args)
+            # Normal async operation
             loop = asyncio.get_event_loop()
 
             if async_script:
@@ -157,6 +263,38 @@ class NavigationController:
             return await loop.run_in_executor(None, self.driver.execute_script, script, *args)
         except Exception as e:
             raise NavigationError(f"Failed to execute script: {e}") from e
+
+    def _wait_for_load_sync(self, timeout: int = 30) -> None:
+        """Synchronous version of _wait_for_load for thread context."""
+        try:
+            wait = WebDriverWait(self.driver, timeout)
+            wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+        except Exception as e:
+            logger.warning(f"Page load wait timeout: {e}")
+
+    def _wait_for_condition_sync(self, condition: WaitCondition, timeout: int) -> None:
+        """Synchronous version of _wait_for_condition for thread context."""
+        wait = WebDriverWait(self.driver, timeout, poll_frequency=condition.poll_frequency)
+
+        if condition.type == "load":
+            self._wait_for_load_sync(timeout)
+
+        elif condition.type == "networkidle":
+            wait.until(
+                lambda driver: driver.execute_script(
+                    """
+                    return performance.getEntriesByType('resource')
+                        .filter(r => !r.responseEnd).length === 0
+                """
+                )
+            )
+
+        elif condition.type == "element" and condition.target:
+            by, value = self._parse_selector(condition.target)
+            wait.until(EC.presence_of_element_located((by, value)))
+
+        elif condition.type == "function" and condition.target:
+            wait.until(lambda driver: driver.execute_script(condition.target))
 
     async def _wait_for_load(self, timeout: int = 30) -> None:
         try:
@@ -208,6 +346,10 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
+            if self._is_in_thread_context():
+                # Synchronous operation in thread context
+                return self.driver.page_source
+            # Normal async operation
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, lambda: self.driver.page_source)
         except Exception as e:
