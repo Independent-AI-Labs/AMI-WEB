@@ -1,5 +1,6 @@
 import asyncio
 import threading
+import time
 from datetime import datetime
 
 from loguru import logger
@@ -35,7 +36,6 @@ class InputController:
 
     def _perform_click_sync(self, element: WebElement, options: ClickOptions) -> None:
         """Synchronous version of click for thread context."""
-        import time
 
         if options.offset_x is not None or options.offset_y is not None:
             actions = ActionChains(self.driver)
@@ -101,8 +101,6 @@ class InputController:
 
             if self._is_in_thread_context():
                 # Synchronous operation in thread context
-                import time
-
                 self._perform_click_sync(element, options)
                 if options.wait_after > 0:
                     time.sleep(options.wait_after / 1000)
@@ -120,7 +118,7 @@ class InputController:
             logger.error(f"Click failed for {selector}: {e}")
             raise InputError(f"Failed to click {selector}: {e}") from e
 
-    async def type_text(self, selector: str, text: str, clear: bool = True, delay: int = 0, wait: bool = True, timeout: int = 10) -> None:
+    async def type_text(self, selector: str, text: str, clear: bool = True, delay: int = 0, wait: bool = True, timeout: int = 10) -> None:  # noqa: C901
         if not self.driver:
             raise InputError("Browser not initialized")
 
@@ -131,8 +129,6 @@ class InputController:
 
             if self._is_in_thread_context():
                 # Synchronous operation in thread context
-                import time
-
                 if clear:
                     element.clear()
 
@@ -379,35 +375,108 @@ class InputController:
             raise InputError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-            actions = ActionChains(self.driver)
+            if self._is_in_thread_context():
+                # Synchronous version for thread context
+                # Use JavaScript to click at exact coordinates
+                script = f"""
+                var element = document.elementFromPoint({x}, {y}) || document.body;
 
-            # Move to the absolute position and click
-            # We use JavaScript to get the element at the coordinates
-            script = f"return document.elementFromPoint({x}, {y})"
-            element = await loop.run_in_executor(None, self.driver.execute_script, script)
+                if ('{button}' === 'right') {{
+                    var event = new MouseEvent('contextmenu', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y}
+                    }});
+                    element.dispatchEvent(event);
+                }} else if ({click_count} === 2) {{
+                    // For double-click, dispatch both click and dblclick events
+                    var clickEvent = new MouseEvent('click', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: 1
+                    }});
+                    element.dispatchEvent(clickEvent);
 
-            if element:
-                # Get the element's position and calculate offset
-                rect = await loop.run_in_executor(None, self.driver.execute_script, "return arguments[0].getBoundingClientRect()", element)
-                offset_x = x - rect["left"]
-                offset_y = y - rect["top"]
-
-                actions.move_to_element_with_offset(element, offset_x, offset_y)
+                    var dblClickEvent = new MouseEvent('dblclick', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: 2
+                    }});
+                    element.dispatchEvent(dblClickEvent);
+                }} else {{
+                    var event = new MouseEvent('click', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: {click_count}
+                    }});
+                    element.dispatchEvent(event);
+                }}
+                return {{x: {x}, y: {y}}};
+                """
+                self.driver.execute_script(script)
             else:
-                # No element at coordinates, use body as reference
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                actions.move_to_element_with_offset(body, x, y)
+                # Normal async operation
+                loop = asyncio.get_event_loop()
 
-            for _ in range(click_count):
-                if button == "right":
-                    actions.context_click()
-                elif button == "middle":
-                    actions.click(on_element=None)
-                else:
-                    actions.click()
+                # Use JavaScript to click at exact coordinates
+                script = f"""
+                var element = document.elementFromPoint({x}, {y}) || document.body;
 
-            await loop.run_in_executor(None, actions.perform)
+                if ('{button}' === 'right') {{
+                    var event = new MouseEvent('contextmenu', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y}
+                    }});
+                    element.dispatchEvent(event);
+                }} else if ({click_count} === 2) {{
+                    // For double-click, dispatch both click and dblclick events
+                    var clickEvent = new MouseEvent('click', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: 1
+                    }});
+                    element.dispatchEvent(clickEvent);
+
+                    var dblClickEvent = new MouseEvent('dblclick', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: 2
+                    }});
+                    element.dispatchEvent(dblClickEvent);
+                }} else {{
+                    var event = new MouseEvent('click', {{
+                        view: window,
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: {x},
+                        clientY: {y},
+                        detail: {click_count}
+                    }});
+                    element.dispatchEvent(event);
+                }}
+                return {{x: {x}, y: {y}}};
+                """
+                await loop.run_in_executor(None, self.driver.execute_script, script)
 
             self.instance.last_activity = datetime.now()
             logger.debug(f"Clicked at coordinates: ({x}, {y})")
@@ -430,36 +499,71 @@ class InputController:
             raise InputError("Browser not initialized")
 
         try:
-            loop = asyncio.get_event_loop()
-            actions = ActionChains(self.driver)
+            # Use JavaScript to simulate drag with intermediate steps
+            script = f"""
+            var startX = {start_x};
+            var startY = {start_y};
+            var endX = {end_x};
+            var endY = {end_y};
+            var steps = 10; // Number of intermediate steps
 
-            # Get element at start position
-            script = f"return document.elementFromPoint({start_x}, {start_y})"
-            start_element = await loop.run_in_executor(None, self.driver.execute_script, script)
+            var startElement = document.elementFromPoint(startX, startY) || document.body;
 
-            if start_element:
-                rect = await loop.run_in_executor(None, self.driver.execute_script, "return arguments[0].getBoundingClientRect()", start_element)
-                offset_x = start_x - rect["left"]
-                offset_y = start_y - rect["top"]
-                actions.move_to_element_with_offset(start_element, offset_x, offset_y)
+            // Dispatch mousedown at start position
+            var mouseDownEvent = new MouseEvent('mousedown', {{
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: startX,
+                clientY: startY,
+                button: 0,
+                buttons: 1
+            }});
+            startElement.dispatchEvent(mouseDownEvent);
+
+            // Dispatch multiple mousemove events for smooth dragging
+            for (var i = 1; i <= steps; i++) {{
+                var progress = i / steps;
+                var currentX = startX + (endX - startX) * progress;
+                var currentY = startY + (endY - startY) * progress;
+
+                var mouseMoveEvent = new MouseEvent('mousemove', {{
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: currentX,
+                    clientY: currentY,
+                    button: 0,
+                    buttons: 1
+                }});
+                document.dispatchEvent(mouseMoveEvent);
+            }}
+
+            // Dispatch mouseup at end position
+            var endElement = document.elementFromPoint(endX, endY) || document.body;
+            var mouseUpEvent = new MouseEvent('mouseup', {{
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: endX,
+                clientY: endY,
+                button: 0,
+                buttons: 0
+            }});
+            endElement.dispatchEvent(mouseUpEvent);
+
+            return true;
+            """
+
+            if self._is_in_thread_context():
+                # Synchronous version for thread context
+                self.driver.execute_script(script)
+                time.sleep(duration)
             else:
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                actions.move_to_element_with_offset(body, start_x, start_y)
-
-            # Click and hold
-            actions.click_and_hold()
-            actions.pause(duration / 2)
-
-            # Calculate drag distance
-            drag_x = end_x - start_x
-            drag_y = end_y - start_y
-
-            # Drag to end position
-            actions.move_by_offset(drag_x, drag_y)
-            actions.pause(duration / 2)
-            actions.release()
-
-            await loop.run_in_executor(None, actions.perform)
+                # Normal async operation
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self.driver.execute_script, script)
+                await asyncio.sleep(duration)
 
             self.instance.last_activity = datetime.now()
             logger.debug(f"Dragged from ({start_x}, {start_y}) to ({end_x}, {end_y})")

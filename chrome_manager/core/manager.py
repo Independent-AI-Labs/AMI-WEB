@@ -94,12 +94,11 @@ class ChromeManager:
             await self.pool.release(instance_id)
             logger.info(f"Returned instance {instance_id} to pool for reuse")
             return True
-        else:
-            # Not a pool instance, just terminate it
-            await instance.terminate()
-            self._instances.pop(instance_id, None)
-            logger.info(f"Terminated non-pool instance {instance_id}")
-            return True
+        # Not a pool instance, just terminate it
+        await instance.terminate()
+        self._instances.pop(instance_id, None)
+        logger.info(f"Terminated non-pool instance {instance_id}")
+        return True
 
     async def terminate_instance(self, instance_id: str, return_to_pool: bool = False) -> bool:
         """Terminate a browser instance.

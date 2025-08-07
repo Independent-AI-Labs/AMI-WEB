@@ -1,11 +1,15 @@
 import asyncio
-import base64
 import json
+import time
+import traceback
 import uuid
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import websockets
 from loguru import logger
+from selenium.webdriver.support.ui import WebDriverWait
 from websockets.server import WebSocketServerProtocol
 
 from ..core.instance import BrowserInstance
@@ -13,7 +17,7 @@ from ..core.manager import ChromeManager
 from ..facade.input import InputController
 from ..facade.media import ScreenshotController
 from ..facade.navigation import NavigationController
-from ..models.browser import ClickOptions
+from ..models.browser import ClickOptions, PageResult
 from ..models.mcp import MCPEvent, MCPTool
 from ..utils.exceptions import MCPError
 
@@ -304,8 +308,6 @@ class MCPServer:
             logger.info(f"Returning response for {tool_name}: success=True, request_id={request_id}")
             return response
         except Exception as e:
-            import traceback
-
             logger.error(f"Tool execution failed for {tool_name}: {e}\n{traceback.format_exc()}")
             execution_time = asyncio.get_event_loop().time() - start_time
 
@@ -330,13 +332,6 @@ class MCPServer:
 
         # WebDriver operations must happen in the same thread/event loop where it was created
         # Since we're already in the correct thread (MCP server thread), we can do direct sync operations
-        import time
-        from datetime import datetime
-
-        from selenium.webdriver.support.ui import WebDriverWait
-
-        from ..models.browser import PageResult
-
         url = parameters["url"]
         logger.info(f"Starting navigation to {url}")
 
@@ -389,25 +384,21 @@ class MCPServer:
             image_data = await screenshot_ctrl.capture_viewport()
 
         # Save screenshot to disk instead of returning base64
-        import os
-        from pathlib import Path
-        
         # Create screenshots directory if it doesn't exist
         screenshots_dir = Path("screenshots")
         screenshots_dir.mkdir(exist_ok=True)
-        
+
         # Generate filename with timestamp
-        from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"screenshot_{instance.id[:8]}_{timestamp}.png"
         filepath = screenshots_dir / filename
-        
+
         # Save the image
-        with open(filepath, "wb") as f:
+        with filepath.open("wb") as f:
             f.write(image_data)
-        
+
         logger.info(f"Screenshot saved to {filepath}")
-        
+
         return {"path": str(filepath), "format": parameters.get("format", "png")}
 
     async def _execute_input(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
