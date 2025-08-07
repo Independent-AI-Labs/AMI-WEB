@@ -1,0 +1,54 @@
+chrome_manager:
+  browser:
+    executable_path: "C:/Users/vdonc/AMI-WEB/chromium-win/chrome.exe"
+    default_headless: true
+    default_window_size: [1920, 1080]
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    
+  pool:
+    min_instances: 1
+    max_instances: 10
+    warm_instances: 2
+    instance_ttl: 3600
+    health_check_interval: 30
+    
+  performance:
+    max_memory_per_instance: 512  # MB
+    max_cpu_per_instance: 25  # percent
+    page_load_timeout: 30
+    script_timeout: 10
+    
+  storage:
+    session_dir: "./sessions"
+    screenshot_dir: "./screenshots"
+    video_dir: "./videos"
+    log_dir: "./logs"
+    
+  mcp:
+    server_host: "0.0.0.0"
+    server_port: 8765
+    max_connections: 100
+    auth_required: false
+    tls_enabled: false
+    ping_interval: 30
+    ping_timeout: 10
+    
+  chrome_options:
+    arguments:
+      - "--disable-blink-features=AutomationControlled"
+      - "--disable-dev-shm-usage"
+      - "--no-sandbox"
+      - "--disable-gpu"
+      - "--disable-web-security"
+      - "--disable-features=IsolateOrigins,site-per-process"
+      - "--allow-running-insecure-content"
+      
+    experimental_options:
+      excludeSwitches:
+        - "enable-automation"
+      useAutomationExtension: false
+      
+    prefs:
+      credentials_enable_service: false
+      profile.password_manager_enabled: false
+      profile.default_content_setting_values.notifications: 2
