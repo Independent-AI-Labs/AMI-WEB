@@ -191,6 +191,18 @@ class MCPServer:
                     "required": ["instance_id"],
                 },
             ),
+            "browser_get_html": MCPTool(
+                name="browser_get_html",
+                description="Get the raw HTML source of the current page",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "selector": {"type": "string", "description": "Optional CSS selector to get HTML of specific element"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
             "browser_get_console_logs": MCPTool(
                 name="browser_get_console_logs",
                 description="Get browser console logs",
@@ -536,25 +548,33 @@ class MCPServer:
         instance = await self._get_instance_or_error(parameters["instance_id"])
         nav = NavigationController(instance)
 
+        # Map tools to their execution logic
+        result: dict[str, Any]
         if tool_name == "browser_scroll":
             await nav.scroll_to(x=parameters.get("x"), y=parameters.get("y"), element=parameters.get("element"), smooth=parameters.get("smooth", True))
-            return {"success": True}
-        if tool_name == "browser_wait_for_element":
+            result = {"success": True}
+        elif tool_name == "browser_wait_for_element":
             found = await nav.wait_for_element(parameters["selector"], timeout=parameters.get("timeout", 30))
-            return {"found": found}
-        if tool_name == "browser_extract_text":
+            result = {"found": found}
+        elif tool_name == "browser_extract_text":
             text = await nav.extract_text(
                 preserve_structure=parameters.get("preserve_structure", True),
                 remove_scripts=parameters.get("remove_scripts", True),
                 remove_styles=parameters.get("remove_styles", True),
             )
-            return {"text": text}
-        if tool_name == "browser_extract_links":
+            result = {"text": text}
+        elif tool_name == "browser_extract_links":
             links = await nav.extract_links(absolute=parameters.get("absolute", True))
-            return {"links": links}
-        # browser_execute_script
-        result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
-        return {"result": result}
+            result = {"links": links}
+        elif tool_name == "browser_get_html":
+            selector = parameters.get("selector")
+            html = await nav.get_element_html(selector) if selector else await nav.get_page_content()
+            result = {"html": html}
+        else:  # browser_execute_script
+            script_result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
+            result = {"result": script_result}
+
+        return result
 
     async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:  # noqa: C901
         # Lifecycle operations
@@ -579,6 +599,7 @@ class MCPServer:
             "browser_execute_script",
             "browser_extract_text",
             "browser_extract_links",
+            "browser_get_html",
         ]:
             result = await self._execute_navigation(tool_name, parameters)
         elif tool_name in ["browser_click", "browser_type"]:
