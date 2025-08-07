@@ -1,5 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
+import atexit
+import subprocess
 import sys
 from pathlib import Path
 
@@ -113,3 +115,36 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "mcp: marks tests related to MCP server")
     config.addinivalue_line("markers", "browser: marks tests related to browser operations")
     config.addinivalue_line("markers", "pool: marks tests related to browser pool")
+
+
+def cleanup_processes():
+    """Kill any remaining browser or server processes."""
+    try:
+        # Only log if logger is still available
+        logger.info("Cleaning up browser and server processes")
+    except:
+        pass
+    
+    try:
+        if sys.platform == "win32":
+            # Kill Chrome and ChromeDriver processes on Windows  
+            import os
+            os.system("taskkill /F /IM chrome.exe 2>nul")
+            os.system("taskkill /F /IM chromedriver.exe 2>nul")
+        else:
+            # Kill Chrome and ChromeDriver processes on Unix
+            subprocess.run(["pkill", "-f", "chrome"], capture_output=True)
+            subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True)
+    except:
+        pass  # Ignore errors during cleanup
+
+
+# Register cleanup at exit
+atexit.register(cleanup_processes)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_at_exit():
+    """Ensure cleanup happens at the end of the test session."""
+    yield
+    cleanup_processes()

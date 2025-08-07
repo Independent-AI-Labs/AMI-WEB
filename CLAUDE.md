@@ -94,3 +94,5 @@ The user has made it EXTREMELY clear that:
 - No shortcuts, no excuses
 
 This is not a suggestion - this is a REQUIREMENT.
+
+P.S. NEVER ADD SHIT LIKE 2>nul TO SHELL COMMANDS!!! This creates a write-protected file in the repo...
