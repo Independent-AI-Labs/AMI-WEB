@@ -91,7 +91,12 @@ class ChromeManagerMCPServer:
             # Initialize Chrome Manager if not already done
             if not self.manager:
                 logger.info("Initializing Chrome Manager...")
+
+                # Chrome Manager will use defaults from Config which already points to:
+                # - ./chromium-win/chrome.exe for Chrome
+                # - ./chromedriver.exe for ChromeDriver
                 self.manager = ChromeManager()
+
                 # Set pool to not create instances on startup
                 self.manager.pool.min_instances = 0
                 self.manager.pool.warm_instances = 0
