@@ -17,19 +17,9 @@ from loguru import logger
 
 from chrome_manager.core.manager import ChromeManager
 from chrome_manager.mcp.server import MCPServer
-from tests.fixtures.threaded_server import ThreadedHTMLServer
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
-
-
-@pytest.fixture(scope="session")
-def test_html_server():
-    """Start test HTML server in a separate thread."""
-    server = ThreadedHTMLServer(port=8889)
-    base_url = server.start()  # Starts in thread
-    yield base_url
-    server.stop()  # Stops the thread
 
 
 class MCPTestServer:
