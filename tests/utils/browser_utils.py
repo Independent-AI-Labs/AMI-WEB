@@ -49,7 +49,7 @@ class TabManager:
 @asynccontextmanager
 async def new_tab(browser: BrowserInstance) -> AsyncGenerator[BrowserInstance, None]:
     """Context manager for creating a new tab.
-    
+
     Usage:
         async with new_tab(browser) as tab_browser:
             nav = NavigationController(tab_browser)
@@ -84,10 +84,10 @@ async def new_tab(browser: BrowserInstance) -> AsyncGenerator[BrowserInstance, N
 
 def create_tab(browser: BrowserInstance) -> str:
     """Create a new tab and return its handle.
-    
+
     Args:
         browser: The browser instance
-        
+
     Returns:
         The handle of the new tab
     """
@@ -106,7 +106,7 @@ def create_tab(browser: BrowserInstance) -> str:
 
 def switch_to_tab(browser: BrowserInstance, tab_handle: str):
     """Switch to a specific tab.
-    
+
     Args:
         browser: The browser instance
         tab_handle: The handle of the tab to switch to
@@ -117,7 +117,7 @@ def switch_to_tab(browser: BrowserInstance, tab_handle: str):
 
 def close_tab(browser: BrowserInstance, switch_to: str | None = None):
     """Close the current tab and optionally switch to another.
-    
+
     Args:
         browser: The browser instance
         switch_to: Optional tab handle to switch to after closing
@@ -141,7 +141,7 @@ def close_tab(browser: BrowserInstance, switch_to: str | None = None):
 
 def close_all_tabs_except(browser: BrowserInstance, keep_tab: str):
     """Close all tabs except the specified one.
-    
+
     Args:
         browser: The browser instance
         keep_tab: The handle of the tab to keep open

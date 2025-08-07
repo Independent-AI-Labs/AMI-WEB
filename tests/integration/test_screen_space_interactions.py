@@ -14,7 +14,7 @@ from tests.fixtures.test_server import HTMLTestServer
 @pytest_asyncio.fixture
 async def test_server():
     """Start test HTTP server for the test."""
-    server = HTMLTestServer(port=8890)
+    server = HTMLTestServer(port=8891)  # Use different port to avoid conflicts
     base_url = await server.start()
     yield base_url
     await server.stop()

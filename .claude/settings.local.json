@@ -34,7 +34,8 @@
       "Bash(pytest:*)",
       "Bash(pip show:*)",
       "Bash(conda activate:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
