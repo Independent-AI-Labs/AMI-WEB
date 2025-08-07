@@ -110,28 +110,35 @@ class BrowserInstance:
 
         if anti_detect:
             self._apply_anti_detection_options(chrome_options)
+            # Don't disable GPU features in anti-detect mode - WebGL needs them
+            # Also add headless check for anti-detect mode
+            if headless:
+                chrome_options.add_argument("--headless=new")
         else:
             self._add_basic_options(chrome_options, headless)
             self._add_conditional_options(chrome_options)
+
+            # Suppress GPU errors and warnings (only in non-anti-detect mode)
+            chrome_options.add_argument("--disable-gpu-sandbox")
+            chrome_options.add_argument("--disable-software-rasterizer")
+            chrome_options.add_argument("--use-gl=swiftshader")  # Use software GL implementation
+            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
 
         # Disable features that cause GCM/sync errors and slow down tests
         chrome_options.add_argument("--disable-background-networking")
         chrome_options.add_argument("--disable-background-timer-throttling")
         chrome_options.add_argument("--disable-backgrounding-occluded-windows")
         chrome_options.add_argument("--disable-sync")
-        chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
         chrome_options.add_argument("--disable-default-apps")
         chrome_options.add_argument("--no-first-run")
         chrome_options.add_argument("--disable-client-side-phishing-detection")
-
-        # Suppress GPU errors and warnings
-        chrome_options.add_argument("--disable-gpu-sandbox")
-        chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--disable-dev-shm-usage")  # Already in conditional, but let's force it
-        chrome_options.add_argument("--use-gl=swiftshader")  # Use software GL implementation
-        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--log-level=3")  # Only show fatal errors
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])  # Disable Chrome logging
+
+        if not anti_detect:
+            # These features conflict with anti-detection
+            chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])  # Disable Chrome logging
 
         for feature in self._options.disable_blink_features:
             chrome_options.add_argument(f"--disable-blink-features={feature}")
