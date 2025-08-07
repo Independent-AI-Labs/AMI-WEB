@@ -64,6 +64,7 @@ class ChromeManager:
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
         use_pool: bool = True,
+        anti_detect: bool = True,  # Enable anti-detect by default for MCP
     ) -> BrowserInstance:
         if not self._initialized:
             await self.initialize()
@@ -73,7 +74,7 @@ class ChromeManager:
             instance = await self.pool.acquire(opts)
         else:
             instance = BrowserInstance(config=self.config)
-            await instance.launch(headless=headless, profile=profile, extensions=extensions, options=options)
+            await instance.launch(headless=headless, profile=profile, extensions=extensions, options=options, anti_detect=anti_detect)
 
         self._instances[instance.id] = instance
         logger.info(f"Got or created browser instance {instance.id}")

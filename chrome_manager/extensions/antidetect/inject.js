@@ -1,189 +1,202 @@
 /* eslint-env browser */
-/* global HTMLMediaElement, Plugin, MimeType */
 
-// Injection script for anti-detection
-// This MUST be pure ES5 - no const, let, arrow functions, template literals
-
+// AGGRESSIVE webdriver removal and anti-detection - runs BEFORE page scripts
 (function() {
     'use strict';
     
-    // ACTUALLY DELETE the webdriver property
-    try {
-        // Delete it first
-        delete navigator.webdriver;
-        
-        // Make sure it stays deleted by removing it from the prototype too
-        delete Navigator.prototype.webdriver;
-        
-        // DON'T redefine it! That makes it exist again!
-        // Just leave it deleted!
-    } catch (e) {
-        // Ignore errors
+    // ========== WEBDRIVER REMOVAL ==========
+    // Remove webdriver from window FIRST
+    if (window.navigator && window.navigator.webdriver) {
+        delete window.navigator.webdriver;
     }
     
-    // Fix H264 codec detection
+    // Get the Navigator prototype
+    var nav = window.Navigator ? window.Navigator.prototype : null;
+    if (nav && nav.webdriver) {
+        delete nav.webdriver;
+    }
+    
+    // Force undefined on navigator.webdriver
     try {
-        var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
-        HTMLMediaElement.prototype.canPlayType = function(type) {
-            if (!type) return '';
-            if (type.indexOf('h264') !== -1 || 
-                type.indexOf('avc1') !== -1 || 
-                type.indexOf('mp4') !== -1) {
-                return 'probably';
-            }
-            return originalCanPlayType ? originalCanPlayType.call(this, type) : 'probably';
-        };
-        
-        // Override createElement for dynamically created media elements
-        var originalCreateElement = document.createElement;
-        document.createElement = function(tagName) {
-            var element = originalCreateElement.call(document, tagName);
-            if (tagName === 'video' || tagName === 'audio') {
-                element.canPlayType = function(type) {
-                    if (!type) return '';
-                    if (type.indexOf('h264') !== -1 || 
-                        type.indexOf('avc1') !== -1 || 
-                        type.indexOf('mp4') !== -1) {
-                        return 'probably';
-                    }
-                    return 'probably';
-                };
-            }
-            return element;
-        };
-        
-        // Fix Audio constructor
-        if (window.Audio) {
-            var OriginalAudio = window.Audio;
-            window.Audio = function() {
-                var audio = new OriginalAudio();
-                audio.canPlayType = function(type) {
-                    if (!type) return '';
-                    if (type.indexOf('h264') !== -1 || 
-                        type.indexOf('avc1') !== -1 || 
-                        type.indexOf('mp4') !== -1) {
-                        return 'probably';
-                    }
-                    return 'probably';
-                };
-                return audio;
-            };
+        Object.defineProperty(window.navigator, 'webdriver', {
+            get: function() { 
+                return undefined; 
+            },
+            set: function() {},
+            configurable: true,
+            enumerable: false
+        });
+    } catch(e) {}
+    
+    // Intercept all property access
+    var origGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+    Object.getOwnPropertyDescriptor = function(obj, prop) {
+        if (prop === 'webdriver' && (obj === window.navigator || obj === Navigator.prototype)) {
+            return undefined;
         }
-    } catch (e) {
-        // Ignore errors
-    }
+        return origGetOwnPropertyDescriptor.apply(this, arguments);
+    };
     
-    // Add realistic plugins
-    try {
-        var pluginArray = [];
-        
-        // Chrome PDF Plugin
-        var pdfPlugin = {};
-        pdfPlugin.name = 'Chrome PDF Plugin';
-        pdfPlugin.filename = 'internal-pdf-viewer';
-        pdfPlugin.description = 'Portable Document Format';
-        pdfPlugin.length = 1;
-        pdfPlugin[0] = {
-            type: 'application/pdf',
-            suffixes: 'pdf',
-            description: 'Portable Document Format'
-        };
-        pdfPlugin.item = function(i) { return this[i]; };
-        pdfPlugin.namedItem = function() { return this[0]; };
-        pluginArray.push(pdfPlugin);
-        
-        // Chrome PDF Viewer
-        var pdfViewer = {};
-        pdfViewer.name = 'Chrome PDF Viewer';
-        pdfViewer.filename = 'mhjfbmdgcfjbbpaeojofohoefgiehjai';
-        pdfViewer.description = '';
-        pdfViewer.length = 1;
-        pdfViewer[0] = {
-            type: 'application/pdf',
-            suffixes: 'pdf',
-            description: ''
-        };
-        pdfViewer.item = function(i) { return this[i]; };
-        pdfViewer.namedItem = function() { return this[0]; };
-        pluginArray.push(pdfViewer);
-        
-        // Native Client
-        var nativeClient = {};
-        nativeClient.name = 'Native Client';
-        nativeClient.filename = 'internal-nacl-plugin';
-        nativeClient.description = '';
-        nativeClient.length = 2;
-        nativeClient[0] = {
-            type: 'application/x-nacl',
-            suffixes: '',
-            description: 'Native Client Executable'
-        };
-        nativeClient[1] = {
-            type: 'application/x-pnacl',
-            suffixes: '',
-            description: 'Portable Native Client Executable'
-        };
-        nativeClient.item = function(i) { return this[i]; };
-        nativeClient.namedItem = function() { return this[0]; };
-        pluginArray.push(nativeClient);
-        
-        // Add array methods
-        pluginArray.item = function(i) { 
-            return this[i]; 
-        };
-        pluginArray.namedItem = function(name) {
-            for (var i = 0; i < this.length; i++) {
-                if (this[i] && this[i].name === name) {
-                    return this[i];
+    // Override hasOwnProperty
+    var origHasOwnProperty = Object.prototype.hasOwnProperty;
+    Object.prototype.hasOwnProperty = function(prop) {
+        if (prop === 'webdriver' && this === window.navigator) {
+            return false;
+        }
+        return origHasOwnProperty.call(this, prop);
+    };
+    
+    // ========== H264 CODEC FIX ==========
+    var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
+    HTMLMediaElement.prototype.canPlayType = function(type) {
+        if (!type) return '';
+        var lowerType = type.toLowerCase();
+        if (lowerType.indexOf('h264') !== -1 || 
+            lowerType.indexOf('avc1') !== -1 || 
+            lowerType.indexOf('mp4') !== -1) {
+            return 'probably';
+        }
+        if (originalCanPlayType) {
+            return originalCanPlayType.apply(this, arguments);
+        }
+        return '';
+    };
+    
+    // ========== PLUGIN CREATION ==========
+    // Only create plugins if they're missing or empty
+    if (!window.navigator.plugins || window.navigator.plugins.length === 0) {
+        try {
+            var pluginArray = [];
+            
+            // Chrome PDF Plugin
+            var pdfPlugin = {
+                name: 'Chrome PDF Plugin',
+                filename: 'internal-pdf-viewer',
+                description: 'Portable Document Format',
+                length: 2
+            };
+            pdfPlugin[0] = {
+                type: 'application/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: pdfPlugin
+            };
+            pdfPlugin[1] = {
+                type: 'text/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: pdfPlugin
+            };
+            pdfPlugin.item = function(i) { return this[i] || null; };
+            pdfPlugin.namedItem = function(n) { return this[n] || null; };
+            
+            pluginArray[0] = pdfPlugin;
+            pluginArray[pdfPlugin.name] = pdfPlugin;
+            
+            // Chrome PDF Viewer
+            var viewerPlugin = {
+                name: 'Chrome PDF Viewer',
+                filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+                description: '',
+                length: 2
+            };
+            viewerPlugin[0] = {
+                type: 'application/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: viewerPlugin
+            };
+            viewerPlugin[1] = {
+                type: 'text/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format',
+                enabledPlugin: viewerPlugin
+            };
+            viewerPlugin.item = function(i) { return this[i] || null; };
+            viewerPlugin.namedItem = function(n) { return this[n] || null; };
+            
+            pluginArray[1] = viewerPlugin;
+            pluginArray[viewerPlugin.name] = viewerPlugin;
+            
+            // Native Client
+            var naclPlugin = {
+                name: 'Native Client',
+                filename: 'internal-nacl-plugin',
+                description: '',
+                length: 2
+            };
+            naclPlugin[0] = {
+                type: 'application/x-nacl',
+                suffixes: '',
+                description: 'Native Client Executable',
+                enabledPlugin: naclPlugin
+            };
+            naclPlugin[1] = {
+                type: 'application/x-pnacl',
+                suffixes: '',
+                description: 'Portable Native Client Executable',
+                enabledPlugin: naclPlugin
+            };
+            naclPlugin.item = function(i) { return this[i] || null; };
+            naclPlugin.namedItem = function(n) { return this[n] || null; };
+            
+            pluginArray[2] = naclPlugin;
+            pluginArray[naclPlugin.name] = naclPlugin;
+            
+            // Set array properties
+            pluginArray.length = 3;
+            pluginArray.item = function(i) { return this[i] || null; };
+            pluginArray.namedItem = function(n) { return this[n] || null; };
+            pluginArray.refresh = function() {};
+            
+            // Create mime array
+            var mimeArray = [];
+            var mimeIdx = 0;
+            
+            for (var i = 0; i < pluginArray.length; i++) {
+                var plugin = pluginArray[i];
+                for (var j = 0; j < plugin.length; j++) {
+                    var mime = plugin[j];
+                    mimeArray[mimeIdx++] = mime;
+                    mimeArray[mime.type] = mime;
                 }
             }
-            return null;
-        };
-        pluginArray.refresh = function() {};
-        
-        Object.defineProperty(navigator, 'plugins', {
-            get: function() { 
-                return pluginArray; 
-            },
-            configurable: true,
-            enumerable: true
-        });
-        
-        // Add mimeTypes
-        var mimeArray = [];
-        mimeArray.push({
-            type: 'application/pdf',
-            suffixes: 'pdf',
-            description: 'Portable Document Format',
-            enabledPlugin: pdfPlugin
-        });
-        mimeArray.push({
-            type: 'application/x-google-chrome-pdf',
-            suffixes: 'pdf',
-            description: 'Portable Document Format',
-            enabledPlugin: pdfViewer
-        });
-        
-        mimeArray.item = function(i) { 
-            return this[i]; 
-        };
-        mimeArray.namedItem = function(type) {
-            for (var i = 0; i < this.length; i++) {
-                if (this[i] && this[i].type === type) {
-                    return this[i];
+            
+            mimeArray.length = mimeIdx;
+            mimeArray.item = function(i) { return this[i] || null; };
+            mimeArray.namedItem = function(n) { return this[n] || null; };
+            
+            // Set prototypes
+            if (window.PluginArray) {
+                Object.setPrototypeOf(pluginArray, PluginArray.prototype);
+            }
+            if (window.MimeTypeArray) {
+                Object.setPrototypeOf(mimeArray, MimeTypeArray.prototype);
+            }
+            
+            for (var k = 0; k < pluginArray.length; k++) {
+                if (window.Plugin) {
+                    Object.setPrototypeOf(pluginArray[k], Plugin.prototype);
+                }
+                for (var m = 0; m < pluginArray[k].length; m++) {
+                    if (window.MimeType) {
+                        Object.setPrototypeOf(pluginArray[k][m], MimeType.prototype);
+                    }
                 }
             }
-            return null;
-        };
-        
-        Object.defineProperty(navigator, 'mimeTypes', {
-            get: function() { 
-                return mimeArray; 
-            },
-            configurable: true,
-            enumerable: true
-        });
-    } catch (e) {
-        // Ignore errors
+            
+            // Override navigator.plugins and mimeTypes
+            Object.defineProperty(window.navigator, 'plugins', {
+                get: function() { return pluginArray; },
+                configurable: true,
+                enumerable: true
+            });
+            
+            Object.defineProperty(window.navigator, 'mimeTypes', {
+                get: function() { return mimeArray; },
+                configurable: true,
+                enumerable: true
+            });
+        } catch(e) {}
     }
 })();
