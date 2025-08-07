@@ -21,6 +21,7 @@ class ChromeManager:
             warm_instances=self.config.get("pool.warm_instances", 2),
             instance_ttl=self.config.get("pool.instance_ttl", 3600),
             health_check_interval=self.config.get("pool.health_check_interval", 30),
+            config=self.config,
         )
         self.session_manager = SessionManager(session_dir=self.config.get("storage.session_dir", "./sessions"))
         self._instances: dict[str, BrowserInstance] = {}
@@ -36,6 +37,10 @@ class ChromeManager:
         self._initialized = True
         logger.info("Chrome Manager initialized successfully")
 
+    async def start(self):
+        """Alias for initialize() for backward compatibility."""
+        await self.initialize()
+
     async def shutdown(self):
         logger.info("Shutting down Chrome Manager")
         await self.pool.shutdown()
@@ -48,7 +53,11 @@ class ChromeManager:
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
 
-    async def create_instance(
+    async def stop(self):
+        """Alias for shutdown() for backward compatibility."""
+        await self.shutdown()
+
+    async def get_or_create_instance(
         self,
         headless: bool = True,
         profile: str | None = None,
@@ -63,28 +72,58 @@ class ChromeManager:
             opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
             instance = await self.pool.acquire(opts)
         else:
-            instance = BrowserInstance()
+            instance = BrowserInstance(config=self.config)
             await instance.launch(headless=headless, profile=profile, extensions=extensions, options=options)
 
         self._instances[instance.id] = instance
-        logger.info(f"Created browser instance {instance.id}")
+        logger.info(f"Got or created browser instance {instance.id}")
         return instance
 
     async def get_instance(self, instance_id: str) -> BrowserInstance | None:
         return self._instances.get(instance_id)
 
-    async def terminate_instance(self, instance_id: str, return_to_pool: bool = True) -> bool:
+    async def return_to_pool(self, instance_id: str) -> bool:
+        """Return an instance to the pool for reuse."""
+        instance = self._instances.get(instance_id)
+        if not instance:
+            logger.warning(f"Instance {instance_id} not found")
+            return False
+
+        if instance.id in self.pool.all_instances:
+            await self.pool.release(instance_id)
+            logger.info(f"Returned instance {instance_id} to pool")
+            return True
+        logger.warning(f"Instance {instance_id} is not a pool instance")
+        return False
+
+    async def terminate_instance(self, instance_id: str, return_to_pool: bool = False) -> bool:
+        """Terminate a browser instance.
+        
+        Args:
+            instance_id: ID of instance to terminate
+            return_to_pool: If True, return to pool for reuse. If False, fully terminate.
+                           Default is False to ensure proper cleanup.
+        """
         instance = self._instances.pop(instance_id, None)
         if not instance:
             logger.warning(f"Instance {instance_id} not found")
             return False
 
         if return_to_pool and instance.id in self.pool.all_instances:
+            # Return to pool for reuse (keeps browser running)
             await self.pool.release(instance_id)
+            logger.info(f"Returned instance {instance_id} to pool")
         else:
+            # Actually terminate the browser
             await instance.terminate()
+            # Remove from pool if it was there
+            if instance.id in self.pool.all_instances:
+                self.pool.all_instances.pop(instance.id, None)
+                if instance in self.pool.available:
+                    self.pool.available.remove(instance)
+                self.pool.in_use.pop(instance.id, None)
+            logger.info(f"Terminated instance {instance_id}")
 
-        logger.info(f"Terminated instance {instance_id}")
         return True
 
     async def list_instances(self) -> list[InstanceInfo]:
@@ -116,7 +155,7 @@ class ChromeManager:
 
         async def execute_task(task: dict[str, Any]):
             async with semaphore:
-                instance = await self.create_instance()
+                instance = await self.get_or_create_instance()
                 try:
                     return await self._execute_task_on_instance(instance, task)
                 finally:

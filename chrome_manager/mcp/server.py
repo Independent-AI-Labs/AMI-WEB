@@ -195,9 +195,25 @@ class MCPServer:
 
         logger.info(f"Starting MCP server on {host}:{port}")
 
-        self.server = await websockets.serve(self.handle_client, host, port, ping_interval=30, ping_timeout=10)
+        # Create a wrapper that works with the new websockets API
+        async def handler_wrapper(websocket):
+            logger.debug(f"Handler wrapper called for {websocket.remote_address}")
+            try:
+                await self.handle_client(websocket)
+            except Exception as e:
+                logger.error(f"Handler error: {e}")
+                raise
 
-        logger.info("MCP server started successfully")
+        # Start the server
+        self.server = await websockets.serve(
+            handler_wrapper,
+            host,  # Use the configured host
+            port,
+            ping_interval=30,
+            ping_timeout=10
+        )
+
+        logger.info(f"MCP server started successfully on {host}:{port}")
 
     async def stop(self):
         if self.server:
@@ -211,7 +227,7 @@ class MCPServer:
             self.clients.clear()
             logger.info("MCP server stopped")
 
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str):  # noqa: ARG002
+    async def handle_client(self, websocket: WebSocketServerProtocol):
         client_id = str(uuid.uuid4())
         self.clients[client_id] = websocket
 
@@ -287,7 +303,7 @@ class MCPServer:
         return instance
 
     async def _execute_launch(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self.manager.create_instance(
+        instance = await self.manager.get_or_create_instance(
             headless=parameters.get("headless", True), profile=parameters.get("profile"), extensions=parameters.get("extensions", [])
         )
         return {"instance_id": instance.id}

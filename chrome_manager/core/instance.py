@@ -13,11 +13,12 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
+from ..utils.config import Config
 from ..utils.exceptions import InstanceError
 
 
 class BrowserInstance:
-    def __init__(self, instance_id: str | None = None):
+    def __init__(self, instance_id: str | None = None, config: Config | None = None):
         self.id = instance_id or str(uuid.uuid4())
         self.driver: WebDriver | None = None
         self.status = BrowserStatus.IDLE
@@ -28,6 +29,7 @@ class BrowserInstance:
         self._service: Service | None = None
         self._logs: list[ConsoleEntry] = []
         self._network_logs: list[NetworkEntry] = []
+        self._config = config or Config()
 
     async def launch(
         self,
@@ -84,6 +86,25 @@ class BrowserInstance:
         self._add_basic_options(chrome_options, headless)
         self._add_conditional_options(chrome_options)
 
+        # Disable features that cause GCM/sync errors and slow down tests
+        chrome_options.add_argument("--disable-background-networking")
+        chrome_options.add_argument("--disable-background-timer-throttling")
+        chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+        chrome_options.add_argument("--disable-sync")
+        chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
+        chrome_options.add_argument("--disable-default-apps")
+        chrome_options.add_argument("--no-first-run")
+        chrome_options.add_argument("--disable-client-side-phishing-detection")
+
+        # Suppress GPU errors and warnings
+        chrome_options.add_argument("--disable-gpu-sandbox")
+        chrome_options.add_argument("--disable-software-rasterizer")
+        chrome_options.add_argument("--disable-dev-shm-usage")  # Already in conditional, but let's force it
+        chrome_options.add_argument("--use-gl=swiftshader")  # Use software GL implementation
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--log-level=3")  # Only show fatal errors
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])  # Disable Chrome logging
+
         for feature in self._options.disable_blink_features:
             chrome_options.add_argument(f"--disable-blink-features={feature}")
         for arg in self._options.arguments:
@@ -104,19 +125,23 @@ class BrowserInstance:
 
     async def _launch_undetected(self, chrome_options: Options) -> WebDriver:
         loop = asyncio.get_event_loop()
-        chrome_path = Path("C:/Users/vdonc/AMI-WEB/chromium-win/chrome.exe")
-        if chrome_path.exists():
-            chrome_options.binary_location = str(chrome_path)
+        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
+        if chrome_binary_path:
+            chrome_path = Path(chrome_binary_path)
+            if chrome_path.exists():
+                chrome_options.binary_location = str(chrome_path)
         return await loop.run_in_executor(None, lambda: uc.Chrome(options=chrome_options, version_main=None, use_subprocess=True, driver_executable_path=None))
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
         loop = asyncio.get_event_loop()
-        chrome_path = Path("C:/Users/vdonc/AMI-WEB/chromium-win/chrome.exe")
-        if chrome_path.exists():
-            chrome_options.binary_location = str(chrome_path)
+        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
+        if chrome_binary_path:
+            chrome_path = Path(chrome_binary_path)
+            if chrome_path.exists():
+                chrome_options.binary_location = str(chrome_path)
 
-        # Use our specific ChromeDriver
-        chromedriver_path = "C:/Users/vdonc/AMI-WEB/chromedriver.exe"
+        # Use ChromeDriver from config
+        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path", "./chromedriver.exe")
         service = Service(executable_path=chromedriver_path)
 
         return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
@@ -138,20 +163,45 @@ class BrowserInstance:
 
             if self.driver:
                 try:
+                    # Properly close the browser using quit() first
+                    # This sends the proper shutdown signal to Chrome
                     self.driver.quit()
+                    logger.debug(f"Browser {self.id} quit successfully")
+
                 except Exception as e:
-                    logger.warning(f"Error during driver quit: {e}")
-                    if force and self.process:
-                        self.process.terminate()
-                        await asyncio.sleep(1)
-                        if self.process.is_running():
-                            self.process.kill()
+                    logger.debug(f"Normal quit failed for {self.id}: {e}")
+
+                    # If normal quit fails, force kill the processes
+                    try:
+                        # Kill via service
+                        service = getattr(self.driver, "service", None)
+                        if service and hasattr(service, "process") and service.process:
+                            if service.process.poll() is None:
+                                service.process.terminate()
+                                await asyncio.sleep(0.1)
+                                if service.process.poll() is None:
+                                    service.process.kill()
+
+                        # Kill via psutil process
+                        if self.process and self.process.is_running():
+                            self.process.terminate()
+                            await asyncio.sleep(0.1)
+                            if self.process.is_running():
+                                self.process.kill()
+
+                    except Exception as kill_error:
+                        logger.debug(f"Force kill error for {self.id}: {kill_error}")
+
+                finally:
+                    self.driver = None
+                    self.process = None
 
             logger.info(f"Browser instance {self.id} terminated")
 
         except Exception as e:
             logger.error(f"Failed to terminate browser instance {self.id}: {e}")
-            raise InstanceError(f"Failed to terminate browser: {e}") from e
+            if not force:
+                raise InstanceError(f"Failed to terminate browser: {e}") from e
 
     async def restart(self) -> WebDriver:
         logger.info(f"Restarting browser instance {self.id}")

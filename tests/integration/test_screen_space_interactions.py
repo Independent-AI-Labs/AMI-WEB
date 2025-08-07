@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 
 from chrome_manager.core.instance import BrowserInstance
 from chrome_manager.facade.input import InputController
@@ -10,27 +11,24 @@ from chrome_manager.facade.navigation import NavigationController
 from tests.fixtures.test_server import HTMLTestServer
 
 
-@pytest.fixture(scope="session")
-def test_server(event_loop):
-    """Start test HTTP server for the test session."""
-
-    async def _start_server():
-        server = HTMLTestServer(port=8890)
-        base_url = await server.start()
-        return server, base_url
-
-    server, base_url = event_loop.run_until_complete(_start_server())
+@pytest_asyncio.fixture
+async def test_server():
+    """Start test HTTP server for the test."""
+    server = HTMLTestServer(port=8890)
+    base_url = await server.start()
     yield base_url
-    event_loop.run_until_complete(server.stop())
+    await server.stop()
 
 
-@pytest.fixture
-def browser_instance(event_loop):
+@pytest_asyncio.fixture
+async def browser_instance():
     """Create a browser instance for testing."""
     instance = BrowserInstance()
-    event_loop.run_until_complete(instance.launch(headless=True))
-    yield instance
-    event_loop.run_until_complete(instance.terminate())
+    try:
+        await instance.launch(headless=True)
+        yield instance
+    finally:
+        await instance.terminate(force=True)
 
 
 class TestScreenSpaceClicks:

@@ -1,0 +1,77 @@
+# Chrome Manager Configuration
+# Copy this file to config.yaml and adjust settings as needed
+
+chrome_manager:
+  browser:
+    # Path to Chrome/Chromium executable
+    chrome_binary_path: "./chromium-win/chrome.exe"
+    
+    # Path to ChromeDriver executable
+    chromedriver_path: "./chromedriver.exe"
+    
+    # Default headless mode
+    default_headless: true
+    
+    # Default window size [width, height]
+    default_window_size: [1920, 1080]
+    
+    # User agent string (null for default)
+    user_agent: null
+
+  pool:
+    # Minimum number of browser instances to keep ready
+    min_instances: 1
+    
+    # Maximum number of browser instances allowed
+    max_instances: 10
+    
+    # Number of warm (pre-launched) instances to maintain
+    warm_instances: 2
+    
+    # Time-to-live for instances in seconds
+    instance_ttl: 3600
+    
+    # Health check interval in seconds
+    health_check_interval: 30
+
+  performance:
+    # Maximum memory per instance in MB
+    max_memory_per_instance: 512
+    
+    # Maximum CPU percentage per instance
+    max_cpu_per_instance: 25
+    
+    # Page load timeout in seconds
+    page_load_timeout: 30
+    
+    # Script execution timeout in seconds
+    script_timeout: 10
+
+  storage:
+    # Directory for session data
+    session_dir: "./sessions"
+    
+    # Directory for screenshots
+    screenshot_dir: "./screenshots"
+    
+    # Directory for video recordings
+    video_dir: "./videos"
+    
+    # Directory for logs
+    log_dir: "./logs"
+
+  mcp:
+    # MCP server host
+    server_host: "localhost"
+    
+    # MCP server port
+    server_port: 8765
+    
+    # Maximum concurrent connections
+    max_connections: 100
+    
+    # Require authentication
+    auth_required: false
+    
+    # Enable TLS
+    tls_enabled: false
