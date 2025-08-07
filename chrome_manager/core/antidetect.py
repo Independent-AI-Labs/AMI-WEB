@@ -217,7 +217,7 @@ def execute_anti_detection_scripts(driver) -> None:
             "Target.setAutoAttach",
             {
                 "autoAttach": True,
-                "waitForDebuggerOnStart": True,  # Wait so we can inject
+                "waitForDebuggerOnStart": False,  # Don't wait - causes timing issues
                 "flatten": True,
                 "filter": [{"type": "page", "exclude": False}],  # Only attach to pages
             },
