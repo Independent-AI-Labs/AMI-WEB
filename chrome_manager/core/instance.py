@@ -11,6 +11,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
 from ..utils.config import Config
@@ -140,9 +141,17 @@ class BrowserInstance:
             if chrome_path.exists():
                 chrome_options.binary_location = str(chrome_path)
 
-        # Use ChromeDriver from config
-        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path", "./chromedriver.exe")
-        service = Service(executable_path=chromedriver_path)
+        # Try to use ChromeDriver from config, otherwise auto-download
+        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path")
+
+        if chromedriver_path and Path(chromedriver_path).exists():
+            # Use specified ChromeDriver
+            service = Service(executable_path=chromedriver_path)
+        else:
+            # Auto-download ChromeDriver using webdriver-manager
+            logger.info("Auto-downloading ChromeDriver...")
+            chromedriver_path = ChromeDriverManager().install()
+            service = Service(executable_path=chromedriver_path)
 
         return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
 
