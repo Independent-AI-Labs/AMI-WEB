@@ -53,38 +53,15 @@ class ChromeDriverPatcher:
 
             modified = False
 
-            # Pattern 1: Find and replace the CDC injection code {window.cdc_... = ...;}
-            cdc_patterns = [
-                rb"\{window\.cdc.*?;\}",  # Standard CDC pattern
-                rb"window\.cdc[^;]*;",  # Alternative CDC pattern
-                rb"\$cdc_[a-zA-Z0-9_]+",  # $cdc_ variables
-                rb"cdc_[a-zA-Z0-9_]+",  # cdc_ properties
-            ]
-
-            for pattern in cdc_patterns:
-                matches = re.findall(pattern, content)
-                for match in matches:
-                    # Replace with spaces to maintain binary size
-                    replacement = b" " * len(match)
-                    content = content.replace(match, replacement)
-                    modified = True
-                    logger.debug(f"Patched CDC pattern: {match[:50]}...")
-
-            # Pattern 2: Replace $cdc strings with $wdc to break detection
-            content = content.replace(b"$cdc", b"$wdc")
-            content = content.replace(b"cdc_", b"wdc_")
-
-            # Pattern 3: Patch key identification strings
-            key_strings = [
-                (b"webdriver", b"web_river"),  # Break "webdriver" string
-                (b"chromedriver", b"chrome_river"),  # Break "chromedriver" string
-                (b"selenium", b"_elenium"),  # Break "selenium" string
-            ]
-
-            for old_str, new_str in key_strings:
-                if old_str in content and len(old_str) == len(new_str):
-                    content = content.replace(old_str, new_str)
-                    modified = True
+            # ONLY replace the exact CDC variable name - no regex patterns!
+            # The specific CDC variable that ChromeDriver uses
+            cdc_var = b"cdc_adoQpoasnfa76pfcZLmcfl"
+            if cdc_var in content:
+                # Replace with same length string to not break offsets
+                wdc_var = b"wdc_adoQpoasnfa76pfcZLmcfl"
+                content = content.replace(cdc_var, wdc_var)
+                modified = True
+                logger.debug(f"Replaced CDC variable: {cdc_var!r} -> {wdc_var!r}")
 
             if modified:
                 # Write the patched binary
@@ -224,6 +201,46 @@ def execute_anti_detection_scripts(driver) -> None:
     This should be called after the driver is initialized.
     """
     scripts = [
+        # FIRST AND MOST CRITICAL: Remove webdriver property completely
+        """
+        // Remove webdriver immediately - this must run first
+        (function() {
+            // Delete from navigator object
+            delete navigator.webdriver;
+
+            // Delete from Navigator prototype
+            delete Navigator.prototype.webdriver;
+
+            // Redefine as undefined getter
+            try {
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: function() { return undefined; },
+                    set: function() {},
+                    configurable: false,
+                    enumerable: false
+                });
+            } catch(e) {}
+
+            // Also try on the prototype
+            try {
+                Object.defineProperty(Navigator.prototype, 'webdriver', {
+                    get: function() { return undefined; },
+                    set: function() {},
+                    configurable: false,
+                    enumerable: false
+                });
+            } catch(e) {}
+
+            // Override Object.getOwnPropertyDescriptor to hide it
+            var originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            Object.getOwnPropertyDescriptor = function(obj, prop) {
+                if (prop === 'webdriver') {
+                    return undefined;
+                }
+                return originalGetOwnPropertyDescriptor.apply(this, arguments);
+            };
+        })();
+        """,
         # CRITICAL: Remove all CDC properties before any page scripts run
         """
         // Delete all CDC properties from window, document, and navigator
@@ -427,6 +444,48 @@ def execute_anti_detection_scripts(driver) -> None:
                 }
             };
         }
+        """,
+        # Fix H264 codec detection
+        """
+        // Override canPlayType to always return 'probably' for H264
+        (function() {
+            HTMLMediaElement.prototype.canPlayType = function(type) {
+                if (type && (type.includes('h264') || type.includes('avc1') || type.includes('mp4'))) {
+                    return 'probably';
+                }
+                return type ? 'probably' : '';
+            };
+
+            // Also fix dynamically created elements
+            var _createElement = document.createElement;
+            document.createElement = function(tagName) {
+                var element = _createElement.apply(document, arguments);
+                if (tagName === 'video' || tagName === 'audio') {
+                    element.canPlayType = function(type) {
+                        if (type && (type.includes('h264') || type.includes('avc1') || type.includes('mp4'))) {
+                            return 'probably';
+                        }
+                        return type ? 'probably' : '';
+                    };
+                }
+                return element;
+            };
+
+            // Fix Audio constructor
+            var _Audio = window.Audio;
+            if (_Audio) {
+                window.Audio = function() {
+                    var audio = new _Audio(...arguments);
+                    audio.canPlayType = function(type) {
+                        if (type && (type.includes('h264') || type.includes('avc1') || type.includes('mp4'))) {
+                            return 'probably';
+                        }
+                        return type ? 'probably' : '';
+                    };
+                    return audio;
+                };
+            }
+        })();
         """,
         # Fix WebGL context and vendor/renderer
         """
