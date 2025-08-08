@@ -7,7 +7,7 @@ import random
 import pytest
 import pytest_asyncio
 
-from chrome_manager.core.instance import BrowserInstance
+# BrowserInstance import removed - using fixtures from conftest
 from chrome_manager.facade.input import InputController
 from chrome_manager.facade.navigation import NavigationController
 from tests.fixtures.threaded_server import ThreadedHTMLServer
@@ -27,15 +27,7 @@ def test_server():
     server.stop()  # Synchronous stop
 
 
-@pytest_asyncio.fixture
-async def browser_instance():
-    """Create a browser instance for testing."""
-    instance = BrowserInstance()
-    try:
-        await instance.launch(headless=HEADLESS)
-        yield instance
-    finally:
-        await instance.terminate(force=True)
+# Fixture removed - using shared fixtures from conftest.py instead
 
 
 class TestScreenSpaceClicks:
