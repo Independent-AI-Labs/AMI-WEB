@@ -306,6 +306,6 @@ Built with:
 
 **⭐ Star us on GitHub if this helps you bypass bot detection!**
 
-**🤖 Using with Claude or Gemini? Check out our [MCP Integration Guide](docs/mcp-integration.md)**
+**🤖 Using with Claude or Gemini? Check out our [MCP Integration Guide](MCP.md)**
 
 **🐛 Found a detection issue? Open an issue with the site URL!**
