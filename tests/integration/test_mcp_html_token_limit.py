@@ -2,7 +2,19 @@
 
 import asyncio
 
+from loguru import logger
+
 from chrome_manager.core.manager import ChromeManager
+
+
+async def get_html_with_selector(nav, selector, max_tokens):
+    """Get HTML for a specific selector with token limit."""
+    max_chars = max_tokens * 4
+    html = await nav.get_element_html(selector)
+    token_count = len(html) // 4
+    if token_count > max_tokens:
+        html = html[:max_chars] + f"\n<!-- Response limited to {max_tokens} tokens. Element too large - try a more specific selector or child elements. -->"
+    return html
 
 
 async def test_mcp_html_limit():
@@ -24,86 +36,35 @@ async def test_mcp_html_limit():
 
         nav = NavigationController(instance)
 
-        # Test the actual MCP logic
-        parameters = {"instance_id": instance_id}
-
         print("Executing browser_get_html logic...")
 
-        # This is the actual code from server.py
-        selector = parameters.get("selector")
-        max_depth = parameters.get("max_depth")
-        collapse_depth = parameters.get("collapse_depth")
+        # Test without selector - should auto-adjust depth
+        print("\n" + "=" * 60)
+        print("Testing without selector (should auto-adjust depth)...")
 
-        # Token limit is 25000 (roughly 4 chars per token)
         max_tokens = 25000
-        max_chars = max_tokens * 4  # Rough approximation
+        max_chars = max_tokens * 4
 
-        # Try to get HTML with progressively more aggressive limits
+        # Try different depths
         html = None
-        tried_approaches = []
-
-        if selector:
-            # Specific element requested
-            html = await nav.get_element_html(selector)
-            token_count = len(html) // 4  # Rough token estimate
-            if token_count > max_tokens:
-                # Even the specific element is too large
-                html = (
-                    html[:max_chars]
-                    + f"\n<!-- Response limited to {max_tokens} tokens. Element too large - try a more specific selector or child elements. -->"
-                )
-        else:
-            # Try different depth limits to fit within token limit
-            depths_to_try = []
-
-            if collapse_depth:
-                depths_to_try.append((max_depth, collapse_depth, "user-specified collapse_depth"))
-            if max_depth:
-                depths_to_try.append((max_depth, None, "user-specified max_depth"))
-
-            # Auto-adjust depths if needed
-            depths_to_try.extend(
-                [
-                    (None, 3, "collapse_depth=3"),
-                    (None, 2, "collapse_depth=2"),
-                    (None, 1, "collapse_depth=1"),
-                    (3, None, "max_depth=3"),
-                    (2, None, "max_depth=2"),
-                    (1, None, "max_depth=1"),
-                ]
-            )
-
-            for md, cd, description in depths_to_try:
-                if md or cd:
-                    html = await nav.get_html_with_depth_limit(md, cd)
-                else:
-                    html = await nav.get_page_content()
-
+        for depth in [3, 2, 1]:
+            try:
+                html = await nav.get_page_content(max_depth=depth, collapse_depth=depth - 1 if depth > 1 else None)
                 token_count = len(html) // 4
-                tried_approaches.append(f"{description}: ~{token_count} tokens")
-
                 if token_count <= max_tokens:
-                    if len(tried_approaches) > 1:
-                        html = f"<!-- Auto-adjusted to {description} to fit within {max_tokens} token limit -->\n" + html
-                    print(f"SUCCESS: Auto-adjusted to {description}")
-                    print(f"  Final token count: ~{token_count} (within {max_tokens} limit)")
+                    print(f"Succeeded with depth={depth}, tokens: ~{token_count}")
                     break
-            else:
-                # Nothing worked, return most collapsed version with message
-                html = await nav.get_html_with_depth_limit(max_depth=1, collapse_depth=1)
-                token_count = len(html) // 4
-                if token_count > max_tokens:
-                    html = html[:max_chars]
-                html = (
-                    f"<!-- WARNING: Response limited to {max_tokens} tokens. Page too large even at minimum depth. \n"
-                    f"Tried approaches: {', '.join(tried_approaches)}\n"
-                    f"Please use a specific selector to target the content you need. -->\n" + html
-                )
-                print("FAILED to fit naturally, had to truncate")
+                print(f"Depth {depth}: {token_count} tokens (too large)")
+            except Exception as e:
+                print(f"Error at depth {depth}: {e}")
 
-        result = {"html": html}
+        if not html or len(html) // 4 > max_tokens:
+            if not html:
+                html = await nav.get_page_content(max_depth=1)
+            if len(html) > max_chars:
+                html = html[:max_chars]
+            print("FAILED to fit naturally, had to truncate")
 
-        print(f"\nTried approaches: {', '.join(tried_approaches)}")
         print(f"\nFirst 500 chars of response:\n{html[:500]}")
         print(f"\nFinal response size: {len(html)} chars (~{len(html)//4} tokens)")
 
@@ -111,13 +72,9 @@ async def test_mcp_html_limit():
         print("\n" + "=" * 60)
         print("Testing with specific selector (#firstHeading)...")
 
-        parameters = {"instance_id": instance_id, "selector": "#firstHeading"}
-        selector = parameters.get("selector")
-
-        html = await nav.get_element_html(selector)
-        token_count = len(html) // 4
+        html = await get_html_with_selector(nav, "#firstHeading", max_tokens)
         print(f"Element HTML: {html}")
-        print(f"Token count: ~{token_count}")
+        print(f"Token count: ~{len(html)//4}")
 
         # Properly terminate
         await manager.return_to_pool(instance_id)
@@ -129,8 +86,8 @@ async def test_mcp_html_limit():
         print(f"Error: {e}")
         try:
             await manager.shutdown()
-        except:
-            pass
+        except Exception:
+            logger.debug("Shutdown failed, but test already failed")
 
 
 if __name__ == "__main__":

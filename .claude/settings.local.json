@@ -40,7 +40,9 @@
       "Bash(del:*)",
       "Bash(for i in 1 2 3)",
       "Bash(do python -m pytest tests/integration/test_antidetection.py::TestAntiDetection::test_second_tab_antidetection -xvs)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(touch:*)",
+      "Bash(copy chromedriver_patched_new.exe chromedriver.exe)"
     ],
     "deny": []
   }
