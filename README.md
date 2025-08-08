@@ -2,12 +2,14 @@
 
 An advanced Chrome automation framework with **undetectable browser fingerprinting**, **Model Context Protocol (MCP) server**, and enterprise-grade pooling. Built for AI agents, web scraping, testing, and automation at scale.
 
+![](res/notbot.png)
+
 ## ✨ Why AMI-WEB?
 
 Traditional browser automation tools are easily detected by modern websites. AMI-WEB solves this with:
 
 - **🥷 Stealth Mode**: Advanced anti-detection that bypasses bot detection on sites like bot.sannysoft.com
-- **🤖 AI-Ready**: Native MCP server for seamless integration with AI agents and LLMs
+- **🤖 AI-Ready**: Native MCP servers (stdio & WebSocket) for seamless integration with Claude, Gemini, and other AI agents
 - **⚡ Lightning Fast**: Async architecture with intelligent browser pooling for massive scale
 - **🔒 Battle-Tested**: Comprehensive test suite with real-world anti-bot verification
 
@@ -22,7 +24,8 @@ Traditional browser automation tools are easily detected by modern websites. AMI
 - **CDP Script Injection**: Pre-page-load script execution for perfect timing
 
 ### MCP Server Integration
-- **WebSocket API**: Real-time bidirectional communication
+- **Stdio Server**: Direct integration with Claude Desktop, Gemini CLI, and other MCP clients
+- **WebSocket API**: Real-time bidirectional communication for custom integrations
 - **40+ Browser Tools**: Complete browser control via standardized protocol
 - **Token-Limited HTML**: Smart HTML extraction with automatic depth adjustment (25k token limit)
 - **Event Streaming**: Live console logs, network activity, and performance metrics
@@ -43,7 +46,10 @@ git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
 pip install -r requirements.txt
 
-# Run the MCP server
+# Run the stdio MCP server (for Claude, Gemini CLI, etc.)
+python mcp_stdio_server.py
+
+# Or run the WebSocket server for custom integrations
 python -m chrome_manager.mcp.server
 
 # Or use directly in Python
@@ -65,6 +71,40 @@ async def main():
 ```
 
 ## 🎮 MCP Server Usage
+
+### Method 1: Stdio Server (Claude Desktop, Gemini CLI)
+
+The stdio server integrates directly with MCP-compatible tools:
+
+#### Claude Desktop Configuration
+
+Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "chrome-automation": {
+      "command": "python",
+      "args": ["mcp_stdio_server.py"],
+      "cwd": "/path/to/AMI-WEB"
+    }
+  }
+}
+```
+
+#### Gemini CLI Configuration
+
+For Gemini CLI or other MCP stdio clients:
+
+```bash
+# Start the stdio server
+python mcp_stdio_server.py
+
+# The server communicates via stdin/stdout using JSON-RPC
+# All 40+ browser tools are available through the MCP protocol
+```
+
+### Method 2: WebSocket Server (Custom Integrations)
 
 Connect any WebSocket client to control browsers:
 
@@ -173,6 +213,20 @@ AMI-WEB uses a layered architecture for maintainability and extensibility:
 └─────────────────────────────────────────────┘
 ```
 
+### MCP Server Modes
+
+AMI-WEB provides two MCP server implementations:
+
+1. **Stdio Server** (`mcp_stdio_server.py`): For direct integration with MCP clients
+   - Used by: Claude Desktop, Gemini CLI, MCP-compatible tools
+   - Protocol: JSON-RPC over stdin/stdout
+   - Best for: AI assistants and chatbots
+
+2. **WebSocket Server** (`server.py`): For custom integrations
+   - Used by: Web apps, custom clients, distributed systems
+   - Protocol: JSON-RPC over WebSocket
+   - Best for: Real-time applications and multi-client scenarios
+
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
 
 ## 🧪 Testing
@@ -187,8 +241,11 @@ pytest tests/integration/test_antidetection.py -v
 # Run with coverage
 pytest --cov=chrome_manager --cov-report=html
 
-# Test MCP server
+# Test MCP WebSocket server
 pytest tests/integration/test_mcp_server.py -v
+
+# Test stdio server
+python mcp_stdio_server.py --test
 ```
 
 ## 📊 Performance
@@ -218,7 +275,10 @@ Extract data from JavaScript-heavy sites without detection. Handle dynamic conte
 Replace flaky Selenium tests with reliable, undetectable automation. Perfect for E2E testing of anti-bot protected applications.
 
 ### AI Web Agents
-Enable LLMs to browse the web naturally. The MCP protocol provides structured tool access for autonomous web navigation.
+Enable LLMs to browse the web naturally. The MCP protocol provides structured tool access for autonomous web navigation. Works seamlessly with:
+- **Claude Desktop**: Native MCP integration for web browsing capabilities
+- **Gemini CLI**: Add browser automation to Google's AI
+- **Custom Agents**: Build your own AI agents with WebSocket or stdio integration
 
 ### Price Monitoring
 Track prices across e-commerce sites that block bots. Maintain persistent sessions for authenticated monitoring.
@@ -245,5 +305,7 @@ Built with:
 ---
 
 **⭐ Star us on GitHub if this helps you bypass bot detection!**
+
+**🤖 Using with Claude or Gemini? Check out our [MCP Integration Guide](docs/mcp-integration.md)**
 
 **🐛 Found a detection issue? Open an issue with the site URL!**
