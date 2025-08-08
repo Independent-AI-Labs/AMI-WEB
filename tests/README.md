@@ -10,7 +10,7 @@ Unlike typical Selenium tests that break on every UI change, AMI-WEB's test suit
 - **🔄 Real Browser Testing**: Uses actual Chrome instances, not mocks
 - **⚡ Parallel Execution**: Run tests concurrently for speed
 - **🎭 Multiple Scenarios**: From simple clicks to complex multi-tab operations
-- **📊 95%+ Coverage**: Comprehensive testing of all components
+- **📊 90%+ Coverage**: Comprehensive testing of all critical components
 
 ## 🚀 Quick Start
 
