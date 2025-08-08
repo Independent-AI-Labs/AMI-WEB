@@ -228,7 +228,14 @@ def execute_anti_detection_scripts(driver) -> None:
         driver.execute_cdp_cmd("Page.enable", {})
 
         # Inject script on main page
-        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script_content})
+        # Use runImmediately to run on existing contexts IMMEDIATELY!
+        driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": script_content,
+                "runImmediately": True,  # CRITICAL: Run immediately on existing contexts!
+            },
+        )
 
         # Also inject into runtime for immediate effect
         try:

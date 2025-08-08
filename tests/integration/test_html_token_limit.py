@@ -13,7 +13,7 @@ async def test_token_limit():
 
     try:
         # Launch browser
-        driver = await instance.launch(headless=False)
+        await instance.launch(headless=False)
         nav = NavigationController(instance)
 
         # Navigate to a complex page that will exceed limits
@@ -26,7 +26,8 @@ async def test_token_limit():
         html = await nav.get_page_content()
         token_count = len(html) // 4
         print(f"Full HTML tokens: ~{token_count}")
-        if token_count > 25000:
+        max_tokens = 25000
+        if token_count > max_tokens:
             print("FAIL: Full HTML exceeds 25000 tokens!")
         else:
             print("Hmm, page might be small enough already")
@@ -36,7 +37,8 @@ async def test_token_limit():
         html = await nav.get_html_with_depth_limit(collapse_depth=2)
         token_count = len(html) // 4
         print(f"Collapsed depth 2 tokens: ~{token_count}")
-        if token_count > 25000:
+        max_tokens = 25000
+        if token_count > max_tokens:
             print(f"FAIL: Still exceeds limit at {token_count} tokens")
         else:
             print(f"PASS: Within limit at {token_count} tokens")
@@ -46,7 +48,8 @@ async def test_token_limit():
         html = await nav.get_html_with_depth_limit(collapse_depth=1)
         token_count = len(html) // 4
         print(f"Collapsed depth 1 tokens: ~{token_count}")
-        if token_count > 25000:
+        max_tokens = 25000
+        if token_count > max_tokens:
             print(f"FAIL: Even depth 1 exceeds at {token_count} tokens")
         else:
             print(f"PASS: Within limit at {token_count} tokens")
@@ -58,7 +61,8 @@ async def test_token_limit():
             html = await nav.get_element_html("#mw-content-text")
             token_count = len(html) // 4
             print(f"Content element tokens: ~{token_count}")
-            if token_count > 25000:
+            max_tokens = 25000
+            if token_count > max_tokens:
                 print("WARNING: Even specific element exceeds limit!")
             else:
                 print("Element within limit")
