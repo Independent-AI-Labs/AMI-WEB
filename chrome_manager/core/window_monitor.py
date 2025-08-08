@@ -81,8 +81,8 @@ class WindowMonitor:
             # Also try direct injection
             try:
                 self.driver.execute_script(self.antidetect_script)
-            except Exception:
-                pass  # May fail if page not ready
+            except Exception as e:
+                logger.debug(f"Direct injection failed (expected if page not ready): {e}")
 
             logger.debug(f"Injected anti-detect into new window {window_handle}")
 

@@ -9,20 +9,118 @@
     window.__antiDetectScript = antiDetect.toString() + '();';
     
     // ========== WEBDRIVER REMOVAL ==========
-    // Remove webdriver completely
+    // Chrome 141+ sets navigator.webdriver = false instead of true
+    // We need to completely remove the property, not just set it to undefined
+    
+    // Method 1: Delete from Navigator.prototype first
     try {
-        delete Object.getPrototypeOf(navigator).webdriver;
+        delete Navigator.prototype.webdriver;
     } catch(e) {}
     
+    // Method 2: Try to delete the property from navigator
     try {
-        Object.defineProperty(navigator, 'webdriver', {
-            get: function() { return undefined; },
-            set: function() {},
-            configurable: false,
-            enumerable: false
+        delete navigator.webdriver;
+    } catch(e) {}
+    
+    // Method 3: If property still exists, override it to be undefined
+    // AND make it non-enumerable and report as non-existent
+    try {
+        // Check if property exists using 'in' operator
+        if ('webdriver' in navigator) {
+            // First try to delete it
+            delete navigator.webdriver;
+            
+            // If still there, override with getter that returns undefined
+            if ('webdriver' in navigator) {
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: function() { return undefined; },
+                    set: function() {},
+                    enumerable: false,
+                    configurable: true
+                });
+            }
+        }
+    } catch(e) {}
+    
+    // Method 4: Override Navigator.prototype if the property is there
+    try {
+        if (Navigator.prototype.hasOwnProperty('webdriver')) {
+            Object.defineProperty(Navigator.prototype, 'webdriver', {
+                get: function() { return undefined; },
+                set: function() {},
+                enumerable: false,
+                configurable: true
+            });
+        }
+    } catch(e) {}
+    
+    // Method 4: Proxy the entire navigator object
+    try {
+        // Create a proxy for navigator that intercepts webdriver
+        const navProxy = new Proxy(navigator, {
+            has: function(target, key) {
+                return key === 'webdriver' ? false : key in target;
+            },
+            get: function(target, key) {
+                return key === 'webdriver' ? undefined : target[key];
+            }
         });
-    } catch(e) {
-        // Already defined, that's fine
+        
+        // Try to replace global navigator
+        if (Object.defineProperty) {
+            Object.defineProperty(window, 'navigator', {
+                value: navProxy,
+                writable: false,
+                configurable: false
+            });
+        }
+    } catch(e) {}
+    
+    // Method 6: Monitor and continuously remove
+    const checkWebDriver = function() {
+        // Check if webdriver property exists at all (even if false)
+        if ('webdriver' in navigator) {
+            try {
+                // Try to delete it
+                delete navigator.webdriver;
+            } catch(e) {}
+            
+            // If still exists after delete attempt, override it
+            if ('webdriver' in navigator) {
+                try {
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: function() { return undefined; },
+                        set: function() {},
+                        enumerable: false,
+                        configurable: true
+                    });
+                } catch(e) {}
+            }
+        }
+    };
+    
+    // Run immediately
+    checkWebDriver();
+    
+    // Run on page events
+    if (typeof document !== 'undefined') {
+        // Run when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkWebDriver);
+        } else {
+            checkWebDriver();
+        }
+        
+        // Run on readystatechange
+        document.addEventListener('readystatechange', checkWebDriver);
+        
+        // Run periodically for first 2 seconds
+        let counter = 0;
+        const interval = setInterval(function() {
+            checkWebDriver();
+            counter++;
+            if (counter > 40) clearInterval(interval); // 40 * 50ms = 2 seconds
+        }, 50);
     }
     
     // ========== H264 CODEC FIX ==========
@@ -192,31 +290,6 @@
     };
     
     // ========== WINDOW.OPEN INTERCEPTOR ==========
-    // Intercept window.open to inject anti-detection into new windows
-    var originalOpen = window.open;
-    window.open = function() {
-        var newWindow = originalOpen.apply(window, arguments);
-        
-        if (newWindow) {
-            // Try to inject our anti-detection immediately
-            try {
-                // Use a small delay to ensure window is ready
-                setTimeout(function() {
-                    if (newWindow && !newWindow.__completeAntiDetectApplied) {
-                        try {
-                            // Inject the entire anti-detection script
-                            var script = window.__antiDetectScript;
-                            if (script) {
-                                newWindow.eval(script);
-                            }
-                        } catch(e) {
-                            // Can't inject cross-origin
-                        }
-                    }
-                }, 10);
-            } catch(e) {}
-        }
-        
-        return newWindow;
-    };
+    // Don't try to intercept window.open - it doesn't work reliably
+    // Instead, rely on the SimpleTabInjector to handle new tabs
 })();

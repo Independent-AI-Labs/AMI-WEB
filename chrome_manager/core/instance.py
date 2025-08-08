@@ -153,6 +153,7 @@ class BrowserInstance:
             # These features conflict with anti-detection
             chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
             chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])  # Disable Chrome logging
+        # Note: When anti_detect is True, excludeSwitches is set by antidetect.py to ["enable-automation", "enable-logging"]
 
         for feature in self._options.disable_blink_features:
             chrome_options.add_argument(f"--disable-blink-features={feature}")
@@ -263,6 +264,154 @@ class BrowserInstance:
 
         return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
 
+    def open_new_tab_with_antidetect_old(self, url: str = None) -> str:
+        """Open a new tab with anti-detection properly injected.
+
+        Returns the window handle of the new tab.
+        """
+        if not self.driver:
+            raise InstanceError(f"No driver for instance {self.id}")
+
+        # Store current handles
+        original_handles = set(self.driver.window_handles)
+
+        # Open blank tab first
+        self.driver.execute_script("window.open('about:blank', '_blank');")
+
+        # Find the new tab handle
+        new_handles = set(self.driver.window_handles) - original_handles
+        if not new_handles:
+            logger.error("Failed to open new tab")
+            return None
+
+        new_handle = new_handles.pop()
+
+        # Switch to new tab
+        self.driver.switch_to.window(new_handle)
+
+        # Inject anti-detection IMMEDIATELY while on about:blank
+        if self._anti_detect and self.window_monitor and self.window_monitor.antidetect_script:
+            # CRITICAL: Must add script for future documents BEFORE navigating
+            try:
+                # Enable Page domain for this tab
+                self.driver.execute_cdp_cmd("Page.enable", {})  # type: ignore[attr-defined]
+
+                # Add script to evaluate on ALL new documents in this tab
+                result = self.driver.execute_cdp_cmd(  # type: ignore[attr-defined]
+                    "Page.addScriptToEvaluateOnNewDocument",
+                    {
+                        "source": self.window_monitor.antidetect_script,
+                        "runImmediately": True,  # Run immediately on existing contexts!
+                    },
+                )
+                logger.info(f"CDP injection successful for new tab with ID: {result.get('identifier', 'unknown')}")
+            except Exception as e:
+                logger.error(f"CDP injection failed - webdriver may be detected: {e}")
+
+            # Also inject directly into about:blank (won't survive navigation but helps verify)
+            try:
+                self.driver.execute_script(self.window_monitor.antidetect_script)
+
+                # Verify injection worked
+                plugin_count = self.driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
+                logger.info(f"Direct injection successful, plugins on about:blank: {plugin_count}")
+            except Exception as e:
+                logger.warning(f"Direct injection failed: {e}")
+
+        # Now navigate if URL provided
+        if url:
+            # Small delay to ensure CDP script is registered
+            import time
+
+            time.sleep(0.1)
+
+            self.driver.get(url)
+            logger.debug(f"Navigated new tab to {url}")
+
+            # Verify anti-detection after navigation
+            if self._anti_detect:
+                try:
+                    time.sleep(0.5)  # Let page load
+                    webdriver_check = self.driver.execute_script("return navigator.webdriver")
+                    plugin_count = self.driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
+                    logger.info(f"After navigation - webdriver: {webdriver_check}, plugins: {plugin_count}")
+                except Exception as e:
+                    logger.warning(f"Could not verify anti-detection: {e}")
+
+        return new_handle
+
+    def open_new_tab_with_antidetect(self, url: str = None) -> str:
+        """Open a new tab with anti-detection using CDP to ensure script runs first.
+
+        Returns the window handle of the new tab.
+        """
+        if not self.driver:
+            raise InstanceError(f"No driver for instance {self.id}")
+
+        original_handles = set(self.driver.window_handles)
+
+        # Method 1: Create new target via CDP
+        try:
+            # Create a new blank tab via CDP
+            result = self.driver.execute_cdp_cmd("Target.createTarget", {"url": "about:blank", "newWindow": False})  # type: ignore[attr-defined]
+            target_id = result.get("targetId")
+
+            if target_id and self._anti_detect and self.window_monitor:
+                # Attach to the new target
+                attach_result = self.driver.execute_cdp_cmd("Target.attachToTarget", {"targetId": target_id, "flatten": True})  # type: ignore[attr-defined]
+                session_id = attach_result.get("sessionId")
+
+                if session_id:
+                    # Send commands to inject script BEFORE navigation
+                    import json
+
+                    # Enable Page domain
+                    msg = json.dumps({"id": 1, "method": "Page.enable", "params": {}})
+                    self.driver.execute_cdp_cmd("Target.sendMessageToTarget", {"message": msg, "sessionId": session_id})  # type: ignore[attr-defined]
+
+                    # Add script to evaluate on new document
+                    msg = json.dumps(
+                        {
+                            "id": 2,
+                            "method": "Page.addScriptToEvaluateOnNewDocument",
+                            "params": {
+                                "source": self.window_monitor.antidetect_script,
+                                "runImmediately": True,  # Run immediately!
+                            },
+                        }
+                    )
+                    self.driver.execute_cdp_cmd("Target.sendMessageToTarget", {"message": msg, "sessionId": session_id})  # type: ignore[attr-defined]
+
+                    # Navigate if URL provided
+                    if url:
+                        msg = json.dumps({"id": 3, "method": "Page.navigate", "params": {"url": url}})
+                        self.driver.execute_cdp_cmd("Target.sendMessageToTarget", {"message": msg, "sessionId": session_id})  # type: ignore[attr-defined]
+
+                    logger.info(f"Created new tab via CDP with anti-detection, target: {target_id}")
+        except Exception as e:
+            logger.error(f"CDP tab creation failed: {e}")
+            # Fallback to old method
+            return self.open_new_tab_with_antidetect_old(url)
+
+        # Find and switch to the new handle
+        import time
+
+        time.sleep(0.5)  # Give time for tab to appear
+        new_handles = set(self.driver.window_handles) - original_handles
+
+        if new_handles:
+            new_handle = new_handles.pop()
+            self.driver.switch_to.window(new_handle)
+
+            # Navigate if we haven't already
+            if url and "about:blank" in self.driver.current_url:
+                self.driver.get(url)
+
+            return new_handle
+
+        logger.error("New tab handle not found after CDP creation")
+        return None
+
     async def _setup_logging(self):
         if not self.driver:
             return
@@ -273,6 +422,23 @@ class BrowserInstance:
             self.driver.execute_cdp_cmd("Console.enable", {})  # type: ignore[attr-defined]
         except Exception as e:
             logger.warning(f"Failed to enable CDP logging: {e}")
+
+    async def _kill_via_service(self) -> None:
+        """Kill browser via service process."""
+        service = getattr(self.driver, "service", None)
+        if service and hasattr(service, "process") and service.process and service.process.poll() is None:
+            service.process.terminate()
+            await asyncio.sleep(0.1)
+            if service.process.poll() is None:
+                service.process.kill()
+
+    async def _kill_via_psutil(self) -> None:
+        """Kill browser via psutil process."""
+        if self.process and self.process.is_running():
+            self.process.terminate()
+            await asyncio.sleep(0.1)
+            if self.process.is_running():
+                self.process.kill()
 
     async def terminate(self, force: bool = False) -> None:
         try:
@@ -294,21 +460,8 @@ class BrowserInstance:
 
                     # If normal quit fails, force kill the processes
                     try:
-                        # Kill via service
-                        service = getattr(self.driver, "service", None)
-                        if service and hasattr(service, "process") and service.process and service.process.poll() is None:
-                            service.process.terminate()
-                            await asyncio.sleep(0.1)
-                            if service.process.poll() is None:
-                                service.process.kill()
-
-                        # Kill via psutil process
-                        if self.process and self.process.is_running():
-                            self.process.terminate()
-                            await asyncio.sleep(0.1)
-                            if self.process.is_running():
-                                self.process.kill()
-
+                        await self._kill_via_service()
+                        await self._kill_via_psutil()
                     except Exception as kill_error:
                         logger.debug(f"Force kill error for {self.id}: {kill_error}")
 
