@@ -364,10 +364,10 @@ export LOG_LEVEL=INFO
 
 ### Docker Deployment
 
-For containerized deployments:
+For containerized deployments (WIP):
 
 ```dockerfile
-FROM python:3.11
+FROM python:3.12
 WORKDIR /app
 COPY . .
 RUN pip install -r requirements.txt
