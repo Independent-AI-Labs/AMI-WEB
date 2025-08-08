@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from chrome_manager.core.instance import BrowserInstance  # noqa: E402
 from chrome_manager.core.manager import ChromeManager  # noqa: E402
+from chrome_manager.utils.config import Config  # noqa: E402
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
@@ -29,6 +30,74 @@ logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
+
+# Global manager instance for all tests
+_GLOBAL_MANAGER = None
+
+
+@pytest_asyncio.fixture(scope="session")
+async def session_manager():
+    """Create a single Chrome manager for the entire test session."""
+    global _GLOBAL_MANAGER  # noqa: PLW0603
+    if _GLOBAL_MANAGER is None:
+        _GLOBAL_MANAGER = ChromeManager()
+        await _GLOBAL_MANAGER.start()
+        logger.info("Created global ChromeManager for test session")
+
+    yield _GLOBAL_MANAGER
+
+    # Cleanup will happen in cleanup_at_exit
+
+
+@pytest_asyncio.fixture
+async def browser_instance(session_manager):
+    """Get a browser instance from the pool for each test."""
+    # Get instance from pool
+    instance = await session_manager.get_or_create_instance(headless=HEADLESS)
+    logger.info(f"Got browser instance {instance.id} from pool")
+
+    # Store initial state
+    initial_handles = set(instance.driver.window_handles)
+
+    yield instance
+
+    # Cleanup after test
+    try:
+        # Close any extra tabs opened during test
+        current_handles = set(instance.driver.window_handles)
+        new_handles = current_handles - initial_handles
+
+        for handle in new_handles:
+            instance.driver.switch_to.window(handle)
+            instance.driver.close()
+
+        # Switch back to initial tab
+        if instance.driver.window_handles:
+            instance.driver.switch_to.window(instance.driver.window_handles[0])
+            # Navigate to about:blank to clear state
+            instance.driver.get("about:blank")
+    except Exception as e:
+        logger.warning(f"Error cleaning up instance {instance.id}: {e}")
+
+    # Return instance to pool
+    await session_manager.return_to_pool(instance.id)
+    logger.info(f"Returned instance {instance.id} to pool")
+
+
+@pytest_asyncio.fixture
+async def antidetect_browser():
+    """Get an anti-detect browser instance from the pool."""
+    # Create a new instance with anti-detect enabled
+    config = Config()
+    instance = BrowserInstance(config=config)
+    await instance.launch(headless=HEADLESS, anti_detect=True)
+    logger.info(f"Created anti-detect browser instance {instance.id}")
+
+    yield instance
+
+    # Terminate this instance (don't return to pool since it has special config)
+    await instance.terminate()
+    logger.info(f"Terminated anti-detect instance {instance.id}")
 
 
 @pytest.fixture(scope="session")
@@ -63,9 +132,11 @@ async def test_server():
         logger.info("Test server stopped")
 
 
+# DEPRECATED - use browser_instance or session_manager instead
 @pytest_asyncio.fixture(scope="class")
 async def browser():
-    """Create a browser instance shared by all tests in a class."""
+    """DEPRECATED: Create a browser instance shared by all tests in a class."""
+    logger.warning("Using deprecated 'browser' fixture - use 'browser_instance' instead")
     instance = BrowserInstance()
     await instance.launch(headless=HEADLESS)
     logger.info(f"Browser instance {instance.id} launched for test class")
@@ -91,9 +162,11 @@ async def browser():
     logger.info(f"Browser instance {instance.id} terminated")
 
 
+# DEPRECATED - use session_manager instead
 @pytest_asyncio.fixture(scope="class")
 async def chrome_manager():
-    """Create a Chrome manager for testing - one per test class."""
+    """DEPRECATED: Create a Chrome manager for testing - one per test class."""
+    logger.warning("Using deprecated 'chrome_manager' fixture - use 'session_manager' instead")
     manager = ChromeManager()
     await manager.start()
 
@@ -132,8 +205,32 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "pool: marks tests related to browser pool")
 
 
+async def cleanup_manager():
+    """Properly shutdown the global manager."""
+    global _GLOBAL_MANAGER  # noqa: PLW0603
+    if _GLOBAL_MANAGER:
+        try:
+            logger.info("Shutting down global ChromeManager")
+            await _GLOBAL_MANAGER.shutdown()
+            _GLOBAL_MANAGER = None
+        except Exception as e:
+            logger.error(f"Error shutting down manager: {e}")
+
+
 def cleanup_processes():
     """Kill any remaining browser or server processes."""
+    # First try to properly shutdown the manager
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(cleanup_manager())
+        else:
+            loop.run_until_complete(cleanup_manager())
+    except Exception:  # noqa: S110
+        pass
+
     with contextlib.suppress(Exception):
         # Only log if logger is still available
         logger.info("Cleaning up browser and server processes")
