@@ -56,3 +56,5 @@ htmlcov/
 .pytest_cache/
 
 nul
+
+.claude
