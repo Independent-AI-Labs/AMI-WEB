@@ -26,7 +26,7 @@ Traditional browser automation tools are easily detected by modern websites. AMI
 ### MCP Server Integration
 - **Stdio Server**: Direct integration with Claude Desktop, Gemini CLI, and other MCP clients
 - **WebSocket API**: Real-time bidirectional communication for custom integrations
-- **40+ Browser Tools**: Complete browser control via standardized protocol
+- **30+ Browser Tools**: Complete browser control via standardized protocol
 - **Token-Limited HTML**: Smart HTML extraction with automatic depth adjustment (25k token limit)
 - **Event Streaming**: Live console logs, network activity, and performance metrics
 - **Session Management**: Persistent browser sessions with state preservation
