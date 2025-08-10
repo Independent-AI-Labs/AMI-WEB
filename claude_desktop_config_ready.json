@@ -3,7 +3,7 @@
     "ami-web-browser": {
       "command": "bash",
       "args": [
-        "/Users/YOUR_USERNAME/AMI-WEB/start_mcp_server.sh"
+        "/Users/vladislavdonchev/Work/AMI-WEB/start_mcp_server.sh"
       ],
       "env": {
         "LOG_LEVEL": "INFO"

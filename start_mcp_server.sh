@@ -5,6 +5,10 @@
 
 set -e  # Exit on error
 
+# For MCP compatibility, only output to stderr for debugging
+exec 3>&1  # Save stdout
+exec 1>&2  # Redirect stdout to stderr for all echo commands
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -66,8 +70,9 @@ else
 fi
 
 # Set environment variables
-export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
+export MCP_LOG_LEVEL="${MCP_LOG_LEVEL:-WARNING}"
 
 # Check if Chrome is configured
 if [ ! -f "config.yaml" ]; then
@@ -87,4 +92,7 @@ fi
 # Start the MCP server
 echo -e "${GREEN}Starting MCP server...${NC}"
 echo "----------------------------------------"
+
+# Restore stdout and exec Python with proper stdio
+exec 1>&3 3>&-  # Restore stdout, close fd 3
 exec python chrome_manager/mcp/mcp_stdio_server.py "$@"
