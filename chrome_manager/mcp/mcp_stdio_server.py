@@ -49,7 +49,8 @@ class StdioTransport:
             return message
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON received: {e}")
-            await self.send_error(None, -32700, "Parse error")
+            # For parse errors, we should send an error with id: null per JSON-RPC spec
+            # But MCP/Claude Desktop doesn't handle this well, so we just log and skip
             return None
         except Exception as e:
             logger.error(f"Error reading message: {e}")
@@ -66,6 +67,13 @@ class StdioTransport:
 
     async def send_error(self, request_id: Any, code: int, message: str, data: Any = None):
         """Send a JSON-RPC error response."""
+        # JSON-RPC spec requires id to be present and match the request
+        # If request_id is None, we can't send a proper error response
+        if request_id is None:
+            # Log the error but don't send a response for notifications
+            logger.error(f"Error without request ID: {code} - {message}")
+            return
+        
         error_response = {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
         if data is not None:
             error_response["error"]["data"] = data
@@ -92,11 +100,12 @@ class ChromeManagerMCPServer:
             if not self.manager:
                 logger.info("Initializing Chrome Manager...")
 
-                # Look for config file with absolute paths
+                # Look for config file in project root
                 from pathlib import Path
 
-                script_dir = Path(__file__).parent.resolve()
-                config_file = script_dir / "mcp_config.json"
+                # Get project root (two levels up from chrome_manager/mcp/)
+                project_root = Path(__file__).parent.parent.parent.resolve()
+                config_file = project_root / "config.yaml"
 
                 if config_file.exists():
                     logger.info(f"Using config file: {config_file}")
@@ -105,10 +114,12 @@ class ChromeManagerMCPServer:
                     logger.warning(f"Config file not found at {config_file}, using defaults")
                     self.manager = ChromeManager()
 
-                # Set pool to not create instances on startup
+                # Initialize the manager first
+                await self.manager.initialize()
+                
+                # Set pool to not create instances on startup (after initialization)
                 self.manager.pool.min_instances = 0
                 self.manager.pool.warm_instances = 0
-                await self.manager.start()
 
                 # Create MCP server wrapper
                 self.mcp_server = MCPServer(self.manager, {})

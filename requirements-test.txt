@@ -1,2 +1,7 @@
 pytest==8.4.1
 pytest-asyncio==1.1.0
+ruff==
+pre-commit==
+mypy==
+types-PyYAML==
+types-aiofiles==
