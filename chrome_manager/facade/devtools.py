@@ -36,7 +36,7 @@ class DevToolsController:
         try:
             await self.execute_cdp_command("Network.getAllCookies", {})
 
-            performance_logs = self.driver.get_log("performance")
+            performance_logs = self.driver.get_log("performance")  # type: ignore[attr-defined]
 
             entries = []
             for log_entry in performance_logs:

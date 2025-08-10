@@ -1,7 +1,9 @@
 """Anti-detection features for ChromeDriver."""
 
+import platform
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 from loguru import logger
@@ -12,8 +14,17 @@ class ChromeDriverPatcher:
 
     def __init__(self, chromedriver_path: str):
         self.original_path = Path(chromedriver_path)
-        # Create a patched version with a different name
-        self.chromedriver_path = self.original_path.parent / "chromedriver_patched.exe"
+        # Create a patched version in a writable location (project directory)
+        # Use the same extension as the original file (or no extension)
+        suffix = self.original_path.suffix
+        name_without_ext = self.original_path.stem
+        patched_name = f"{name_without_ext}_patched{suffix}"
+
+        # Store patched version in project directory instead of system directory
+        project_root = Path(__file__).parent.parent.parent
+        drivers_dir = project_root / "drivers"
+        drivers_dir.mkdir(exist_ok=True)
+        self.chromedriver_path = drivers_dir / patched_name
         self.backup_path: Path | None = None
 
     def is_patched(self) -> bool:
@@ -68,6 +79,31 @@ class ChromeDriverPatcher:
                 with self.chromedriver_path.open("wb") as f:
                     f.write(content)
                 logger.info("ChromeDriver patched successfully")
+
+                # On macOS, sign the patched binary to avoid Gatekeeper issues
+                if platform.system() == "Darwin":
+                    try:
+                        # Remove any existing extended attributes
+                        subprocess.run(
+                            ["xattr", "-cr", str(self.chromedriver_path)],
+                            check=False,
+                            capture_output=True,
+                        )
+
+                        # Sign with ad-hoc signature
+                        subprocess.run(
+                            ["codesign", "--force", "--deep", "--sign", "-", str(self.chromedriver_path)],
+                            check=True,
+                            capture_output=True,
+                            text=True,
+                        )
+                        logger.info("Patched ChromeDriver signed successfully on macOS")
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Failed to sign patched ChromeDriver: {e}")
+                        logger.warning("The patched driver may be blocked by macOS Gatekeeper")
+                    except FileNotFoundError:
+                        logger.warning("codesign command not found - unable to sign patched driver")
+
                 return True
 
             logger.warning("No CDC patterns found to patch in ChromeDriver")
