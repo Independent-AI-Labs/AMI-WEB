@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
-import undetected_chromedriver as uc
 from loguru import logger
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -173,15 +172,6 @@ class BrowserInstance:
         chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"})
         return chrome_options
 
-    async def _launch_undetected(self, chrome_options: Options) -> WebDriver:
-        loop = asyncio.get_event_loop()
-        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
-        if chrome_binary_path:
-            chrome_path = Path(chrome_binary_path)
-            if chrome_path.exists():
-                chrome_options.binary_location = str(chrome_path)
-        return await loop.run_in_executor(None, lambda: uc.Chrome(options=chrome_options, version_main=None, use_subprocess=True, driver_executable_path=None))
-
     async def _launch_undetected_mode(self, chrome_options: Options) -> WebDriver:
         """Launch Chrome with anti-detection features."""
         loop = asyncio.get_event_loop()
@@ -196,6 +186,8 @@ class BrowserInstance:
 
         # Patch ChromeDriver but more carefully
         patched_driver_path = chromedriver_path
+        logger.info(f"ChromeDriver path from config: {chromedriver_path}")
+
         if chromedriver_path and Path(chromedriver_path).exists():
             from .antidetect import ChromeDriverPatcher
 
@@ -205,8 +197,13 @@ class BrowserInstance:
                 if patcher.patch():
                     patched_driver_path = str(patcher.get_patched_path())
                     logger.info(f"Using patched ChromeDriver: {patched_driver_path}")
+                else:
+                    logger.error("Failed to patch ChromeDriver")
             else:
                 patched_driver_path = str(patcher.get_patched_path())
+                logger.info(f"Using already patched ChromeDriver: {patched_driver_path}")
+        else:
+            logger.error(f"ChromeDriver not found at: {chromedriver_path}")
 
         # Set up remote debugging
         debug_port = utils.free_port()
@@ -217,6 +214,7 @@ class BrowserInstance:
         if patched_driver_path and Path(patched_driver_path).exists():
             service = Service(executable_path=patched_driver_path)
         else:
+            logger.error(f"Patched ChromeDriver not found at: {patched_driver_path}")
             raise InstanceError("ChromeDriver path not found for anti-detection mode")
 
         # Launch Chrome
@@ -556,7 +554,7 @@ class BrowserInstance:
             raise InstanceError("Browser not initialized")
 
         try:
-            logs = self.driver.get_log("browser")
+            logs = self.driver.get_log("browser")  # type: ignore[attr-defined]
             entries = []
             for log in logs:
                 entries.append(

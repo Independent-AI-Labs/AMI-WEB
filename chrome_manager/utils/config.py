@@ -60,24 +60,61 @@ class Config:
         return default
 
     def _get_defaults(self) -> dict[str, Any]:
-        # Get absolute paths for Chrome and ChromeDriver
-        base_dir = Path(__file__).parent.parent.parent  # Project root
-        chrome_path = base_dir / "chromium-win" / "chrome.exe"
-        driver_path = base_dir / "chromedriver.exe"
-
         return {
             "chrome_manager": {
                 "browser": {
-                    "chrome_binary_path": str(chrome_path.absolute()) if chrome_path.exists() else "./chromium-win/chrome.exe",
-                    "chromedriver_path": str(driver_path.absolute()) if driver_path.exists() else "./chromedriver.exe",
-                    "executable_path": None,
+                    "chrome_binary_path": "chrome",
+                    "chromedriver_path": "chromedriver",
                     "default_headless": True,
                     "default_window_size": [1920, 1080],
                     "user_agent": None,
                 },
-                "pool": {"min_instances": 1, "max_instances": 10, "warm_instances": 2, "instance_ttl": 3600, "health_check_interval": 30},
-                "performance": {"max_memory_per_instance": 512, "max_cpu_per_instance": 25, "page_load_timeout": 30, "script_timeout": 10},
-                "storage": {"session_dir": "./sessions", "screenshot_dir": "./screenshots", "video_dir": "./videos", "log_dir": "./logs"},
-                "mcp": {"server_host": "localhost", "server_port": 8765, "max_connections": 100, "auth_required": False, "tls_enabled": False},
+                "pool": {
+                    "min_instances": 1,
+                    "max_instances": 10,
+                    "warm_instances": 2,
+                    "instance_ttl": 3600,
+                    "health_check_interval": 30,
+                },
+                "performance": {
+                    "max_memory_per_instance": 512,
+                    "max_cpu_per_instance": 25,
+                    "page_load_timeout": 30,
+                    "script_timeout": 10,
+                },
+                "storage": {
+                    "session_dir": "./sessions",
+                    "screenshot_dir": "./screenshots",
+                    "video_dir": "./videos",
+                    "log_dir": "./logs",
+                },
+                "mcp": {
+                    "server_host": "0.0.0.0",  # noqa: S104
+                    "server_port": 8765,
+                    "max_connections": 100,
+                    "auth_required": False,
+                    "tls_enabled": False,
+                    "ping_interval": 30,
+                    "ping_timeout": 10,
+                },
+                "chrome_options": {
+                    "arguments": [
+                        "--disable-blink-features=AutomationControlled",
+                        "--disable-dev-shm-usage",
+                        "--no-sandbox",
+                        "--disable-web-security",
+                        "--disable-features=IsolateOrigins,site-per-process",
+                        "--allow-running-insecure-content",
+                    ],
+                    "experimental_options": {
+                        "excludeSwitches": ["enable-automation"],
+                        "useAutomationExtension": False,
+                    },
+                    "prefs": {
+                        "credentials_enable_service": False,
+                        "profile.password_manager_enabled": False,
+                        "profile.default_content_setting_values.notifications": 2,
+                    },
+                },
             }
         }

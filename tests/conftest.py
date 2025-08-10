@@ -40,7 +40,8 @@ async def session_manager():
     """Create a single Chrome manager for the entire test session."""
     global _GLOBAL_MANAGER  # noqa: PLW0603
     if _GLOBAL_MANAGER is None:
-        _GLOBAL_MANAGER = ChromeManager()
+        # Pass config file path to ChromeManager
+        _GLOBAL_MANAGER = ChromeManager(config_file="config.yaml")
         await _GLOBAL_MANAGER.start()
         logger.info("Created global ChromeManager for test session")
 
@@ -88,7 +89,8 @@ async def browser_instance(session_manager):
 async def antidetect_browser():
     """Get an anti-detect browser instance from the pool."""
     # Create a new instance with anti-detect enabled
-    config = Config()
+    # Load config from config.yaml if it exists, otherwise use defaults
+    config = Config.load("config.yaml")
     instance = BrowserInstance(config=config)
     await instance.launch(headless=HEADLESS, anti_detect=True)
     logger.info(f"Created anti-detect browser instance {instance.id}")
@@ -137,7 +139,9 @@ async def test_server():
 async def browser():
     """DEPRECATED: Create a browser instance shared by all tests in a class."""
     logger.warning("Using deprecated 'browser' fixture - use 'browser_instance' instead")
-    instance = BrowserInstance()
+    # Load config from config.yaml if it exists, otherwise use defaults
+    config = Config.load("config.yaml")
+    instance = BrowserInstance(config=config)
     await instance.launch(headless=HEADLESS)
     logger.info(f"Browser instance {instance.id} launched for test class")
 

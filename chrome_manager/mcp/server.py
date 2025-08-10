@@ -10,7 +10,7 @@ from typing import Any
 import websockets
 from loguru import logger
 from selenium.webdriver.support.ui import WebDriverWait
-from websockets.server import WebSocketServerProtocol
+from websockets.server import WebSocketServerProtocol  # type: ignore[attr-defined]
 
 from ..core.instance import BrowserInstance
 from ..core.manager import ChromeManager

@@ -33,6 +33,9 @@ videos/
 sessions/
 chromium-win/
 chromium/
+chrome-mac-arm64/
+chrome-*.zip
+drivers/
 
 # IDE
 .vscode/
