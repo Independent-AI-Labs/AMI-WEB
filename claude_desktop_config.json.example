@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "ami-web-browser": {
+      "// Option 1": "Use the start script (recommended - handles conda environment)",
+      "command": "/path/to/AMI-WEB/start_mcp_server.sh",
+      "args": [],
+      
+      "// Option 2": "Direct Python execution (requires manual environment setup)",
+      "// command": "python3",
+      "// args": ["chrome_manager/mcp/mcp_stdio_server.py"],
+      "// cwd": "/path/to/AMI-WEB",
+      
+      "env": {
+        "PYTHONPATH": "/path/to/AMI-WEB",
+        "LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}
