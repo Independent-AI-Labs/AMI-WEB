@@ -57,7 +57,7 @@ class MCPTestServer:
 
     async def _setup_server(self):
         """Set up the server components."""
-        self.manager = ChromeManager()
+        self.manager = ChromeManager(config_file="config.yaml")
         # Override pool settings for efficient test reuse
         self.manager.pool.min_instances = 1  # Keep 1 instance ready
         self.manager.pool.warm_instances = 1  # Keep 1 warm for reuse

@@ -73,7 +73,7 @@ class StdioTransport:
             # Log the error but don't send a response for notifications
             logger.error(f"Error without request ID: {code} - {message}")
             return
-        
+
         error_response = {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
         if data is not None:
             error_response["error"]["data"] = data
@@ -116,7 +116,7 @@ class ChromeManagerMCPServer:
 
                 # Initialize the manager first
                 await self.manager.initialize()
-                
+
                 # Set pool to not create instances on startup (after initialization)
                 self.manager.pool.min_instances = 0
                 self.manager.pool.warm_instances = 0
