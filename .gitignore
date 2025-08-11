@@ -53,6 +53,7 @@ Thumbs.db
 /logs/
 /temp/
 *.pid
+config.yaml
 config.local.yaml
 .coverage
 htmlcov/
