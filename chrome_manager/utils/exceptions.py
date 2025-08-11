@@ -32,3 +32,11 @@ class MCPError(ChromeManagerError):
 
 class ChromeTimeoutError(ChromeManagerError):
     """Operation timeout errors"""
+
+
+class PoolError(ChromeManagerError):
+    """Raised when pool operations fail."""
+
+
+class ProfileError(ChromeManagerError):
+    """Raised when profile operations fail."""

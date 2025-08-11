@@ -37,6 +37,14 @@ chrome-mac-arm64/
 chrome-*.zip
 drivers/
 
+# Browser profiles and test data
+browser_profiles/
+test_profiles/
+profiles/
+**/DevToolsActivePort
+**/saved_cookies.json
+test_downloads/
+
 # IDE
 .vscode/
 .idea/

@@ -12,6 +12,7 @@ from ..utils.config import Config
 from .instance import BrowserInstance
 
 if TYPE_CHECKING:
+    from .profile_manager import ProfileManager
     from .properties_manager import PropertiesManager
 
 
@@ -25,6 +26,7 @@ class InstancePool:
         health_check_interval: int = 30,
         config: Config | None = None,
         properties_manager: "PropertiesManager | None" = None,
+        profile_manager: "ProfileManager | None" = None,
     ):
         self.min_instances = min_instances
         self.max_instances = max_instances
@@ -33,6 +35,7 @@ class InstancePool:
         self.health_check_interval = health_check_interval
         self._config = config or Config()
         self._properties_manager = properties_manager
+        self._profile_manager = profile_manager
 
         self.available: deque[BrowserInstance] = deque()
         self.in_use: dict[str, BrowserInstance] = {}
@@ -128,7 +131,11 @@ class InstancePool:
         return None
 
     async def _create_instance(self, options: ChromeOptions | None = None) -> BrowserInstance:
-        instance = BrowserInstance(config=self._config, properties_manager=self._properties_manager)
+        instance = BrowserInstance(
+            config=self._config,
+            properties_manager=self._properties_manager,
+            profile_manager=self._profile_manager,
+        )
         opts = options or ChromeOptions()
         # Always enable anti-detect for pooled instances
         await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=True)
