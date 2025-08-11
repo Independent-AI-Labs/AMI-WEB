@@ -3,12 +3,16 @@ import builtins
 import contextlib
 from collections import deque
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from ..models.browser import ChromeOptions
 from ..utils.config import Config
 from .instance import BrowserInstance
+
+if TYPE_CHECKING:
+    from .properties_manager import PropertiesManager
 
 
 class InstancePool:
@@ -20,6 +24,7 @@ class InstancePool:
         instance_ttl: int = 3600,
         health_check_interval: int = 30,
         config: Config | None = None,
+        properties_manager: "PropertiesManager | None" = None,
     ):
         self.min_instances = min_instances
         self.max_instances = max_instances
@@ -27,6 +32,7 @@ class InstancePool:
         self.instance_ttl = instance_ttl
         self.health_check_interval = health_check_interval
         self._config = config or Config()
+        self._properties_manager = properties_manager
 
         self.available: deque[BrowserInstance] = deque()
         self.in_use: dict[str, BrowserInstance] = {}
@@ -122,7 +128,7 @@ class InstancePool:
         return None
 
     async def _create_instance(self, options: ChromeOptions | None = None) -> BrowserInstance:
-        instance = BrowserInstance(config=self._config)
+        instance = BrowserInstance(config=self._config, properties_manager=self._properties_manager)
         opts = options or ChromeOptions()
         # Always enable anti-detect for pooled instances
         await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=True)

@@ -12,7 +12,7 @@ import websockets
 from tests.integration.test_mcp_server import mcp_server  # noqa: F401
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
 
 
 class TestMCPLogsAndStorage:

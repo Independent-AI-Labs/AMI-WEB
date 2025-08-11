@@ -15,7 +15,7 @@ from chrome_manager.facade.media import ScreenshotController
 from chrome_manager.facade.navigation import NavigationController
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
 
 # Global instances
 _server_thread = None
@@ -459,7 +459,7 @@ class TestBrowserPool:
         _ = await session_manager.get_pool_stats()
 
         # Request instance from pool
-        instance = await session_manager.get_or_create_instance()
+        instance = await session_manager.get_or_create_instance(headless=HEADLESS)
         assert instance is not None
 
         # Return to pool
@@ -471,7 +471,7 @@ class TestBrowserPool:
         assert stats_after_return["available"] > 0
 
         # Get from pool again (should be warm - quick to get)
-        instance2 = await session_manager.get_or_create_instance()
+        instance2 = await session_manager.get_or_create_instance(headless=HEADLESS)
         assert instance2 is not None
 
         # The instance should be from the pool (might be same or different instance)

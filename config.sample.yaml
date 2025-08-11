@@ -75,3 +75,114 @@ chrome_manager:
     
     # Enable TLS
     tls_enabled: false
+    
+    # Ping interval in seconds
+    ping_interval: 30
+    
+    # Ping timeout in seconds
+    ping_timeout: 10
+
+  # Chrome launch options
+  chrome_options:
+    arguments:
+      - "--disable-blink-features=AutomationControlled"
+      - "--disable-dev-shm-usage"
+      - "--no-sandbox"
+      - "--disable-web-security"
+      - "--disable-features=IsolateOrigins,site-per-process"
+      - "--allow-running-insecure-content"
+      
+    experimental_options:
+      excludeSwitches:
+        - "enable-automation"
+      useAutomationExtension: false
+      
+    prefs:
+      credentials_enable_service: false
+      profile.password_manager_enabled: false
+      profile.default_content_setting_values.notifications: 2
+
+  # Browser Properties Configuration
+  browser_properties:
+    # Default properties preset
+    # Options: windows_chrome, mac_safari, linux_firefox, mobile_chrome, 
+    #          mobile_safari, stealth, minimal, custom
+    preset: "stealth"
+    
+    # Override specific properties (these override preset values)
+    # Uncomment and modify as needed
+    overrides:
+      # User Agent & Platform
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      platform: "Win32"
+      vendor: "Google Inc."
+      
+      # Language & Locale
+      language: "en-US"
+      languages: ["en-US", "en"]
+      
+      # Screen & Display
+      screen_resolution: [1920, 1080]
+      color_depth: 24
+      pixel_ratio: 1.0
+      
+      # Hardware & Performance
+      hardware_concurrency: 8  # CPU cores
+      device_memory: 8  # GB
+      max_touch_points: 0
+      
+      # WebGL Configuration
+      webgl_vendor: "Google Inc. (Intel)"
+      webgl_renderer: "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+      webgl_version: "WebGL 2.0"
+      webgl_shading_language_version: "WebGL GLSL ES 3.00"
+      
+      # Media Codecs Support
+      codec_support:
+        h264: true
+        h265: false
+        vp8: true
+        vp9: true
+        av1: false
+        opus: true
+        vorbis: true
+        aac: true
+        mp3: true
+        flac: true
+      
+      # Browser Features
+      webdriver_visible: false  # Hide webdriver property
+      automation_controlled: false  # Disable automation indicators
+      
+      # Network & Connectivity
+      connection_type: "ethernet"
+      effective_type: "4g"
+      downlink: 10.0  # Mbps
+      rtt: 50  # Round trip time in ms
+      save_data: false
+      
+      # Permissions
+      notification_permission: "default"  # Options: granted, denied, default
+      geolocation_permission: "prompt"
+      camera_permission: "prompt"
+      microphone_permission: "prompt"
+      
+      # Battery API (set to null to disable)
+      battery_level: 0.85  # 0.0 to 1.0
+      battery_charging: true
+      
+      # Timezone
+      # timezone: "America/New_York"
+      # timezone_offset: -300  # Minutes from UTC
+      
+      # Fingerprinting Protection
+      canvas_noise: false  # Add noise to canvas operations
+      audio_context_noise: false  # Add noise to audio context
+      
+      # Do Not Track
+      # do_not_track: "1"  # Set to "1" to enable
+      
+      # Plugins Configuration
+      # Default plugins include Chrome PDF Plugin, Chrome PDF Viewer, and Native Client
+      # Set to empty array [] to disable all plugins
+      # plugins: []

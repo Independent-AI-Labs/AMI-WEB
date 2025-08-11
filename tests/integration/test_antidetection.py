@@ -235,7 +235,7 @@ class TestAntiDetection:
         try:
             # Get instance without explicitly passing anti_detect
             instance = await manager.get_or_create_instance(
-                headless=False,
+                headless=True,
                 use_pool=False,  # Don't use pool for direct testing
             )
 

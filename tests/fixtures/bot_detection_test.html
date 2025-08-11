@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Properties Detection Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        .test-label {
+            font-weight: bold;
+            color: #555;
+            min-width: 250px;
+        }
+        .test-value {
+            color: #333;
+            word-break: break-all;
+            flex: 1;
+            font-family: 'Courier New', monospace;
+        }
+        .pass {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .fail {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        .section-title {
+            color: #2196F3;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        #summary {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .detection-score {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+        }
+        .score-good {
+            color: #4CAF50;
+        }
+        .score-bad {
+            color: #f44336;
+        }
+        .score-medium {
+            color: #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Browser Properties & Bot Detection Test</h1>
+    
+    <div id="summary">
+        <div class="detection-score" id="detection-score">Analyzing...</div>
+        <div id="detection-summary"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🤖 WebDriver Detection</div>
+        <div id="webdriver-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🌐 Navigator Properties</div>
+        <div id="navigator-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🖥️ Screen & Hardware</div>
+        <div id="hardware-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🎨 WebGL Properties</div>
+        <div id="webgl-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🎵 Media Codecs</div>
+        <div id="codec-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🔌 Plugins</div>
+        <div id="plugin-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🎯 Canvas Fingerprint</div>
+        <canvas id="test-canvas" width="200" height="50" style="border: 1px solid #ddd;"></canvas>
+        <div id="canvas-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">🔊 Audio Context</div>
+        <div id="audio-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">⚡ Permissions & APIs</div>
+        <div id="permission-tests"></div>
+    </div>
+
+    <div class="test-section">
+        <div class="section-title">📱 Client Hints</div>
+        <div id="client-hints-tests"></div>
+    </div>
+
+    <script>
+        // Detection results
+        let detectionResults = {
+            webdriver: [],
+            suspicious: [],
+            passed: []
+        };
+
+        function addTestResult(containerId, label, value, status = '') {
+            const container = document.getElementById(containerId);
+            const item = document.createElement('div');
+            item.className = 'test-item';
+            
+            let statusClass = '';
+            let statusText = '';
+            if (status === 'pass') {
+                statusClass = 'pass';
+                statusText = ' ✓';
+                detectionResults.passed.push(label);
+            } else if (status === 'fail') {
+                statusClass = 'fail';
+                statusText = ' ✗';
+                detectionResults.webdriver.push(label);
+            } else if (status === 'warning') {
+                statusClass = 'warning';
+                statusText = ' ⚠';
+                detectionResults.suspicious.push(label);
+            }
+            
+            item.innerHTML = `
+                <div class="test-label">${label}${statusText}</div>
+                <div class="test-value ${statusClass}">${value}</div>
+            `;
+            container.appendChild(item);
+        }
+
+        function calculateScore() {
+            const totalTests = detectionResults.webdriver.length + 
+                              detectionResults.suspicious.length + 
+                              detectionResults.passed.length;
+            
+            const score = Math.round((detectionResults.passed.length / totalTests) * 100);
+            
+            const scoreElement = document.getElementById('detection-score');
+            const summaryElement = document.getElementById('detection-summary');
+            
+            let scoreClass = 'score-bad';
+            let verdict = 'BOT DETECTED';
+            
+            if (score >= 90) {
+                scoreClass = 'score-good';
+                verdict = 'HUMAN-LIKE';
+            } else if (score >= 70) {
+                scoreClass = 'score-medium';
+                verdict = 'SUSPICIOUS';
+            }
+            
+            scoreElement.className = `detection-score ${scoreClass}`;
+            scoreElement.textContent = `${score}% Human Score`;
+            
+            summaryElement.innerHTML = `
+                <strong>Verdict:</strong> ${verdict}<br>
+                <strong>Passed:</strong> ${detectionResults.passed.length} tests<br>
+                <strong>Failed:</strong> ${detectionResults.webdriver.length} tests<br>
+                <strong>Suspicious:</strong> ${detectionResults.suspicious.length} tests
+            `;
+        }
+
+        // Test WebDriver
+        function testWebDriver() {
+            // Multiple detection methods
+            const webdriverTests = [
+                { label: 'navigator.webdriver', value: navigator.webdriver },
+                { label: 'window.webdriver', value: window.webdriver },
+                { label: '$cdc_ in document', value: '$cdc_' in document },
+                { label: '$wdc_ in document', value: '$wdc_' in document },
+                { label: '_Selenium_IDE_Recorder', value: window._Selenium_IDE_Recorder },
+                { label: '__webdriver_script_fn', value: document.__webdriver_script_fn },
+                { label: '__driver_evaluate', value: document.__driver_evaluate },
+                { label: '__webdriver_evaluate', value: document.__webdriver_evaluate },
+                { label: '__selenium_evaluate', value: document.__selenium_evaluate },
+                { label: '__webdriver_unwrapped', value: document.__webdriver_unwrapped },
+                { label: '__selenium_unwrapped', value: document.__selenium_unwrapped },
+                { label: '_phantom', value: window._phantom },
+                { label: 'phantom.injectJs', value: window.phantom?.injectJs },
+                { label: 'domAutomation', value: window.domAutomation },
+                { label: 'domAutomationController', value: window.domAutomationController }
+            ];
+
+            webdriverTests.forEach(test => {
+                const status = (test.value === undefined || test.value === false) ? 'pass' : 'fail';
+                addTestResult('webdriver-tests', test.label, 
+                    test.value === undefined ? 'undefined' : String(test.value), status);
+            });
+        }
+
+        // Test Navigator Properties
+        function testNavigator() {
+            const navProps = [
+                { label: 'User Agent', value: navigator.userAgent },
+                { label: 'Platform', value: navigator.platform },
+                { label: 'Vendor', value: navigator.vendor },
+                { label: 'Language', value: navigator.language },
+                { label: 'Languages', value: navigator.languages?.join(', ') || 'N/A' },
+                { label: 'Online', value: navigator.onLine },
+                { label: 'Do Not Track', value: navigator.doNotTrack },
+                { label: 'Max Touch Points', value: navigator.maxTouchPoints },
+                { label: 'Hardware Concurrency', value: navigator.hardwareConcurrency },
+                { label: 'Device Memory', value: navigator.deviceMemory || 'N/A' },
+                { label: 'Connection Type', value: navigator.connection?.effectiveType || 'N/A' },
+                { label: 'Cookiees Enabled', value: navigator.cookieEnabled },
+                { label: 'App Name', value: navigator.appName },
+                { label: 'App Version', value: navigator.appVersion },
+                { label: 'Product', value: navigator.product },
+                { label: 'Product Sub', value: navigator.productSub }
+            ];
+
+            navProps.forEach(prop => {
+                // Check for suspicious values
+                let status = '';
+                if (prop.label === 'User Agent' && prop.value.includes('HeadlessChrome')) {
+                    status = 'fail';
+                } else if (prop.label === 'Vendor' && prop.value === '') {
+                    status = 'warning';
+                } else if (prop.label === 'Languages' && (!navigator.languages || navigator.languages.length === 0)) {
+                    status = 'warning';
+                } else if (prop.label === 'Hardware Concurrency' && prop.value === 0) {
+                    status = 'warning';
+                } else {
+                    status = 'pass';
+                }
+                
+                addTestResult('navigator-tests', prop.label, prop.value, status);
+            });
+        }
+
+        // Test Screen & Hardware
+        function testHardware() {
+            const hardwareProps = [
+                { label: 'Screen Width', value: screen.width },
+                { label: 'Screen Height', value: screen.height },
+                { label: 'Available Width', value: screen.availWidth },
+                { label: 'Available Height', value: screen.availHeight },
+                { label: 'Color Depth', value: screen.colorDepth },
+                { label: 'Pixel Depth', value: screen.pixelDepth },
+                { label: 'Device Pixel Ratio', value: window.devicePixelRatio },
+                { label: 'Outer Width', value: window.outerWidth },
+                { label: 'Outer Height', value: window.outerHeight },
+                { label: 'Inner Width', value: window.innerWidth },
+                { label: 'Inner Height', value: window.innerHeight },
+                { label: 'Screen X', value: window.screenX },
+                { label: 'Screen Y', value: window.screenY }
+            ];
+
+            hardwareProps.forEach(prop => {
+                // Check for headless indicators
+                let status = 'pass';
+                if ((prop.label === 'Outer Width' || prop.label === 'Outer Height') && prop.value === 0) {
+                    status = 'warning';
+                }
+                addTestResult('hardware-tests', prop.label, prop.value, status);
+            });
+        }
+
+        // Test WebGL
+        function testWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (!gl) {
+                    addTestResult('webgl-tests', 'WebGL Support', 'Not supported', 'warning');
+                    return;
+                }
+
+                addTestResult('webgl-tests', 'WebGL Support', 'Supported', 'pass');
+
+                // Get debug info
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                    const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    
+                    addTestResult('webgl-tests', 'WebGL Vendor', vendor, 
+                        vendor.includes('SwiftShader') ? 'warning' : 'pass');
+                    addTestResult('webgl-tests', 'WebGL Renderer', renderer, 
+                        renderer.includes('SwiftShader') ? 'warning' : 'pass');
+                } else {
+                    addTestResult('webgl-tests', 'Debug Info', 'Not available', 'warning');
+                }
+
+                // Get WebGL version
+                const version = gl.getParameter(gl.VERSION);
+                const shadingVersion = gl.getParameter(gl.SHADING_LANGUAGE_VERSION);
+                addTestResult('webgl-tests', 'WebGL Version', version, 'pass');
+                addTestResult('webgl-tests', 'Shading Language', shadingVersion, 'pass');
+
+                // Get supported extensions
+                const extensions = gl.getSupportedExtensions();
+                addTestResult('webgl-tests', 'Extensions Count', extensions.length, 
+                    extensions.length > 0 ? 'pass' : 'warning');
+
+            } catch (e) {
+                addTestResult('webgl-tests', 'WebGL Error', e.toString(), 'fail');
+            }
+        }
+
+        // Test Media Codecs
+        function testCodecs() {
+            const codecs = [
+                { label: 'H.264 (AVC)', mime: 'video/mp4; codecs="avc1.42E01E"' },
+                { label: 'H.265 (HEVC)', mime: 'video/mp4; codecs="hev1.1.2.L93.B0"' },
+                { label: 'VP8', mime: 'video/webm; codecs="vp8"' },
+                { label: 'VP9', mime: 'video/webm; codecs="vp9"' },
+                { label: 'AV1', mime: 'video/mp4; codecs="av01.0.00M.08"' },
+                { label: 'Opus', mime: 'audio/webm; codecs="opus"' },
+                { label: 'Vorbis', mime: 'audio/ogg; codecs="vorbis"' },
+                { label: 'AAC', mime: 'audio/mp4; codecs="mp4a.40.2"' },
+                { label: 'MP3', mime: 'audio/mpeg' },
+                { label: 'FLAC', mime: 'audio/flac' }
+            ];
+
+            const video = document.createElement('video');
+            const audio = document.createElement('audio');
+
+            codecs.forEach(codec => {
+                const element = codec.mime.startsWith('video') ? video : audio;
+                const support = element.canPlayType(codec.mime);
+                let status = 'pass';
+                
+                // H.264 should typically be supported
+                if (codec.label === 'H.264 (AVC)' && support === '') {
+                    status = 'warning';
+                }
+                
+                const supportText = support === '' ? 'Not supported' : 
+                                  support === 'maybe' ? 'Maybe' : 'Supported';
+                addTestResult('codec-tests', codec.label, supportText, status);
+            });
+        }
+
+        // Test Plugins
+        function testPlugins() {
+            const plugins = navigator.plugins;
+            
+            addTestResult('plugin-tests', 'Plugin Count', plugins.length, 
+                plugins.length === 0 ? 'warning' : 'pass');
+
+            if (plugins.length > 0) {
+                for (let i = 0; i < Math.min(plugins.length, 5); i++) {
+                    const plugin = plugins[i];
+                    addTestResult('plugin-tests', `Plugin ${i + 1}`, 
+                        `${plugin.name} (${plugin.filename})`, 'pass');
+                }
+            }
+
+            // Check for specific plugins
+            const expectedPlugins = ['Chrome PDF Plugin', 'Chrome PDF Viewer', 'Native Client'];
+            expectedPlugins.forEach(name => {
+                const hasPlugin = Array.from(plugins).some(p => p.name === name);
+                addTestResult('plugin-tests', name, hasPlugin ? 'Present' : 'Missing', 
+                    hasPlugin ? 'pass' : 'warning');
+            });
+        }
+
+        // Test Canvas Fingerprint
+        function testCanvas() {
+            try {
+                const canvas = document.getElementById('test-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Draw test pattern
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillStyle = '#f60';
+                ctx.fillRect(125, 1, 62, 20);
+                ctx.fillStyle = '#069';
+                ctx.fillText('BrowserTest 🚀', 2, 15);
+                ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                ctx.fillText('BrowserTest 🚀', 4, 17);
+                
+                // Get canvas data
+                const dataURL = canvas.toDataURL();
+                const hash = btoa(dataURL).substring(0, 16);
+                
+                addTestResult('canvas-tests', 'Canvas Fingerprint', hash, 'pass');
+                addTestResult('canvas-tests', 'toDataURL Works', 'Yes', 'pass');
+                
+                // Test WebGL canvas
+                const glCanvas = document.createElement('canvas');
+                const gl = glCanvas.getContext('webgl');
+                if (gl) {
+                    const glDataURL = glCanvas.toDataURL();
+                    addTestResult('canvas-tests', 'WebGL Canvas', 'Supported', 'pass');
+                }
+                
+            } catch (e) {
+                addTestResult('canvas-tests', 'Canvas Error', e.toString(), 'fail');
+            }
+        }
+
+        // Test Audio Context
+        function testAudio() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) {
+                    addTestResult('audio-tests', 'Audio Context', 'Not supported', 'warning');
+                    return;
+                }
+
+                const audioContext = new AudioContext();
+                const oscillator = audioContext.createOscillator();
+                const analyser = audioContext.createAnalyser();
+                const gain = audioContext.createGain();
+                const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                oscillator.type = 'triangle';
+                oscillator.frequency.value = 10000;
+                gain.gain.value = 0;
+                
+                oscillator.connect(analyser);
+                analyser.connect(scriptProcessor);
+                scriptProcessor.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                oscillator.start(0);
+                scriptProcessor.onaudioprocess = function(event) {
+                    const output = event.outputBuffer.getChannelData(0);
+                    let sum = 0;
+                    for (let i = 0; i < output.length; i++) {
+                        sum += Math.abs(output[i]);
+                    }
+                    const fingerprint = sum.toString().substring(0, 8);
+                    addTestResult('audio-tests', 'Audio Fingerprint', fingerprint, 'pass');
+                    oscillator.stop();
+                    audioContext.close();
+                };
+
+                addTestResult('audio-tests', 'Sample Rate', audioContext.sampleRate, 'pass');
+                addTestResult('audio-tests', 'State', audioContext.state, 'pass');
+                
+            } catch (e) {
+                addTestResult('audio-tests', 'Audio Error', e.toString(), 'fail');
+            }
+        }
+
+        // Test Permissions
+        async function testPermissions() {
+            const permissions = [
+                'geolocation',
+                'notifications',
+                'camera',
+                'microphone',
+                'accelerometer',
+                'gyroscope',
+                'magnetometer'
+            ];
+
+            for (const perm of permissions) {
+                try {
+                    const result = await navigator.permissions.query({ name: perm });
+                    addTestResult('permission-tests', 
+                        perm.charAt(0).toUpperCase() + perm.slice(1), 
+                        result.state, 'pass');
+                } catch (e) {
+                    addTestResult('permission-tests', 
+                        perm.charAt(0).toUpperCase() + perm.slice(1), 
+                        'Query failed', 'warning');
+                }
+            }
+
+            // Battery API
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    addTestResult('permission-tests', 'Battery Level', 
+                        Math.round(battery.level * 100) + '%', 'pass');
+                    addTestResult('permission-tests', 'Battery Charging', 
+                        battery.charging ? 'Yes' : 'No', 'pass');
+                } catch (e) {
+                    addTestResult('permission-tests', 'Battery API', 'Error', 'warning');
+                }
+            } else {
+                addTestResult('permission-tests', 'Battery API', 'Not supported', 'pass');
+            }
+        }
+
+        // Test Client Hints
+        function testClientHints() {
+            if (navigator.userAgentData) {
+                const brands = navigator.userAgentData.brands;
+                addTestResult('client-hints-tests', 'Brands', 
+                    brands.map(b => `${b.brand} v${b.version}`).join(', '), 'pass');
+                addTestResult('client-hints-tests', 'Mobile', 
+                    navigator.userAgentData.mobile ? 'Yes' : 'No', 'pass');
+                addTestResult('client-hints-tests', 'Platform', 
+                    navigator.userAgentData.platform, 'pass');
+                
+                // Get high entropy values
+                navigator.userAgentData.getHighEntropyValues([
+                    'architecture',
+                    'bitness',
+                    'model',
+                    'platformVersion',
+                    'uaFullVersion',
+                    'wow64'
+                ]).then(values => {
+                    Object.entries(values).forEach(([key, value]) => {
+                        if (value !== undefined && value !== '') {
+                            addTestResult('client-hints-tests', 
+                                key.charAt(0).toUpperCase() + key.slice(1), 
+                                value, 'pass');
+                        }
+                    });
+                }).catch(e => {
+                    addTestResult('client-hints-tests', 'High Entropy Values', 
+                        'Failed to retrieve', 'warning');
+                });
+            } else {
+                addTestResult('client-hints-tests', 'User Agent Data', 
+                    'Not supported', 'warning');
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            testWebDriver();
+            testNavigator();
+            testHardware();
+            testWebGL();
+            testCodecs();
+            testPlugins();
+            testCanvas();
+            testAudio();
+            await testPermissions();
+            testClientHints();
+            
+            // Calculate score after a delay to ensure all async tests complete
+            setTimeout(calculateScore, 1000);
+        }
+
+        // Run tests on load
+        window.addEventListener('load', runAllTests);
+        
+        // Export results for automation
+        window.getBotDetectionResults = function() {
+            return {
+                score: document.getElementById('detection-score').textContent,
+                webdriverDetected: detectionResults.webdriver.length > 0,
+                suspiciousCount: detectionResults.suspicious.length,
+                passedCount: detectionResults.passed.length,
+                details: detectionResults
+            };
+        };
+    </script>
+</body>
+</html>

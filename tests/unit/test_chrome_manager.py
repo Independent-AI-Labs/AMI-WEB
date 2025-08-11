@@ -21,7 +21,7 @@ async def test_basic_operations():
     try:
         # Create a browser instance
         print("\n1. Creating browser instance...")
-        instance = await manager.get_or_create_instance(headless=False)
+        instance = await manager.get_or_create_instance(headless=True)
         print(f"   [OK] Created instance: {instance.id}")
 
         # Navigate to a website

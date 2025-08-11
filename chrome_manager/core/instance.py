@@ -13,15 +13,17 @@ from selenium.webdriver.common.service import utils
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
+from ..models.browser_properties import BrowserProperties
 from ..utils.config import Config
 from ..utils.exceptions import InstanceError
 
 if TYPE_CHECKING:
+    from .properties_manager import PropertiesManager
     from .simple_tab_injector import SimpleTabInjector
 
 
 class BrowserInstance:
-    def __init__(self, instance_id: str | None = None, config: Config | None = None):
+    def __init__(self, instance_id: str | None = None, config: Config | None = None, properties_manager: "PropertiesManager | None" = None):
         self.id = instance_id or str(uuid.uuid4())
         self.driver: WebDriver | None = None
         self.status = BrowserStatus.IDLE
@@ -33,6 +35,7 @@ class BrowserInstance:
         self._logs: list[ConsoleEntry] = []
         self._network_logs: list[NetworkEntry] = []
         self._config = config or Config()
+        self._properties_manager = properties_manager
         self.window_monitor: "SimpleTabInjector | None" = None
 
     async def launch(
@@ -42,6 +45,7 @@ class BrowserInstance:
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
         anti_detect: bool = False,
+        browser_properties: "BrowserProperties | None" = None,
     ) -> WebDriver:
         try:
             self.status = BrowserStatus.STARTING
@@ -49,6 +53,15 @@ class BrowserInstance:
             self._anti_detect = anti_detect
 
             chrome_options = self._build_chrome_options(headless=headless, profile=profile, extensions=extensions or [], anti_detect=anti_detect)
+
+            # Apply browser properties if properties manager is available
+            if self._properties_manager and browser_properties:
+                self._properties_manager.set_instance_properties(self.id, browser_properties)
+                self._properties_manager.apply_to_chrome_options(chrome_options, browser_properties)
+            elif self._properties_manager:
+                # Apply default properties
+                props = self._properties_manager.get_instance_properties(self.id)
+                self._properties_manager.apply_to_chrome_options(chrome_options, props)
 
             if anti_detect:
                 # Use undetected mode with patched ChromeDriver
@@ -62,6 +75,11 @@ class BrowserInstance:
 
             self.status = BrowserStatus.IDLE
             self.last_activity = datetime.now()
+
+            # Inject browser properties after launch
+            if self._properties_manager:
+                props = browser_properties or self._properties_manager.get_instance_properties(self.id)
+                self._properties_manager.inject_properties(self.driver, props)
 
             await self._setup_logging()
 
@@ -217,8 +235,12 @@ class BrowserInstance:
             logger.error(f"Patched ChromeDriver not found at: {patched_driver_path}")
             raise InstanceError("ChromeDriver path not found for anti-detection mode")
 
-        # Launch Chrome
+        # Launch Chrome with timeout configuration
         driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+
+        # Set timeouts for better test performance
+        driver.set_page_load_timeout(30)  # 30 seconds for page loads
+        driver.implicitly_wait(5)  # 5 seconds implicit wait
 
         # Apply anti-detection scripts via CDP BEFORE any navigation
         from .antidetect import execute_anti_detection_scripts
@@ -260,7 +282,13 @@ class BrowserInstance:
                     "ChromeDriver not found and webdriver-manager not installed. Please install webdriver-manager or provide a chromedriver_path in config."
                 ) from e
 
-        return await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
+
+        # Set timeouts for better test performance
+        driver.set_page_load_timeout(30)  # 30 seconds for page loads
+        driver.implicitly_wait(5)  # 5 seconds implicit wait
+
+        return driver
 
     def open_new_tab_with_antidetect_old(self, url: str = None) -> str:
         """Open a new tab with anti-detection properly injected.
