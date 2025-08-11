@@ -19,7 +19,7 @@ from chrome_manager.core.manager import ChromeManager
 from chrome_manager.mcp.server import MCPServer
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
 
 
 class MCPTestServer:

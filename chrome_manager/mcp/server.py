@@ -304,6 +304,62 @@ class MCPServer:
                     "required": ["instance_id", "key", "value"],
                 },
             ),
+            "browser_set_properties": MCPTool(
+                name="browser_set_properties",
+                description="Set browser properties for an instance or tab",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string", "description": "Optional instance ID"},
+                        "tab_id": {"type": "string", "description": "Optional tab ID"},
+                        "preset": {
+                            "type": "string",
+                            "enum": ["windows_chrome", "mac_safari", "linux_firefox", "mobile_chrome", "mobile_safari", "stealth", "minimal", "custom"],
+                            "description": "Preset configuration to use",
+                        },
+                        "properties": {
+                            "type": "object",
+                            "description": "Custom properties to set/override",
+                            "properties": {
+                                "user_agent": {"type": "string"},
+                                "platform": {"type": "string"},
+                                "language": {"type": "string"},
+                                "languages": {"type": "array", "items": {"type": "string"}},
+                                "screen_resolution": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2},
+                                "hardware_concurrency": {"type": "integer"},
+                                "device_memory": {"type": "integer"},
+                                "webgl_vendor": {"type": "string"},
+                                "webgl_renderer": {"type": "string"},
+                                "webdriver_visible": {"type": "boolean"},
+                                "automation_controlled": {"type": "boolean"},
+                                "canvas_noise": {"type": "boolean"},
+                                "audio_context_noise": {"type": "boolean"},
+                                "codec_support": {
+                                    "type": "object",
+                                    "properties": {
+                                        "h264": {"type": "boolean"},
+                                        "h265": {"type": "boolean"},
+                                        "vp8": {"type": "boolean"},
+                                        "vp9": {"type": "boolean"},
+                                        "av1": {"type": "boolean"},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            ),
+            "browser_get_properties": MCPTool(
+                name="browser_get_properties",
+                description="Get current browser properties",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string", "description": "Optional instance ID"},
+                        "tab_id": {"type": "string", "description": "Optional tab ID"},
+                    },
+                },
+            ),
         }
 
     async def start(self):
@@ -694,6 +750,11 @@ class MCPServer:
             "browser_set_session_storage",
         ]:
             result = await self._execute_storage(tool_name, parameters)
+        # Browser Properties operations
+        elif tool_name == "browser_set_properties":
+            result = await self._execute_set_properties(parameters)
+        elif tool_name == "browser_get_properties":
+            result = await self._execute_get_properties(parameters)
         else:
             raise MCPError(f"Tool {tool_name} not implemented")
 
@@ -759,6 +820,26 @@ class MCPServer:
         # browser_set_session_storage
         await nav.set_session_storage(parameters["key"], parameters["value"])
         return {"success": True}
+
+    async def _execute_set_properties(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Execute browser_set_properties tool."""
+        instance_id = parameters.get("instance_id")
+        tab_id = parameters.get("tab_id")
+        preset = parameters.get("preset")
+        properties = parameters.get("properties")
+
+        success = await self.manager.set_browser_properties(instance_id=instance_id, tab_id=tab_id, properties=properties, preset=preset)
+
+        return {"success": success}
+
+    async def _execute_get_properties(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Execute browser_get_properties tool."""
+        instance_id = parameters.get("instance_id")
+        tab_id = parameters.get("tab_id")
+
+        properties = await self.manager.get_browser_properties(instance_id=instance_id, tab_id=tab_id)
+
+        return {"properties": properties}
 
     async def broadcast_event(self, event: MCPEvent):
         event_data = {
