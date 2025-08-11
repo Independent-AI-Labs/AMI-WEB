@@ -22,7 +22,7 @@ async def test_mcp_html_limit(session_manager):
     manager = session_manager
 
     # Get instance from manager
-    instance = await manager.get_or_create_instance(headless=False)
+    instance = await manager.get_or_create_instance(headless=True)
     instance_id = instance.id
 
     try:

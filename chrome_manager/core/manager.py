@@ -6,15 +6,18 @@ from loguru import logger
 from ..facade.media import ScreenshotController
 from ..facade.navigation import NavigationController
 from ..models.browser import ChromeOptions, InstanceInfo
+from ..models.browser_properties import BrowserProperties
 from ..utils.config import Config
 from .instance import BrowserInstance
 from .pool import InstancePool
+from .properties_manager import PropertiesManager
 from .session import SessionManager
 
 
 class ChromeManager:
     def __init__(self, config_file: str | None = None):
         self.config = Config.load(config_file) if config_file else Config()
+        self.properties_manager = PropertiesManager(self.config)
         self.pool = InstancePool(
             min_instances=self.config.get("pool.min_instances", 1),
             max_instances=self.config.get("pool.max_instances", 10),
@@ -22,6 +25,7 @@ class ChromeManager:
             instance_ttl=self.config.get("pool.instance_ttl", 3600),
             health_check_interval=self.config.get("pool.health_check_interval", 30),
             config=self.config,
+            properties_manager=self.properties_manager,
         )
         self.session_manager = SessionManager(session_dir=self.config.get("storage.session_dir", "./sessions"))
         self._instances: dict[str, BrowserInstance] = {}
@@ -154,6 +158,83 @@ class ChromeManager:
 
     async def get_pool_stats(self) -> dict:
         return self.pool.get_stats()
+
+    # Browser Properties Management
+    async def set_browser_properties(  # noqa: C901, PLR0912
+        self, instance_id: str | None = None, tab_id: str | None = None, properties: BrowserProperties | dict[str, Any] | None = None, preset: str | None = None
+    ) -> bool:
+        """Set browser properties for an instance or tab."""
+        # Create properties from preset if specified
+        if preset:
+            from ..models.browser_properties import BrowserPropertiesPreset, get_preset_properties
+
+            try:
+                preset_enum = BrowserPropertiesPreset(preset.lower())
+                properties = get_preset_properties(preset_enum)
+            except ValueError:
+                logger.error(f"Invalid preset: {preset}")
+                return False
+
+        if not properties:
+            logger.error("No properties or preset specified")
+            return False
+
+        # Set default properties if no instance specified
+        if not instance_id:
+            if isinstance(properties, dict):
+                base_props = self.properties_manager._default_properties.model_copy()
+                for key, value in properties.items():
+                    if hasattr(base_props, key):
+                        setattr(base_props, key, value)
+                self.properties_manager._default_properties = base_props
+            else:
+                self.properties_manager._default_properties = properties
+            logger.info("Updated default browser properties")
+            return True
+
+        # Set instance or tab properties
+        instance = await self.get_instance(instance_id)
+        if not instance:
+            logger.error(f"Instance {instance_id} not found")
+            return False
+
+        if tab_id:
+            # Set tab-specific properties
+            self.properties_manager.set_tab_properties(instance_id, tab_id, properties)
+            # Inject into the specific tab if it exists
+            if instance.driver:
+                current_handle = instance.driver.current_window_handle
+                try:
+                    # Switch to target tab
+                    for handle in instance.driver.window_handles:
+                        instance.driver.switch_to.window(handle)
+                        # Check if this is the target tab (would need tab ID mapping)
+                        # For now, inject into current tab
+                        if handle == tab_id or not tab_id:
+                            props = self.properties_manager.get_tab_properties(instance_id, handle)
+                            self.properties_manager.inject_properties(instance.driver, props, handle)
+                            break
+                finally:
+                    # Switch back
+                    instance.driver.switch_to.window(current_handle)
+        else:
+            # Set instance-wide properties
+            self.properties_manager.set_instance_properties(instance_id, properties)
+            # Inject into all tabs
+            if instance.driver:
+                props = self.properties_manager.get_instance_properties(instance_id)
+                self.properties_manager.inject_properties(instance.driver, props)
+
+        return True
+
+    async def get_browser_properties(self, instance_id: str | None = None, tab_id: str | None = None) -> dict[str, Any]:
+        """Get current browser properties."""
+        if not instance_id:
+            return self.properties_manager.export_properties()
+
+        props = self.properties_manager.get_tab_properties(instance_id, tab_id) if tab_id else self.properties_manager.get_instance_properties(instance_id)
+
+        return self.properties_manager.export_properties(props)
 
     async def execute_batch(self, tasks: list[dict[str, Any]], max_concurrent: int = 5) -> list[Any]:
         semaphore = asyncio.Semaphore(max_concurrent)

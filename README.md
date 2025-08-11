@@ -1,4 +1,4 @@
-# 🤖 AMI-WEB Chrome Automation Platform
+# 🤖 AMI-WEB Safe & Compliant Browser Automation
 
 An advanced Chrome automation framework with **undetectable browser fingerprinting**, **Model Context Protocol (MCP) server**, and enterprise-grade pooling. Built for AI agents, web scraping, testing, and automation at scale.
 

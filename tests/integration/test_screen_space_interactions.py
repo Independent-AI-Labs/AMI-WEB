@@ -13,7 +13,7 @@ from chrome_manager.facade.navigation import NavigationController
 from tests.fixtures.threaded_server import ThreadedHTMLServer
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
 
 
 @pytest_asyncio.fixture

@@ -25,7 +25,7 @@ logger.remove()
 logger.add(sys.stderr, level="INFO")
 
 # Test configuration - can be overridden by environment variable
-HEADLESS = os.environ.get("TEST_HEADLESS", "false").lower() == "true"
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless mode
 logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
 # Configure pytest-asyncio
@@ -42,8 +42,13 @@ async def session_manager():
     if _GLOBAL_MANAGER is None:
         # Pass config file path to ChromeManager
         _GLOBAL_MANAGER = ChromeManager(config_file="config.yaml")
+        # Configure pool for testing - smaller pool, faster cleanup
+        _GLOBAL_MANAGER.pool.min_instances = 1
+        _GLOBAL_MANAGER.pool.max_instances = 3  # Limit max instances for tests
+        _GLOBAL_MANAGER.pool.warm_instances = 1
+        _GLOBAL_MANAGER.pool.health_check_interval = 60  # Less frequent health checks during tests
         await _GLOBAL_MANAGER.start()
-        logger.info("Created global ChromeManager for test session")
+        logger.info("Created global ChromeManager for test session with optimized pool settings")
 
     yield _GLOBAL_MANAGER
 
@@ -54,8 +59,9 @@ async def session_manager():
 async def browser_instance(session_manager):
     """Get a browser instance from the pool for each test."""
     # Get instance from pool
-    instance = await session_manager.get_or_create_instance(headless=HEADLESS)
-    logger.info(f"Got browser instance {instance.id} from pool")
+    logger.info(f"Requesting browser instance (headless={HEADLESS})")
+    instance = await session_manager.get_or_create_instance(headless=HEADLESS, use_pool=True)
+    logger.info(f"Got browser instance {instance.id} from pool (headless={HEADLESS})")
 
     # Store initial state
     initial_handles = set(instance.driver.window_handles)
@@ -69,14 +75,19 @@ async def browser_instance(session_manager):
         new_handles = current_handles - initial_handles
 
         for handle in new_handles:
-            instance.driver.switch_to.window(handle)
-            instance.driver.close()
+            try:
+                instance.driver.switch_to.window(handle)
+                instance.driver.close()
+            except Exception:
+                logger.debug(f"Tab {handle} may already be closed")
 
         # Switch back to initial tab
         if instance.driver.window_handles:
             instance.driver.switch_to.window(instance.driver.window_handles[0])
             # Navigate to about:blank to clear state
             instance.driver.get("about:blank")
+            # Clear cookies for clean state
+            instance.driver.delete_all_cookies()
     except Exception as e:
         logger.warning(f"Error cleaning up instance {instance.id}: {e}")
 
