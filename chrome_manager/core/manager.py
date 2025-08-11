@@ -7,9 +7,11 @@ from ..facade.media import ScreenshotController
 from ..facade.navigation import NavigationController
 from ..models.browser import ChromeOptions, InstanceInfo
 from ..models.browser_properties import BrowserProperties
+from ..models.security import SecurityConfig
 from ..utils.config import Config
 from .instance import BrowserInstance
 from .pool import InstancePool
+from .profile_manager import ProfileManager
 from .properties_manager import PropertiesManager
 from .session import SessionManager
 
@@ -18,6 +20,7 @@ class ChromeManager:
     def __init__(self, config_file: str | None = None):
         self.config = Config.load(config_file) if config_file else Config()
         self.properties_manager = PropertiesManager(self.config)
+        self.profile_manager = ProfileManager(base_dir=self.config.get("chrome_manager.storage.profiles_dir", "./browser_profiles"))
         self.pool = InstancePool(
             min_instances=self.config.get("pool.min_instances", 1),
             max_instances=self.config.get("pool.max_instances", 10),
@@ -26,6 +29,7 @@ class ChromeManager:
             health_check_interval=self.config.get("pool.health_check_interval", 30),
             config=self.config,
             properties_manager=self.properties_manager,
+            profile_manager=self.profile_manager,
         )
         self.session_manager = SessionManager(session_dir=self.config.get("storage.session_dir", "./sessions"))
         self._instances: dict[str, BrowserInstance] = {}
@@ -69,6 +73,8 @@ class ChromeManager:
         options: ChromeOptions | None = None,
         use_pool: bool = True,
         anti_detect: bool = True,  # Enable anti-detect by default for MCP
+        security_config: "SecurityConfig | None" = None,
+        download_dir: str | None = None,
     ) -> BrowserInstance:
         if not self._initialized:
             await self.initialize()
@@ -77,8 +83,20 @@ class ChromeManager:
             opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
             instance = await self.pool.acquire(opts)
         else:
-            instance = BrowserInstance(config=self.config)
-            await instance.launch(headless=headless, profile=profile, extensions=extensions, options=options, anti_detect=anti_detect)
+            instance = BrowserInstance(
+                config=self.config,
+                properties_manager=self.properties_manager,
+                profile_manager=self.profile_manager,
+            )
+            await instance.launch(
+                headless=headless,
+                profile=profile,
+                extensions=extensions,
+                options=options,
+                anti_detect=anti_detect,
+                security_config=security_config,
+                download_dir=download_dir,
+            )
 
         self._instances[instance.id] = instance
         logger.info(f"Got or created browser instance {instance.id}")

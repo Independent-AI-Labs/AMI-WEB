@@ -51,6 +51,12 @@ chrome_manager:
     # Directory for session data
     session_dir: "./sessions"
     
+    # Directory for browser profiles
+    profiles_dir: "./browser_profiles"
+    
+    # Directory for downloads
+    download_dir: "./downloads"
+    
     # Directory for screenshots
     screenshot_dir: "./screenshots"
     
@@ -59,6 +65,16 @@ chrome_manager:
     
     # Directory for logs
     log_dir: "./logs"
+  
+  security:
+    # Security level: strict, standard, relaxed, permissive
+    level: "standard"
+    
+    # Override specific security settings (optional)
+    # ignore_certificate_errors: false
+    # allow_insecure_localhost: true
+    # safe_browsing_enabled: true
+    # download_protection_enabled: true
 
   mcp:
     # MCP server host

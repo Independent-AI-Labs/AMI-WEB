@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -14,16 +15,24 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, NetworkEntry, PerformanceMetrics, TabInfo
 from ..models.browser_properties import BrowserProperties
+from ..models.security import SecurityConfig, SecurityLevel
 from ..utils.config import Config
 from ..utils.exceptions import InstanceError
 
 if TYPE_CHECKING:
+    from .profile_manager import ProfileManager
     from .properties_manager import PropertiesManager
     from .simple_tab_injector import SimpleTabInjector
 
 
 class BrowserInstance:
-    def __init__(self, instance_id: str | None = None, config: Config | None = None, properties_manager: "PropertiesManager | None" = None):
+    def __init__(
+        self,
+        instance_id: str | None = None,
+        config: Config | None = None,
+        properties_manager: "PropertiesManager | None" = None,
+        profile_manager: "ProfileManager | None" = None,
+    ):
         self.id = instance_id or str(uuid.uuid4())
         self.driver: WebDriver | None = None
         self.status = BrowserStatus.IDLE
@@ -36,6 +45,10 @@ class BrowserInstance:
         self._network_logs: list[NetworkEntry] = []
         self._config = config or Config()
         self._properties_manager = properties_manager
+        self._profile_manager = profile_manager
+        self._profile_name: str | None = None
+        self._download_dir: Path | None = None
+        self._security_config: SecurityConfig | None = None
         self.window_monitor: "SimpleTabInjector | None" = None
 
     async def launch(
@@ -46,13 +59,44 @@ class BrowserInstance:
         options: ChromeOptions | None = None,
         anti_detect: bool = False,
         browser_properties: "BrowserProperties | None" = None,
+        download_dir: str | None = None,
+        security_config: SecurityConfig | None = None,
     ) -> WebDriver:
         try:
             self.status = BrowserStatus.STARTING
             self._options = options or ChromeOptions()
             self._anti_detect = anti_detect
+            self._profile_name = profile
 
-            chrome_options = self._build_chrome_options(headless=headless, profile=profile, extensions=extensions or [], anti_detect=anti_detect)
+            # Set up security configuration
+            if security_config:
+                self._security_config = security_config
+            else:
+                # Load from config or use default
+                security_level = self._config.get("chrome_manager.security.level", "standard")
+                self._security_config = SecurityConfig.from_level(SecurityLevel(security_level))
+
+            # Set up download directory
+            if download_dir:
+                self._download_dir = Path(download_dir).resolve()
+            elif profile and self._profile_manager:
+                # Use profile-specific download directory
+                profile_dir = self._profile_manager.get_profile_dir(profile)
+                self._download_dir = profile_dir / "Downloads"
+            else:
+                # Use default download directory
+                self._download_dir = Path(self._config.get("chrome_manager.storage.download_dir", "./downloads")).resolve()
+
+            self._download_dir.mkdir(parents=True, exist_ok=True)
+
+            chrome_options = self._build_chrome_options(
+                headless=headless,
+                profile=profile,
+                extensions=extensions or [],
+                anti_detect=anti_detect,
+                download_dir=str(self._download_dir),
+                security_config=self._security_config,
+            )
 
             # Apply browser properties if properties manager is available
             if self._properties_manager and browser_properties:
@@ -134,27 +178,30 @@ class BrowserInstance:
         if ext_path.exists():
             chrome_options.add_argument(f"--load-extension={ext_path.resolve()}")
 
-    def _build_chrome_options(self, headless: bool, profile: str | None, extensions: list[str], anti_detect: bool = False) -> Options:
-        chrome_options = Options()
+    def _configure_anti_detect_mode(self, chrome_options: Options, headless: bool) -> None:
+        """Configure Chrome for anti-detection mode."""
+        self._apply_anti_detection_options(chrome_options)
+        self._add_antidetect_extension(chrome_options)
+        if headless:
+            chrome_options.add_argument("--headless=new")
 
-        if anti_detect:
-            self._apply_anti_detection_options(chrome_options)
-            # Extension now ONLY removes webdriver flag - no conflicts
-            self._add_antidetect_extension(chrome_options)
-            # Don't disable GPU features in anti-detect mode - WebGL needs them
-            # Also add headless check for anti-detect mode
-            if headless:
-                chrome_options.add_argument("--headless=new")
-        else:
-            self._add_basic_options(chrome_options, headless)
-            self._add_conditional_options(chrome_options)
+    def _configure_standard_mode(self, chrome_options: Options, headless: bool) -> None:
+        """Configure Chrome for standard mode."""
+        self._add_basic_options(chrome_options, headless)
+        self._add_conditional_options(chrome_options)
 
-            # Suppress GPU errors and warnings (only in non-anti-detect mode)
-            chrome_options.add_argument("--disable-gpu-sandbox")
-            chrome_options.add_argument("--disable-software-rasterizer")
-            chrome_options.add_argument("--use-gl=swiftshader")  # Use software GL implementation
-            chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        # Suppress GPU errors and warnings
+        chrome_options.add_argument("--disable-gpu-sandbox")
+        chrome_options.add_argument("--disable-software-rasterizer")
+        chrome_options.add_argument("--use-gl=swiftshader")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
 
+        # These features conflict with anti-detection
+        chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+
+    def _add_common_arguments(self, chrome_options: Options) -> None:
+        """Add common arguments for all modes."""
         # Disable features that cause GCM/sync errors and slow down tests
         chrome_options.add_argument("--disable-background-networking")
         chrome_options.add_argument("--disable-background-timer-throttling")
@@ -164,14 +211,10 @@ class BrowserInstance:
         chrome_options.add_argument("--no-first-run")
         chrome_options.add_argument("--disable-client-side-phishing-detection")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--log-level=3")  # Only show fatal errors
+        chrome_options.add_argument("--log-level=3")
 
-        if not anti_detect:
-            # These features conflict with anti-detection
-            chrome_options.add_argument("--disable-features=ChromeWhatsNewUI,TranslateUI")
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])  # Disable Chrome logging
-        # Note: When anti_detect is True, excludeSwitches is set by antidetect.py to ["enable-automation", "enable-logging"]
-
+    def _apply_custom_options(self, chrome_options: Options, extensions: list[str]) -> None:
+        """Apply custom options from configuration."""
         for feature in self._options.disable_blink_features:
             chrome_options.add_argument(f"--disable-blink-features={feature}")
         for arg in self._options.arguments:
@@ -179,13 +222,74 @@ class BrowserInstance:
         for ext_path in extensions:
             chrome_options.add_extension(ext_path)
 
-        if self._options.prefs:
-            chrome_options.add_experimental_option("prefs", self._options.prefs)
-        for key, value in self._options.experimental_options.items():
-            chrome_options.add_experimental_option(key, value)
+    def _apply_preferences(
+        self,
+        chrome_options: Options,
+        download_dir: str | None,
+        security_config: SecurityConfig | None,
+    ) -> None:
+        """Apply Chrome preferences."""
+        prefs = self._options.prefs.copy() if self._options.prefs else {}
 
+        if security_config:
+            prefs.update(security_config.to_chrome_prefs())
+
+        if download_dir:
+            prefs.update(
+                {
+                    "download.default_directory": download_dir,
+                    "download.prompt_for_download": False,
+                    "download.directory_upgrade": True,
+                }
+            )
+
+        if prefs:
+            chrome_options.add_experimental_option("prefs", prefs)
+
+        for key, value in self._options.experimental_options.items():
+            if key != "prefs":
+                chrome_options.add_experimental_option(key, value)
+
+    def _build_chrome_options(
+        self,
+        headless: bool,
+        profile: str | None,
+        extensions: list[str],
+        anti_detect: bool = False,
+        download_dir: str | None = None,
+        security_config: SecurityConfig | None = None,
+    ) -> Options:
+        chrome_options = Options()
+
+        # Configure based on mode
+        if anti_detect:
+            self._configure_anti_detect_mode(chrome_options, headless)
+        else:
+            self._configure_standard_mode(chrome_options, headless)
+
+        # Add common arguments
+        self._add_common_arguments(chrome_options)
+
+        # Apply custom options
+        self._apply_custom_options(chrome_options, extensions)
+
+        # Apply security configuration
+        if security_config:
+            for arg in security_config.to_chrome_args():
+                chrome_options.add_argument(arg)
+            for key, value in security_config.to_capabilities().items():
+                chrome_options.set_capability(key, value)
+
+        # Apply preferences
+        self._apply_preferences(chrome_options, download_dir, security_config)
+
+        # Set up profile directory
         if profile:
-            chrome_options.add_argument(f"--user-data-dir={profile}")
+            if self._profile_manager:
+                profile_dir = self._profile_manager.get_profile_dir(profile)
+                chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+            else:
+                chrome_options.add_argument(f"--user-data-dir={profile}")
 
         chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"})
         return chrome_options
@@ -446,6 +550,166 @@ class BrowserInstance:
         except Exception as e:
             logger.warning(f"Failed to get console logs: {e}")
             return []
+
+    def get_security_config(self) -> SecurityConfig | None:
+        """Get the security configuration for this instance."""
+        return self._security_config
+
+    def get_download_directory(self) -> Path | None:
+        """Get the download directory for this instance."""
+        return self._download_dir
+
+    def list_downloads(self) -> list[dict[str, Any]]:
+        """List all files in the download directory."""
+        if not self._download_dir or not self._download_dir.exists():
+            return []
+
+        downloads = []
+        for file_path in self._download_dir.iterdir():
+            if file_path.is_file():
+                stat = file_path.stat()
+                downloads.append(
+                    {
+                        "name": file_path.name,
+                        "path": str(file_path),
+                        "size": stat.st_size,
+                        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    }
+                )
+
+        return sorted(downloads, key=lambda x: x["modified"], reverse=True)
+
+    def wait_for_download(self, filename: str | None = None, timeout: int = 30) -> Path | None:
+        """Wait for a download to complete."""
+        import time
+
+        if not self._download_dir:
+            return None
+
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            # Check for Chrome temp download files (.crdownload)
+            temp_files = list(self._download_dir.glob("*.crdownload"))
+
+            if not temp_files:
+                # No downloads in progress
+                if filename:
+                    target_file = self._download_dir / filename
+                    if target_file.exists():
+                        return target_file
+                else:
+                    # Return the most recent file
+                    files = [f for f in self._download_dir.iterdir() if f.is_file() and not f.name.endswith(".crdownload")]
+                    if files:
+                        return max(files, key=lambda f: f.stat().st_mtime)
+
+            time.sleep(0.5)
+
+        return None
+
+    def clear_downloads(self) -> int:
+        """Clear all files from the download directory."""
+        if not self._download_dir or not self._download_dir.exists():
+            return 0
+
+        count = 0
+        for file_path in self._download_dir.iterdir():
+            if file_path.is_file():
+                file_path.unlink()
+                count += 1
+
+        logger.info(f"Cleared {count} files from download directory")
+        return count
+
+    def save_cookies(self) -> list[dict]:
+        """Save current cookies."""
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
+
+        cookies = self.driver.get_cookies()
+
+        # If using a profile, save cookies to profile
+        if self._profile_name and self._profile_manager:
+            profile_dir = self._profile_manager.get_profile_dir(self._profile_name)
+            cookies_file = profile_dir / "saved_cookies.json"
+
+            with cookies_file.open("w") as f:
+                json.dump(cookies, f, indent=2)
+
+            logger.info(f"Saved {len(cookies)} cookies to profile {self._profile_name}")
+
+        return cookies
+
+    def _load_cookies_from_profile(self) -> list[dict] | None:
+        """Load cookies from profile storage."""
+        if not self._profile_name or not self._profile_manager:
+            return None
+
+        profile_dir = self._profile_manager.get_profile_dir(self._profile_name)
+        cookies_file = profile_dir / "saved_cookies.json"
+
+        if not cookies_file.exists():
+            return None
+
+        with cookies_file.open() as f:
+            cookies = json.load(f)
+        logger.info(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
+        return cookies
+
+    def _add_cookies_for_domain(self, domain: str, cookies: list[dict], navigate: bool) -> int:
+        """Add cookies for a specific domain."""
+        count = 0
+
+        if navigate and domain:
+            clean_domain = domain.lstrip(".")
+            url = f"https://{clean_domain}/"
+            try:
+                self.driver.get(url)
+            except Exception as e:
+                logger.debug(f"Could not navigate to {url}: {e}")
+
+        for cookie in cookies:
+            try:
+                self.driver.add_cookie(cookie)
+                count += 1
+            except Exception as e:
+                logger.debug(f"Could not add cookie: {e}")
+
+        return count
+
+    def load_cookies(self, cookies: list[dict] | None = None, navigate_to_domain: bool = True) -> int:
+        """Load cookies into the browser.
+
+        Args:
+            cookies: List of cookie dicts to load, or None to load from profile
+            navigate_to_domain: If True, navigate to cookie domain before adding
+        """
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
+
+        # Load from profile if no cookies provided
+        if not cookies:
+            cookies = self._load_cookies_from_profile()
+
+        if not cookies:
+            return 0
+
+        # Group cookies by domain
+        cookies_by_domain: dict[str, list[dict]] = {}
+        for cookie in cookies:
+            domain = cookie.get("domain", "")
+            if domain:
+                cookies_by_domain.setdefault(domain, []).append(cookie)
+
+        # Add cookies for each domain
+        count = 0
+        for domain, domain_cookies in cookies_by_domain.items():
+            count += self._add_cookies_for_domain(domain, domain_cookies, navigate_to_domain)
+
+        logger.info(f"Added {count} cookies to browser")
+        return count
 
     def get_info(self) -> InstanceInfo:
         memory_usage = 0
