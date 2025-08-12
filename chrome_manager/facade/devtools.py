@@ -5,7 +5,7 @@ from typing import Any
 
 from loguru import logger
 
-from ..core.instance import BrowserInstance
+from ..core.browser.instance import BrowserInstance
 from ..models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics
 from ..utils.exceptions import ChromeManagerError
 

@@ -1,5 +1,4 @@
-from .core.instance import BrowserInstance
-from .core.manager import ChromeManager
+from .core import BrowserInstance, ChromeManager
 from .facade.input import InputController
 from .facade.navigation import NavigationController
 from .models.browser import BrowserStatus, InstanceInfo

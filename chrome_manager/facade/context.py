@@ -3,7 +3,7 @@ import asyncio
 from loguru import logger
 from selenium.webdriver.common.by import By
 
-from ..core.instance import BrowserInstance
+from ..core.browser.instance import BrowserInstance
 from ..models.browser import TabInfo
 from ..utils.exceptions import NavigationError
 

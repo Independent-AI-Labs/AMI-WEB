@@ -5,20 +5,20 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
-from ..models.browser import ChromeOptions
-from ..utils.config import Config
-from .instance import BrowserInstance
+from ...models.browser import ChromeOptions
+from ...utils.config import Config
+from ..browser.instance import BrowserInstance
 
 if TYPE_CHECKING:
+    from ..browser.properties_manager import PropertiesManager
     from .profile_manager import ProfileManager
-    from .properties_manager import PropertiesManager
 
 # Constants for pool management
 DEFAULT_ACQUIRE_TIMEOUT = 30  # seconds
 WARMUP_CHECK_INTERVAL = 10  # seconds
 
 
-class InstancePool:
+class BrowserPool:
     def __init__(
         self,
         min_instances: int = 1,
@@ -87,7 +87,7 @@ class InstancePool:
             instance = await self._get_available_instance(options)
             if instance:
                 self.in_use[instance.id] = instance
-                instance.last_activity = datetime.now()
+                instance.update_activity()
                 logger.debug(f"Acquired instance {instance.id} from pool")
                 return instance
 
@@ -122,14 +122,14 @@ class InstancePool:
                 await self._remove_instance(instance)
                 logger.info(f"Removed unhealthy instance {instance_id}")
 
-    async def _get_available_instance(self, options: ChromeOptions | None) -> BrowserInstance | None:
+    async def _get_available_instance(self, options: ChromeOptions | None) -> BrowserInstance | None:  # noqa: ARG002
         while self.available:
             instance = self.available.popleft()
             if await self._is_healthy(instance):
-                if not options or self._matches_options(instance, options):
-                    return instance
-            else:
-                await self._remove_instance(instance)
+                # For now, just reuse any healthy instance
+                # TODO: Add better matching logic based on actual configuration
+                return instance
+            await self._remove_instance(instance)
         return None
 
     async def _create_instance(self, options: ChromeOptions | None = None) -> BrowserInstance:
@@ -190,11 +190,6 @@ class InstancePool:
         self.all_instances.pop(instance.id, None)
         if instance in self.available:
             self.available.remove(instance)
-
-    def _matches_options(self, instance: BrowserInstance, options: ChromeOptions) -> bool:
-        if not instance._options:
-            return False
-        return instance._options.headless == options.headless and set(instance._options.extensions) == set(options.extensions)
 
     async def _ensure_min_instances(self):
         current_count = len(self.all_instances)
