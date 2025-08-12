@@ -11,6 +11,10 @@ class BrowserStatus(Enum):
     CRASHED = "crashed"
     TERMINATED = "terminated"
     STARTING = "starting"
+    READY = "ready"
+    ERROR = "error"
+    CLOSING = "closing"
+    CLOSED = "closed"
 
 
 class InstanceInfo(BaseModel):
