@@ -39,7 +39,10 @@ async def chrome_manager():
 
     try:
         manager = ChromeManager(config_file=config_file)
-        await manager.initialize()
+        # Don't initialize pool to avoid conflicts with profile tests
+        # Just initialize the session manager
+        await manager.session_manager.initialize()
+        manager._initialized = True
         yield manager
         await manager.shutdown()
     finally:
