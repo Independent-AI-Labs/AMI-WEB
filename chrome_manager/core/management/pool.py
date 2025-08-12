@@ -139,8 +139,9 @@ class BrowserPool:
             profile_manager=self._profile_manager,
         )
         opts = options or ChromeOptions()
-        # Use anti_detect from options if provided, default to True for pooled instances
-        anti_detect = getattr(opts, "anti_detect", True)
+        # Use anti_detect from options if provided, otherwise from config, default to True
+        default_anti_detect = self._config.get("chrome_manager.pool.anti_detect_default", True)
+        anti_detect = getattr(opts, "anti_detect", default_anti_detect)
         await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=anti_detect)
         return instance
 
@@ -160,7 +161,8 @@ class BrowserPool:
         try:
             health = await instance.health_check()
             return health["healthy"]
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Health check failed for instance {instance.id}: {e}")
             return False
 
     async def _reset_instance(self, instance: BrowserInstance):
@@ -219,16 +221,24 @@ class BrowserPool:
             to_remove = []
 
             for _instance_id, instance in list(self.all_instances.items()):
+                # Skip health checks on instances that are in use
+                if instance.id in self.in_use:
+                    continue
+
+                # Only apply TTL to idle instances (not in use)
                 age = (datetime.now() - instance.created_at).total_seconds()
                 if age > self.instance_ttl:
+                    logger.info(f"Removing instance {instance.id} due to TTL (age: {age:.0f}s)")
                     to_remove.append(instance)
                     continue
 
+                # Check health only for available instances
                 if not await self._is_healthy(instance):
                     to_remove.append(instance)
 
             for instance in to_remove:
                 await self._remove_instance(instance)
+                # Only remove from in_use if it was somehow there
                 self.in_use.pop(instance.id, None)
 
         await self._ensure_min_instances()
