@@ -40,3 +40,7 @@ class PoolError(ChromeManagerError):
 
 class ProfileError(ChromeManagerError):
     """Raised when profile operations fail."""
+
+
+class SessionError(ChromeManagerError):
+    """Raised when session operations fail."""
