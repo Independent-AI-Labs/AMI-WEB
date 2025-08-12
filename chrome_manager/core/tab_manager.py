@@ -95,3 +95,11 @@ class TabManager:
             # If this is the current tab, reinject
             if self.driver.current_window_handle == tab_id:
                 self.ensure_antidetect_on_current_tab()
+
+    def cleanup_closed_tabs(self):
+        """Remove closed tabs from the injected tabs set to prevent memory leak."""
+        try:
+            current_handles = set(self.driver.window_handles)
+            self._injected_tabs = self._injected_tabs.intersection(current_handles)
+        except Exception as e:
+            logger.debug(f"Error cleaning up closed tabs: {e}")

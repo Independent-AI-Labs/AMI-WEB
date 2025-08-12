@@ -24,6 +24,13 @@ if TYPE_CHECKING:
     from .properties_manager import PropertiesManager
     from .simple_tab_injector import SimpleTabInjector
 
+# Timeout constants - configurable via environment or config
+DEFAULT_PAGE_LOAD_TIMEOUT = 30  # seconds
+DEFAULT_SCRIPT_TIMEOUT = 30  # seconds
+DEFAULT_IMPLICIT_WAIT = 5  # seconds
+DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
+PROCESS_TERMINATION_TIMEOUT = 5  # seconds
+
 
 class BrowserInstance:
     def __init__(
@@ -343,8 +350,8 @@ class BrowserInstance:
         driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
 
         # Set timeouts for better test performance
-        driver.set_page_load_timeout(30)  # 30 seconds for page loads
-        driver.implicitly_wait(5)  # 5 seconds implicit wait
+        driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
+        driver.implicitly_wait(DEFAULT_IMPLICIT_WAIT)
 
         # Apply anti-detection scripts via CDP BEFORE any navigation
         from .antidetect import execute_anti_detection_scripts
@@ -389,8 +396,8 @@ class BrowserInstance:
         driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=service, options=chrome_options))
 
         # Set timeouts for better test performance
-        driver.set_page_load_timeout(30)  # 30 seconds for page loads
-        driver.implicitly_wait(5)  # 5 seconds implicit wait
+        driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
+        driver.implicitly_wait(DEFAULT_IMPLICIT_WAIT)
 
         return driver
 
@@ -605,7 +612,7 @@ class BrowserInstance:
                     if files:
                         return max(files, key=lambda f: f.stat().st_mtime)
 
-            time.sleep(0.5)
+            time.sleep(DOWNLOAD_CHECK_INTERVAL)
 
         return None
 

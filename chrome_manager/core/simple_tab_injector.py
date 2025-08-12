@@ -81,12 +81,12 @@ class SimpleTabInjector:
 
     def _inject_via_script(self, handle: str) -> bool:
         """Inject script directly into document."""
-        max_attempts = 20
+        max_attempts = 10
         for attempt in range(max_attempts):
             try:
                 # Try to inject immediately, even if document not ready
                 self.driver.execute_script(self.antidetect_script)
-                time.sleep(0.01)  # Small delay to let script execute
+                # Script execution is synchronous, no delay needed
 
                 # Verify injection worked
                 plugin_count = self.driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
@@ -101,7 +101,7 @@ class SimpleTabInjector:
 
             except Exception as e:
                 if attempt < max_attempts - 1:
-                    time.sleep(0.01)  # Wait 10ms and retry
+                    time.sleep(0.05)  # Wait 50ms and retry
                 else:
                     logger.error(f"Failed all injection attempts: {e}")
         return False
@@ -109,7 +109,7 @@ class SimpleTabInjector:
     def _inject_late(self, handle: str) -> bool:
         """Last ditch effort to inject after delay."""
         logger.warning(f"Standard injection failed for tab {handle}, trying after delay...")
-        time.sleep(0.5)
+        time.sleep(0.2)
         try:
             self.driver.execute_script(self.antidetect_script)
             plugin_count = self.driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
@@ -157,4 +157,4 @@ class SimpleTabInjector:
             except Exception as e:
                 logger.debug(f"Monitor loop error: {e}")
 
-            time.sleep(0.001)  # Check every 1ms for ultra-fast response
+            time.sleep(0.1)  # Check every 100ms - balance between responsiveness and CPU usage

@@ -137,8 +137,9 @@ class InstancePool:
             profile_manager=self._profile_manager,
         )
         opts = options or ChromeOptions()
-        # Always enable anti-detect for pooled instances
-        await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=True)
+        # Use anti_detect from options if provided, default to True for pooled instances
+        anti_detect = getattr(opts, "anti_detect", True)
+        await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=anti_detect)
         return instance
 
     async def _wait_for_instance(self, timeout: int, options: ChromeOptions | None) -> BrowserInstance:
@@ -149,7 +150,7 @@ class InstancePool:
                 if instance:
                     self.in_use[instance.id] = instance
                     return instance
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)  # Reduced from 0.5s for better responsiveness
 
         raise TimeoutError(f"Failed to acquire instance within {timeout} seconds")
 
