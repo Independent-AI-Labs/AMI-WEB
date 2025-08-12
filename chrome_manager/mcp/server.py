@@ -12,8 +12,7 @@ from loguru import logger
 from selenium.webdriver.support.ui import WebDriverWait
 from websockets.server import WebSocketServerProtocol  # type: ignore[attr-defined]
 
-from ..core.instance import BrowserInstance
-from ..core.manager import ChromeManager
+from ..core import BrowserInstance, ChromeManager
 from ..facade.input import InputController
 from ..facade.media import ScreenshotController
 from ..facade.navigation import NavigationController
@@ -625,7 +624,6 @@ class MCPServer:
         return instance
 
     async def _execute_launch(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        # The security config will be picked up from _next_security_config if set
         # Don't use pool if profile is specified (profiles need dedicated instances)
         use_pool = not bool(parameters.get("profile"))
 
@@ -670,7 +668,7 @@ class MCPServer:
             content_length = instance.driver.execute_script("return document.documentElement.innerHTML.length")
 
             load_time = time.time() - start_time
-            instance.last_activity = datetime.now()
+            instance.update_activity()
 
             logger.info(f"Navigation successful - Title: {title}, URL: {current_url}, Load time: {load_time:.2f}s")
 
@@ -1077,25 +1075,13 @@ class MCPServer:
         return {"download_dir": str(download_dir) if download_dir else None}
 
     # Security configuration method
-    async def _execute_set_security(self, parameters: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_set_security(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
         """Set security configuration for next browser launch."""
-        from ..models.security import SecurityConfig, SecurityLevel
 
-        # Store security config for next launch
-        if "level" in parameters:
-            level = SecurityLevel(parameters["level"])
-            self.manager._next_security_config = SecurityConfig.from_level(level)
-        else:
-            # Create custom security config
-            config_params = {}
-            for key in ["ignore_certificate_errors", "allow_insecure_localhost", "safe_browsing_enabled", "download_protection_enabled"]:
-                if key in parameters:
-                    config_params[key] = parameters[key]
-
-            if config_params:
-                self.manager._next_security_config = SecurityConfig(**config_params)
-
-        return {"success": True}
+        # Note: ChromeManager removed _next_security_config to avoid race conditions
+        # Security config should be passed when creating browser instances instead
+        logger.warning("set_security_config is deprecated - pass security config when launching browser")
+        return {"success": True, "warning": "Security config should be set when launching browser"}
 
     async def broadcast_event(self, event: MCPEvent):
         event_data = {

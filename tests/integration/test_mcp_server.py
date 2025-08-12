@@ -15,7 +15,7 @@ import pytest_asyncio
 import websockets
 from loguru import logger
 
-from chrome_manager.core.manager import ChromeManager
+from chrome_manager.core import ChromeManager
 from chrome_manager.mcp.server import MCPServer
 
 # Test configuration

@@ -27,7 +27,7 @@ if log_level == "DEBUG":
 
 # Import Chrome Manager components
 try:
-    from chrome_manager.core.manager import ChromeManager
+    from chrome_manager.core import ChromeManager
     from chrome_manager.mcp.server import MCPServer
 except ImportError as e:
     logger.error(f"Failed to import Chrome Manager: {e}")

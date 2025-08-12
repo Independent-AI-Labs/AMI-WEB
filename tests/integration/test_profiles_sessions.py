@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from selenium.webdriver.common.by import By
 
-from chrome_manager.core.manager import ChromeManager
-from chrome_manager.core.profile_manager import ProfileManager
+from chrome_manager.core import ChromeManager
+from chrome_manager.core.management import ProfileManager
 from chrome_manager.models.security import SecurityConfig, SecurityLevel
 
 
