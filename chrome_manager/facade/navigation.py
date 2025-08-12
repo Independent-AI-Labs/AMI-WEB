@@ -1,47 +1,20 @@
 import asyncio
-import threading
 from typing import Any
 
 from loguru import logger
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
 
-from ..core.browser.instance import BrowserInstance
 from ..models.browser import PageResult, WaitCondition
 from ..utils.exceptions import NavigationError
 from ..utils.parser import HTMLParser
+from .base import BaseController
+from .config import FACADE_CONFIG
+from .utils import parameterized_js_execution
 
 
-class NavigationController:
-    def __init__(self, instance: BrowserInstance):
-        self.instance = instance
-        self.driver = instance.driver
-
-    def _is_in_thread_context(self) -> bool:
-        """Check if we're running in a non-main thread with its own event loop."""
-        try:
-            # Check if we're in the main thread
-            current_thread = threading.current_thread()
-            main_thread = threading.main_thread()
-
-            # Log the thread info for debugging
-            logger.debug(f"Thread check: current={current_thread.name}, main={main_thread.name}, is_main={current_thread is main_thread}")
-
-            if current_thread is not main_thread:
-                # Check if this thread has an event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                    is_running = loop.is_running()
-                    logger.debug(f"Thread has event loop, running={is_running}")
-                    return is_running
-                except RuntimeError as e:
-                    logger.debug(f"Thread has no event loop: {e}")
-                    return False
-            return False
-        except Exception as e:
-            logger.debug(f"Error in thread check: {e}")
-            return False
+class NavigationController(BaseController):
+    """Controller for browser navigation operations."""
 
     async def navigate(self, url: str, wait_for: WaitCondition | None = None, timeout: int = 30) -> PageResult:
         if not self.driver:
@@ -202,15 +175,19 @@ class NavigationController:
 
         try:
             if element:
-                script = f"""
-                const element = document.querySelector('{element}');
+                script = parameterized_js_execution(
+                    """
+                const element = document.querySelector({element});
                 if (element) {{
                     element.scrollIntoView({{
-                        behavior: '{"smooth" if smooth else "auto"}',
+                        behavior: {behavior},
                         block: 'center'
                     }});
                 }}
-                """
+                """,
+                    element=element,
+                    behavior="smooth" if smooth else "auto",
+                )
             else:
                 behavior = "smooth" if smooth else "auto"
                 script = f"window.scrollTo({{left: {x or 0}, top: {y or 0}, behavior: '{behavior}'}})"
@@ -220,12 +197,12 @@ class NavigationController:
                 import time
 
                 self.driver.execute_script(script)
-                time.sleep(0.5 if smooth else 0.1)
+                time.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
             else:
                 # Normal async operation
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self.driver.execute_script, script)
-                await asyncio.sleep(0.5 if smooth else 0.1)
+                await asyncio.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
 
         except Exception as e:
             raise NavigationError(f"Failed to scroll: {e}") from e
@@ -330,15 +307,6 @@ class NavigationController:
         elif condition.type == "function" and condition.target:
             await loop.run_in_executor(None, wait.until, lambda driver: driver.execute_script(condition.target))
 
-    def _parse_selector(self, selector: str) -> tuple:
-        if selector.startswith("//"):
-            return (By.XPATH, selector)
-        if selector.startswith("#"):
-            return (By.ID, selector[1:])
-        if selector.startswith("."):
-            return (By.CLASS_NAME, selector[1:])
-        return (By.CSS_SELECTOR, selector)
-
     async def get_page_content(self) -> str:
         """Get the full HTML content of the page."""
         if not self.driver:
@@ -360,7 +328,7 @@ class NavigationController:
             raise NavigationError("Browser not initialized")
 
         try:
-            script = f"return document.querySelector('{selector}').innerHTML"
+            script = parameterized_js_execution("return document.querySelector({selector}).innerHTML", selector=selector)
             return await self.execute_script(script)
         except Exception as e:
             raise NavigationError(f"Failed to get element HTML: {e}") from e

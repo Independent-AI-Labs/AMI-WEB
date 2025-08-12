@@ -2,7 +2,6 @@ import asyncio
 import base64
 import contextlib
 import io
-import threading
 import time
 import uuid
 from datetime import datetime
@@ -11,30 +10,15 @@ import cv2
 import numpy as np
 from loguru import logger
 from PIL import Image
-from selenium.webdriver.common.by import By
 
-from ..core.browser.instance import BrowserInstance
 from ..models.media import ImageFormat, RecordingSession
 from ..utils.exceptions import MediaError
+from .base import BaseController
+from .config import FACADE_CONFIG
 
 
-class ScreenshotController:
-    def __init__(self, instance: BrowserInstance):
-        self.instance = instance
-        self.driver = instance.driver
-
-    def _is_in_thread_context(self) -> bool:
-        """Check if we're running in a non-main thread with its own event loop."""
-        try:
-            if threading.current_thread() is not threading.main_thread():
-                try:
-                    loop = asyncio.get_event_loop()
-                    return loop.is_running()
-                except RuntimeError:
-                    return False
-            return False
-        except Exception:
-            return False
+class ScreenshotController(BaseController):
+    """Controller for screenshot and media capture operations."""
 
     async def capture_viewport(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:  # noqa: ARG002
         if not self.driver:
@@ -129,7 +113,7 @@ class ScreenshotController:
 
             while current_position < total_height:
                 self.driver.execute_script(f"window.scrollTo(0, {current_position})")
-                time.sleep(0.2)
+                time.sleep(FACADE_CONFIG.screenshot_stitch_delay)
                 screenshot_base64 = self.driver.get_screenshot_as_base64()
                 screenshots.append(base64.b64decode(screenshot_base64))
                 current_position += viewport_height
@@ -153,7 +137,7 @@ class ScreenshotController:
             while current_position < total_height:
                 await loop.run_in_executor(None, self.driver.execute_script, f"window.scrollTo(0, {current_position})")
 
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
 
                 screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
                 screenshots.append(base64.b64decode(screenshot_base64))
@@ -300,20 +284,12 @@ class ScreenshotController:
 
         return output.getvalue()
 
-    def _parse_selector(self, selector: str) -> tuple:
-        if selector.startswith("//"):
-            return (By.XPATH, selector)
-        if selector.startswith("#"):
-            return (By.ID, selector[1:])
-        if selector.startswith("."):
-            return (By.CLASS_NAME, selector[1:])
-        return (By.CSS_SELECTOR, selector)
 
+class VideoRecorder(BaseController):
+    """Controller for video recording operations."""
 
-class VideoRecorder:
-    def __init__(self, instance: BrowserInstance):
-        self.instance = instance
-        self.driver = instance.driver
+    def __init__(self, instance):
+        super().__init__(instance)
         self.recording_sessions: dict[str, dict] = {}
 
     async def start_recording(self, output_path: str, fps: int = 30, codec: str = "h264") -> RecordingSession:
@@ -368,20 +344,21 @@ class VideoRecorder:
         logger.info(f"Resumed recording session {session_id}")
 
     async def _record_loop(self, session_id: str, output_path: str, fps: int, codec: str) -> None:  # noqa: ARG002
-        recording = self.recording_sessions[session_id]
-        frame_interval = 1.0 / fps
-
-        viewport_size = self.driver.get_window_size()
-        width = viewport_size["width"]
-        height = viewport_size["height"]
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
-        writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-        recording["writer"] = writer
-
-        start_time = time.time()
-
+        writer = None
         try:
+            recording = self.recording_sessions[session_id]
+            frame_interval = 1.0 / fps
+
+            viewport_size = self.driver.get_window_size()
+            width = viewport_size["width"]
+            height = viewport_size["height"]
+
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
+            writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            recording["writer"] = writer
+
+            start_time = time.time()
+
             while recording["session"].status != "stopped":
                 if recording["session"].status == "recording":
                     screenshot_base64 = self.driver.get_screenshot_as_base64()
@@ -397,6 +374,16 @@ class VideoRecorder:
                 await asyncio.sleep(frame_interval)
 
         except asyncio.CancelledError:
-            pass
+            logger.debug(f"Recording loop cancelled for session {session_id}")
+        except Exception as e:
+            logger.error(f"Error in recording loop for session {session_id}: {e}")
+            # Clean up the session on error
+            if session_id in self.recording_sessions:
+                self.recording_sessions[session_id]["session"].status = "error"
         finally:
-            writer.release()
+            if writer:
+                writer.release()
+            # Always clean up the session from dict to prevent memory leak
+            if session_id in self.recording_sessions:
+                logger.debug(f"Cleaning up recording session {session_id}")
+                del self.recording_sessions[session_id]

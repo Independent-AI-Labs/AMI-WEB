@@ -1,37 +1,20 @@
 import asyncio
-import threading
 import time
 
 from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
-from ..core.browser.instance import BrowserInstance
 from ..models.browser import ClickOptions
 from ..utils.exceptions import InputError
+from .base import BaseController
 
 
-class InputController:
-    def __init__(self, instance: BrowserInstance):
-        self.instance = instance
-        self.driver = instance.driver
-
-    def _is_in_thread_context(self) -> bool:
-        """Check if we're running in a non-main thread with its own event loop."""
-        try:
-            if threading.current_thread() is not threading.main_thread():
-                try:
-                    loop = asyncio.get_event_loop()
-                    return loop.is_running()
-                except RuntimeError:
-                    return False
-            return False
-        except Exception:
-            return False
+class InputController(BaseController):
+    """Controller for browser input operations."""
 
     def _perform_click_sync(self, element: WebElement, options: ClickOptions) -> None:
         """Synchronous version of click for thread context."""
@@ -348,18 +331,6 @@ class InputController:
         except Exception as e:
             logger.warning(f"Element not found: {selector}: {e}")
             return None
-
-    def _parse_selector(self, selector: str) -> tuple:
-        if selector.startswith("//"):
-            return (By.XPATH, selector)
-        if selector.startswith("#"):
-            return (By.ID, selector[1:])
-        if selector.startswith("."):
-            return (By.CLASS_NAME, selector[1:])
-        if selector.startswith("[name="):
-            name = selector[6:-1]
-            return (By.NAME, name)
-        return (By.CSS_SELECTOR, selector)
 
     async def click_at_coordinates(self, x: int, y: int, button: str = "left", click_count: int = 1) -> None:
         """Click at specific screen coordinates.
