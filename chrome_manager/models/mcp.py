@@ -4,6 +4,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+def current_time() -> datetime:
+    """Factory function for current timestamp."""
+    return datetime.now()
+
+
 class MCPTool(BaseModel):
     name: str
     description: str
@@ -21,7 +26,7 @@ class MCPRequest(BaseModel):
     tool: str
     parameters: dict[str, Any]
     request_id: str
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=current_time)
 
 
 class MCPResponse(BaseModel):
@@ -36,4 +41,4 @@ class MCPEvent(BaseModel):
     event_type: str
     instance_id: str | None = None
     data: dict[str, Any]
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=current_time)
