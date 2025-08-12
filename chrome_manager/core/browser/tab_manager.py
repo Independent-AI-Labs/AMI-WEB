@@ -23,7 +23,8 @@ class TabManager:
 
     def _load_antidetect_script(self):
         """Load the anti-detection script content."""
-        script_path = Path(__file__).parent.parent / "scripts" / "complete-antidetect.js"
+        # Path: chrome_manager/core/browser -> chrome_manager/scripts
+        script_path = Path(__file__).parent.parent.parent / "scripts" / "complete-antidetect.js"
         if script_path.exists():
             with script_path.open("r", encoding="utf-8") as f:
                 self.antidetect_script = f.read()

@@ -75,8 +75,12 @@ class BrowserOptionsBuilder:
         """Add basic Chrome options."""
         if headless:
             chrome_options.add_argument("--headless=new")
-            chrome_options.add_argument("--disable-gpu")
+            # Don't disable GPU in headless - we need it for WebGL!
             chrome_options.add_argument("--no-sandbox")
+            # Enable WebGL with hardware acceleration
+            chrome_options.add_argument("--enable-webgl")
+            chrome_options.add_argument("--use-gl=angle")  # Use ANGLE (hardware accelerated)
+            chrome_options.add_argument("--use-angle=default")  # Let ANGLE choose best backend
 
     def _add_conditional_options(self, chrome_options: Options) -> None:
         """Add conditional options based on configuration."""

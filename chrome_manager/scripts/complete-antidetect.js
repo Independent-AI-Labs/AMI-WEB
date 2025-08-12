@@ -273,21 +273,92 @@
     }
     
     // ========== WEBGL SPOOFING ==========
+    // Store original getContext first
     var originalGetContext = HTMLCanvasElement.prototype.getContext;
+    
+    // Define WebGL extension constants if not present
+    if (typeof WebGLRenderingContext !== 'undefined') {
+        // These might not be defined, so define them
+        if (!WebGLRenderingContext.prototype.UNMASKED_VENDOR_WEBGL) {
+            WebGLRenderingContext.prototype.UNMASKED_VENDOR_WEBGL = 0x9245;
+        }
+        if (!WebGLRenderingContext.prototype.UNMASKED_RENDERER_WEBGL) {
+            WebGLRenderingContext.prototype.UNMASKED_RENDERER_WEBGL = 0x9246;
+        }
+    }
+    
+    // Override getContext
     HTMLCanvasElement.prototype.getContext = function() {
         var context = originalGetContext.apply(this, arguments);
         if (context && (arguments[0] === 'webgl' || arguments[0] === 'webgl2' || arguments[0] === 'experimental-webgl')) {
+            // Hook getParameter on the context
             if (context.getParameter) {
                 var originalGetParameter = context.getParameter.bind(context);
                 context.getParameter = function(pname) {
-                    if (pname === 0x9245) return 'Google Inc. (Intel)';
-                    if (pname === 0x9246) return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                    // UNMASKED_VENDOR_WEBGL
+                    if (pname === 0x9245 || pname === 37445) {
+                        return 'Google Inc. (Intel)';
+                    }
+                    // UNMASKED_RENDERER_WEBGL
+                    if (pname === 0x9246 || pname === 37446) {
+                        return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                    }
                     return originalGetParameter(pname);
+                };
+            }
+            
+            // Also hook getExtension to intercept WEBGL_debug_renderer_info
+            if (context.getExtension) {
+                var originalGetExtension = context.getExtension.bind(context);
+                context.getExtension = function(name) {
+                    var extension = originalGetExtension(name);
+                    if (name === 'WEBGL_debug_renderer_info' && extension) {
+                        // The extension object should have the constants
+                        if (!extension.UNMASKED_VENDOR_WEBGL) {
+                            extension.UNMASKED_VENDOR_WEBGL = 0x9245;
+                        }
+                        if (!extension.UNMASKED_RENDERER_WEBGL) {
+                            extension.UNMASKED_RENDERER_WEBGL = 0x9246;
+                        }
+                    }
+                    return extension;
                 };
             }
         }
         return context;
     };
+    
+    // Also try to patch WebGLRenderingContext prototype directly
+    try {
+        if (typeof WebGLRenderingContext !== 'undefined' && WebGLRenderingContext.prototype.getParameter) {
+            var originalWebGLGetParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(pname) {
+                if (pname === 0x9245 || pname === 37445) {
+                    return 'Google Inc. (Intel)';
+                }
+                if (pname === 0x9246 || pname === 37446) {
+                    return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                }
+                return originalWebGLGetParameter.call(this, pname);
+            };
+        }
+    } catch(e) {}
+    
+    // Also try WebGL2
+    try {
+        if (typeof WebGL2RenderingContext !== 'undefined' && WebGL2RenderingContext.prototype.getParameter) {
+            var originalWebGL2GetParameter = WebGL2RenderingContext.prototype.getParameter;
+            WebGL2RenderingContext.prototype.getParameter = function(pname) {
+                if (pname === 0x9245 || pname === 37445) {
+                    return 'Google Inc. (Intel)';
+                }
+                if (pname === 0x9246 || pname === 37446) {
+                    return 'ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                }
+                return originalWebGL2GetParameter.call(this, pname);
+            };
+        }
+    } catch(e) {}
     
     // ========== WINDOW.OPEN INTERCEPTOR ==========
     // Don't try to intercept window.open - it doesn't work reliably

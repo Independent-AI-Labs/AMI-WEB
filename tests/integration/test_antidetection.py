@@ -41,14 +41,16 @@ class TestAntiDetection:
                         results["plugin_count"] = test_result
                     elif "WebGL Vendor" in test_name:
                         results["webgl_vendor"] = "Google Inc." in test_result or "Intel" in test_result
+                        results["webgl_vendor_actual"] = test_result
                     elif "WebGL Renderer" in test_name:
                         results["webgl_renderer"] = "ANGLE" in test_result or "Intel" in test_result
+                        results["webgl_renderer_actual"] = test_result
 
             # Assert critical features
             assert results.get("webdriver", False), "WebDriver detection failed"
             assert results.get("plugins", False), f"No plugins detected: {results.get('plugin_count', 'unknown')}"
-            assert results.get("webgl_vendor", False), "WebGL vendor not properly spoofed"
-            assert results.get("webgl_renderer", False), "WebGL renderer not properly spoofed"
+            assert results.get("webgl_vendor", False), f"WebGL vendor not properly spoofed. Actual: {results.get('webgl_vendor_actual', 'unknown')}"
+            assert results.get("webgl_renderer", False), f"WebGL renderer not properly spoofed. Actual: {results.get('webgl_renderer_actual', 'unknown')}"
 
         finally:
             pass  # Cleanup handled by fixture
@@ -205,8 +207,10 @@ class TestAntiDetection:
                         results["plugin_count"] = test_result
                     elif "WebGL Vendor" in test_name:
                         results["webgl_vendor"] = "Google Inc." in test_result or "Intel" in test_result
+                        results["webgl_vendor_actual"] = test_result
                     elif "WebGL Renderer" in test_name:
                         results["webgl_renderer"] = "ANGLE" in test_result or "Intel" in test_result
+                        results["webgl_renderer_actual"] = test_result
 
             print(f"Parsed results: {results}")
             print("=================================\n")
