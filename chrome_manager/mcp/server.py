@@ -28,7 +28,10 @@ class MCPServer:
         self.config = config
         self.clients: dict[str, WebSocketServerProtocol] = {}
         self.tools = self._register_tools()
+        self.tool_handlers = None  # Will be set after methods are defined
         self.server = None
+        # Initialize handlers after all methods exist
+        self._init_handlers()
 
     def _register_tools(self) -> dict[str, MCPTool]:
         return {
@@ -360,6 +363,139 @@ class MCPServer:
                     },
                 },
             ),
+            # Profile management tools
+            "browser_list_profiles": MCPTool(
+                name="browser_list_profiles",
+                description="List all available browser profiles",
+                parameters={"type": "object", "properties": {}},
+            ),
+            "browser_delete_profile": MCPTool(
+                name="browser_delete_profile",
+                description="Delete a browser profile and all its data",
+                parameters={
+                    "type": "object",
+                    "properties": {"profile_name": {"type": "string"}},
+                    "required": ["profile_name"],
+                },
+            ),
+            "browser_copy_profile": MCPTool(
+                name="browser_copy_profile",
+                description="Copy a browser profile to a new name",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "source_profile": {"type": "string"},
+                        "dest_profile": {"type": "string"},
+                    },
+                    "required": ["source_profile", "dest_profile"],
+                },
+            ),
+            # Session management tools
+            "browser_save_session": MCPTool(
+                name="browser_save_session",
+                description="Save current browser session for later restoration",
+                parameters={
+                    "type": "object",
+                    "properties": {"instance_id": {"type": "string"}},
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_restore_session": MCPTool(
+                name="browser_restore_session",
+                description="Restore a previously saved browser session",
+                parameters={
+                    "type": "object",
+                    "properties": {"session_id": {"type": "string"}},
+                    "required": ["session_id"],
+                },
+            ),
+            "browser_list_sessions": MCPTool(
+                name="browser_list_sessions",
+                description="List all saved browser sessions",
+                parameters={"type": "object", "properties": {}},
+            ),
+            # Cookie persistence tools
+            "browser_save_cookies": MCPTool(
+                name="browser_save_cookies",
+                description="Save cookies to browser profile for persistence",
+                parameters={
+                    "type": "object",
+                    "properties": {"instance_id": {"type": "string"}},
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_load_cookies": MCPTool(
+                name="browser_load_cookies",
+                description="Load saved cookies from browser profile",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "navigate_to_domain": {"type": "boolean", "default": True, "description": "Navigate to cookie domain before loading"},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            # Download management tools
+            "browser_list_downloads": MCPTool(
+                name="browser_list_downloads",
+                description="List all files in the download directory",
+                parameters={
+                    "type": "object",
+                    "properties": {"instance_id": {"type": "string"}},
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_wait_for_download": MCPTool(
+                name="browser_wait_for_download",
+                description="Wait for a download to complete",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "instance_id": {"type": "string"},
+                        "filename": {"type": "string", "description": "Optional specific filename to wait for"},
+                        "timeout": {"type": "number", "default": 30},
+                    },
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_clear_downloads": MCPTool(
+                name="browser_clear_downloads",
+                description="Clear all files from the download directory",
+                parameters={
+                    "type": "object",
+                    "properties": {"instance_id": {"type": "string"}},
+                    "required": ["instance_id"],
+                },
+            ),
+            "browser_get_download_dir": MCPTool(
+                name="browser_get_download_dir",
+                description="Get the download directory path for this instance",
+                parameters={
+                    "type": "object",
+                    "properties": {"instance_id": {"type": "string"}},
+                    "required": ["instance_id"],
+                },
+            ),
+            # Security configuration tool
+            "browser_set_security": MCPTool(
+                name="browser_set_security",
+                description="Set security configuration for next browser launch",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "level": {
+                            "type": "string",
+                            "enum": ["strict", "standard", "relaxed", "permissive"],
+                            "description": "Security level preset",
+                        },
+                        "ignore_certificate_errors": {"type": "boolean"},
+                        "allow_insecure_localhost": {"type": "boolean"},
+                        "safe_browsing_enabled": {"type": "boolean"},
+                        "download_protection_enabled": {"type": "boolean"},
+                    },
+                },
+            ),
         }
 
     async def start(self):
@@ -489,8 +625,16 @@ class MCPServer:
         return instance
 
     async def _execute_launch(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        # The security config will be picked up from _next_security_config if set
+        # Don't use pool if profile is specified (profiles need dedicated instances)
+        use_pool = not bool(parameters.get("profile"))
+
         instance = await self.manager.get_or_create_instance(
-            headless=parameters.get("headless", True), profile=parameters.get("profile"), extensions=parameters.get("extensions", [])
+            headless=parameters.get("headless", True),
+            profile=parameters.get("profile"),
+            extensions=parameters.get("extensions", []),
+            download_dir=parameters.get("download_dir"),
+            use_pool=use_pool,
         )
         return {"instance_id": instance.id}
 
@@ -705,60 +849,55 @@ class MCPServer:
 
         return result
 
-    async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:  # noqa: C901
-        # Lifecycle operations
-        if tool_name == "browser_launch":
-            result = await self._execute_launch(parameters)
-        elif tool_name == "browser_close":
+    async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
+        """Execute a tool using the handler registry or delegating to routing methods."""
+        # Check if we have a direct handler in the registry
+        if self.tool_handlers and (handler := self.tool_handlers.get(tool_name)):
+            return await handler(parameters)
+
+        # Handle special cases that need custom logic
+        if tool_name == "browser_close":
             # Return to pool for reuse instead of terminating
-            result = {"success": await self.manager.return_to_pool(parameters["instance_id"])}
-        elif tool_name == "browser_list":
+            return {"success": await self.manager.return_to_pool(parameters["instance_id"])}
+        if tool_name == "browser_list":
             instances = await self.manager.list_instances()
-            result = {
+            return {
                 "instances": [
                     {"id": inst.id, "status": inst.status.value, "created_at": inst.created_at.isoformat(), "active_tabs": inst.active_tabs}
                     for inst in instances
                 ]
             }
-        # Delegate to specific handlers
-        elif tool_name in [
-            "browser_navigate",
-            "browser_scroll",
-            "browser_wait_for_element",
-            "browser_execute_script",
-            "browser_extract_text",
-            "browser_extract_links",
-            "browser_get_html",
-        ]:
-            result = await self._execute_navigation(tool_name, parameters)
-        elif tool_name in ["browser_click", "browser_type"]:
-            result = await self._execute_input(tool_name, parameters)
-        elif tool_name == "browser_screenshot":
-            result = await self._execute_screenshot(parameters)
-        elif tool_name in ["browser_get_cookies", "browser_set_cookies"]:
-            result = await self._execute_cookies(tool_name, parameters)
-        elif tool_name in ["browser_get_tabs", "browser_switch_tab"]:
-            result = await self._execute_tabs(tool_name, parameters)
-        elif tool_name in ["browser_get_console_logs", "browser_get_network_logs"]:
-            result = await self._execute_logs(tool_name, parameters)
-        elif tool_name in [
-            "browser_get_local_storage",
-            "browser_set_local_storage",
-            "browser_remove_local_storage",
-            "browser_clear_local_storage",
-            "browser_get_session_storage",
-            "browser_set_session_storage",
-        ]:
-            result = await self._execute_storage(tool_name, parameters)
-        # Browser Properties operations
-        elif tool_name == "browser_set_properties":
-            result = await self._execute_set_properties(parameters)
-        elif tool_name == "browser_get_properties":
-            result = await self._execute_get_properties(parameters)
-        else:
-            raise MCPError(f"Tool {tool_name} not implemented")
 
-        return result
+        # Delegate to routing methods for grouped handlers
+        # Define routing map for delegated handlers
+        routing_map = {
+            "browser_navigate": self._execute_navigation,
+            "browser_scroll": self._execute_navigation,
+            "browser_wait_for_element": self._execute_navigation,
+            "browser_execute_script": self._execute_navigation,
+            "browser_extract_text": self._execute_navigation,
+            "browser_extract_links": self._execute_navigation,
+            "browser_get_html": self._execute_navigation,
+            "browser_click": self._execute_input,
+            "browser_type": self._execute_input,
+            "browser_get_cookies": self._execute_cookies,
+            "browser_set_cookies": self._execute_cookies,
+            "browser_get_tabs": self._execute_tabs,
+            "browser_switch_tab": self._execute_tabs,
+            "browser_get_console_logs": self._execute_logs,
+            "browser_get_network_logs": self._execute_logs,
+            "browser_get_local_storage": self._execute_storage,
+            "browser_set_local_storage": self._execute_storage,
+            "browser_remove_local_storage": self._execute_storage,
+            "browser_clear_local_storage": self._execute_storage,
+            "browser_get_session_storage": self._execute_storage,
+            "browser_set_session_storage": self._execute_storage,
+        }
+
+        if router := routing_map.get(tool_name):
+            return await router(tool_name, parameters)
+
+        raise MCPError(f"Tool {tool_name} not implemented")
 
     async def _execute_logs(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
         instance = await self._get_instance_or_error(parameters["instance_id"])
@@ -841,6 +980,123 @@ class MCPServer:
 
         return {"properties": properties}
 
+    # Profile management methods
+    async def _execute_list_profiles(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
+        """List all available browser profiles."""
+        if not self.manager.profile_manager:
+            return {"profiles": []}
+
+        profiles = self.manager.profile_manager.list_profiles()
+        return {"profiles": profiles}
+
+    async def _execute_delete_profile(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Delete a browser profile."""
+        if not self.manager.profile_manager:
+            raise MCPError("Profile manager not configured")
+
+        profile_name = parameters["profile_name"]
+        success = self.manager.profile_manager.delete_profile(profile_name)
+        return {"success": success}
+
+    async def _execute_copy_profile(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Copy a browser profile to a new name."""
+        if not self.manager.profile_manager:
+            raise MCPError("Profile manager not configured")
+
+        source = parameters["source_profile"]
+        dest = parameters["dest_profile"]
+        new_profile_path = self.manager.profile_manager.copy_profile(source, dest)
+        return {"success": True, "profile_path": str(new_profile_path)}
+
+    # Session management methods
+    async def _execute_save_session(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Save current browser session."""
+        instance_id = parameters["instance_id"]
+        session_id = await self.manager.save_session(instance_id)
+        return {"session_id": session_id}
+
+    async def _execute_restore_session(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Restore a previously saved session."""
+        session_id = parameters["session_id"]
+        instance = await self.manager.restore_session(session_id)
+        return {"instance_id": instance.id}
+
+    async def _execute_list_sessions(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
+        """List all saved browser sessions."""
+        sessions = await self.manager.session_manager.list_sessions()
+        # Map session_id to id for backward compatibility
+        formatted_sessions = []
+        for session in sessions:
+            formatted_session = session.copy()
+            formatted_session["id"] = session.get("session_id", session.get("id", ""))
+            formatted_sessions.append(formatted_session)
+        return {"sessions": formatted_sessions}
+
+    # Cookie persistence methods
+    async def _execute_save_cookies(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Save cookies to browser profile."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        cookies = instance.save_cookies()
+        return {"success": True, "cookie_count": len(cookies)}
+
+    async def _execute_load_cookies(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Load cookies from browser profile."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        navigate = parameters.get("navigate_to_domain", True)
+        count = instance.load_cookies(navigate_to_domain=navigate)
+        return {"success": True, "cookies_loaded": count}
+
+    # Download management methods
+    async def _execute_list_downloads(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """List all files in the download directory."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        downloads = instance.list_downloads()
+        return {"downloads": downloads}
+
+    async def _execute_wait_for_download(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Wait for a download to complete."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        filename = parameters.get("filename")
+        timeout = parameters.get("timeout", 30)
+
+        downloaded_file = instance.wait_for_download(filename=filename, timeout=timeout)
+        if downloaded_file:
+            return {"success": True, "path": str(downloaded_file)}
+        return {"success": False, "error": "Download timeout"}
+
+    async def _execute_clear_downloads(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Clear all files from download directory."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        cleared = instance.clear_downloads()
+        return {"success": True, "files_cleared": cleared}
+
+    async def _execute_get_download_dir(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Get download directory path."""
+        instance = await self._get_instance_or_error(parameters["instance_id"])
+        download_dir = instance.get_download_directory()
+        return {"download_dir": str(download_dir) if download_dir else None}
+
+    # Security configuration method
+    async def _execute_set_security(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        """Set security configuration for next browser launch."""
+        from ..models.security import SecurityConfig, SecurityLevel
+
+        # Store security config for next launch
+        if "level" in parameters:
+            level = SecurityLevel(parameters["level"])
+            self.manager._next_security_config = SecurityConfig.from_level(level)
+        else:
+            # Create custom security config
+            config_params = {}
+            for key in ["ignore_certificate_errors", "allow_insecure_localhost", "safe_browsing_enabled", "download_protection_enabled"]:
+                if key in parameters:
+                    config_params[key] = parameters[key]
+
+            if config_params:
+                self.manager._next_security_config = SecurityConfig(**config_params)
+
+        return {"success": True}
+
     async def broadcast_event(self, event: MCPEvent):
         event_data = {
             "type": "event",
@@ -854,3 +1110,26 @@ class MCPServer:
 
         if self.clients:
             await asyncio.gather(*[client.send(message) for client in self.clients.values()], return_exceptions=True)
+
+    def _init_handlers(self):
+        """Initialize the tool handler registry after all methods are defined."""
+        self.tool_handlers = {
+            # Direct handlers
+            "browser_launch": self._execute_launch,
+            "browser_screenshot": self._execute_screenshot,
+            "browser_set_properties": self._execute_set_properties,
+            "browser_get_properties": self._execute_get_properties,
+            "browser_list_profiles": self._execute_list_profiles,
+            "browser_delete_profile": self._execute_delete_profile,
+            "browser_copy_profile": self._execute_copy_profile,
+            "browser_save_session": self._execute_save_session,
+            "browser_restore_session": self._execute_restore_session,
+            "browser_list_sessions": self._execute_list_sessions,
+            "browser_save_cookies": self._execute_save_cookies,
+            "browser_load_cookies": self._execute_load_cookies,
+            "browser_list_downloads": self._execute_list_downloads,
+            "browser_wait_for_download": self._execute_wait_for_download,
+            "browser_clear_downloads": self._execute_clear_downloads,
+            "browser_get_download_dir": self._execute_get_download_dir,
+            "browser_set_security": self._execute_set_security,
+        }

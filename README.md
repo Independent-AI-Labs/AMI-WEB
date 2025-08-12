@@ -1,89 +1,74 @@
-# 🤖 AMI-WEB Safe & Compliant Browser Automation
+# 🛡️ AMI-WEB: Enterprise Browser Automation Platform
 
-An advanced Chrome automation framework with **undetectable browser fingerprinting**, **Model Context Protocol (MCP) server**, and enterprise-grade pooling. Built for AI agents, web scraping, testing, and automation at scale.
+**Secure, Compliant, and Undetectable Browser Automation for Enterprise Applications**
 
-![](res/notbot.png)
+AMI-WEB is an enterprise-grade browser automation platform that prioritizes security, privacy, and observability while maintaining undetectable operation. Built for organizations requiring compliant web automation, security testing, and AI-powered browser interactions.
 
-## ✨ Why AMI-WEB?
+## 🎯 Key Benefits
 
-Traditional browser automation tools are easily detected by modern websites. AMI-WEB solves this with:
+### For Enterprise
+- **🔐 Security-First Architecture**: Four-tier security model with configurable TLS, certificate validation, and safe browsing
+- **📊 Complete Observability**: Full audit trails, performance metrics, and compliance reporting
+- **🏢 Multi-Tenant Isolation**: Secure profile and session isolation for different users/clients
+- **✅ Compliance Ready**: Built-in audit logging and security controls for regulatory requirements
 
-- **🥷 Stealth Mode**: Advanced anti-detection that bypasses bot detection on sites like bot.sannysoft.com
-- **🤖 AI-Ready**: Native MCP servers (stdio & WebSocket) for seamless integration with Claude, Gemini, and other AI agents
-- **⚡ Lightning Fast**: Async architecture with intelligent browser pooling for massive scale
-- **🔒 Battle-Tested**: Comprehensive test suite with real-world anti-bot verification
+### For Developers
+- **🤖 AI Integration**: Native MCP protocol support for Claude, Gemini, and custom AI agents
+- **🚀 High Performance**: Async architecture with connection pooling and resource optimization
+- **🛠️ 40+ Browser Tools**: Comprehensive API for complete browser control
+- **🧪 Battle-Tested**: Extensive test suite with real-world validation
 
-## 🎯 Key Features
-
-### Undetectable Browser Automation
-- **WebDriver Detection Bypass**: Removes all traces of automation
-- **Plugin Spoofing**: Mimics real Chrome plugins (PDF, Chrome Viewer, Native Client)
-- **WebGL Fingerprinting**: Realistic GPU vendor/renderer spoofing
-- **H264 Codec Support**: Returns authentic codec responses
-- **Window.open() Injection**: Maintains stealth across all tabs and popups
-- **CDP Script Injection**: Pre-page-load script execution for perfect timing
-
-### MCP Server Integration
-- **Stdio Server**: Direct integration with Claude Desktop, Gemini CLI, and other MCP clients
-- **WebSocket API**: Real-time bidirectional communication for custom integrations
-- **30+ Browser Tools**: Complete browser control via standardized protocol
-- **Token-Limited HTML**: Smart HTML extraction with automatic depth adjustment (25k token limit)
-- **Event Streaming**: Live console logs, network activity, and performance metrics
-- **Session Management**: Persistent browser sessions with state preservation
-
-### Enterprise Architecture
-- **Connection Pooling**: Pre-warmed browser instances for instant availability
-- **Resource Management**: Automatic cleanup and memory optimization
-- **Thread-Safe Operations**: Concurrent automation without race conditions
-- **Graceful Degradation**: Fallback strategies for resilient operation
-- **Structured Logging**: Comprehensive debugging with Loguru
+### For Security Teams
+- **🔍 Traffic Analysis Ready**: WIP mitmproxy integration for built-in packet inspection
+- **🛡️ Safe Downloads**: OS-integrated malware scanning via Chrome SafeBrowsing
+- **🔒 Certificate Management**: Flexible TLS configuration for security testing
+- **📝 Audit Compliance**: Complete activity logging for security reviews
 
 ## 🚀 Quick Start
 
+### Installation
+
 ```bash
-# Clone and install
+# Clone the repository
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Run the stdio MCP server (for Claude, Gemini CLI, etc.)
-python mcp_stdio_server.py
+# Copy and configure settings
+cp config.sample.yaml config.yaml
+```
 
-# Or run the WebSocket server for custom integrations
-python -m chrome_manager.mcp.server
+### Basic Usage
 
-# Or use directly in Python
+```python
 from chrome_manager.core.manager import ChromeManager
 
 async def main():
+    # Initialize the platform
     manager = ChromeManager()
     await manager.initialize()
     
-    # Get an undetectable browser instance
+    # Launch a secure browser instance
     browser = await manager.get_or_create_instance(
-        headless=False,
-        anti_detect=True  # Enable stealth mode
+        profile="production",      # Isolated profile
+        security_level="strict",   # Maximum security
+        headless=True              # Server operation
     )
     
-    # Navigate and interact
-    browser.driver.get("https://bot.sannysoft.com")
-    # All bot detection tests will pass!
+    # Perform automation
+    browser.driver.get("https://example.com")
+    # Your automation logic here
 ```
 
-## 🎮 MCP Server Usage
-
-### Method 1: Stdio Server (Claude Desktop, Gemini CLI)
-
-The stdio server integrates directly with MCP-compatible tools:
-
-#### Claude Desktop Configuration
-
-Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+### AI Agent Integration
 
 ```json
+// Claude Desktop configuration
 {
   "mcpServers": {
-    "chrome-automation": {
+    "ami-web": {
       "command": "python",
       "args": ["mcp_stdio_server.py"],
       "cwd": "/path/to/AMI-WEB"
@@ -92,220 +77,105 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
 }
 ```
 
-#### Gemini CLI Configuration
+## 🔐 Security Levels
 
-For Gemini CLI or other MCP stdio clients:
+| Level | Use Case | Certificate Validation | Safe Browsing | Site Isolation |
+|-------|----------|----------------------|---------------|----------------|
+| **STRICT** | Production | ✅ Enforced | ✅ Enhanced | ✅ Enabled |
+| **STANDARD** | General Use | ✅ Enforced | ✅ Enabled | ✅ Enabled |
+| **RELAXED** | Development | ⚠️ Flexible | ✅ Enabled | ✅ Enabled |
+| **PERMISSIVE** | Testing | ❌ Optional | ❌ Optional | ❌ Optional |
 
-```bash
-# Start the stdio server
-python mcp_stdio_server.py
+## 📦 Core Features
 
-# The server communicates via stdin/stdout using JSON-RPC
-# All 40+ browser tools are available through the MCP protocol
-```
+### Browser Environment Management
+- **Persistent Profiles**: Maintain separate browser environments
+- **Session Management**: Save and restore complete browser states
+- **Cookie Persistence**: Secure credential storage across sessions
+- **Download Management**: Isolated, scanned download directories
 
-### Method 2: WebSocket Server (Custom Integrations)
+### Anti-Detection Technology
+- **Undetectable Operation**: Bypasses modern bot detection systems
+- **Fingerprint Protection**: Dynamic WebGL, canvas, and audio spoofing
+- **Human-like Behavior**: Natural interaction patterns
+- **Stealth Mode**: Complete automation marker elimination
 
-Connect any WebSocket client to control browsers:
-
-```javascript
-// JavaScript/Node.js example
-const ws = new WebSocket('ws://localhost:8765');
-
-ws.on('open', () => {
-    // Launch browser
-    ws.send(JSON.stringify({
-        type: 'tool',
-        tool: 'browser_launch',
-        parameters: { headless: false },
-        request_id: '123'
-    }));
-});
-
-ws.on('message', (data) => {
-    const response = JSON.parse(data);
-    if (response.result?.instance_id) {
-        // Navigate to page
-        ws.send(JSON.stringify({
-            type: 'tool',
-            tool: 'browser_navigate',
-            parameters: {
-                instance_id: response.result.instance_id,
-                url: 'https://example.com'
-            },
-            request_id: '124'
-        }));
-    }
-});
-```
-
-## 🛠️ Available MCP Tools
-
-<details>
-<summary><b>Browser Lifecycle (4 tools)</b></summary>
-
-- `browser_launch` - Start a new browser instance
-- `browser_close` - Close and cleanup instance
-- `browser_list` - List all active instances
-- `browser_get_tabs` - Get all open tabs
-</details>
-
-<details>
-<summary><b>Navigation & Interaction (8 tools)</b></summary>
-
-- `browser_navigate` - Go to URL with smart waiting
-- `browser_click` - Click elements with retry logic
-- `browser_type` - Type text with human-like timing
-- `browser_scroll` - Smooth or instant scrolling
-- `browser_wait_for_element` - Wait for element presence
-- `browser_back` / `browser_forward` / `browser_refresh`
-</details>
-
-<details>
-<summary><b>Content Extraction (6 tools)</b></summary>
-
-- `browser_get_html` - Get HTML with token limiting
-- `browser_extract_text` - Extract readable text
-- `browser_extract_links` - Get all page links
-- `browser_screenshot` - Capture page/element/viewport
-- `browser_execute_script` - Run JavaScript code
-- `browser_get_cookies` - Extract browser cookies
-</details>
-
-<details>
-<summary><b>Storage & Data (8 tools)</b></summary>
-
-- `browser_get_local_storage` - Read localStorage
-- `browser_set_local_storage` - Write to localStorage
-- `browser_remove_local_storage` - Delete items
-- `browser_clear_local_storage` - Clear all storage
-- `browser_get_session_storage` - Read sessionStorage
-- `browser_set_session_storage` - Write sessionStorage
-- `browser_set_cookies` - Set browser cookies
-</details>
-
-<details>
-<summary><b>Monitoring & Debugging (4 tools)</b></summary>
-
-- `browser_get_console_logs` - Capture console output
-- `browser_get_network_logs` - Monitor network activity
-- `browser_switch_tab` - Change active tab
-- `browser_get_performance_metrics` - Page performance data
-</details>
+### Enterprise Integration
+- **MCP Protocol**: Standard interface for AI agents
+- **WebSocket API**: Real-time bidirectional communication
+- **REST API**: Traditional integration options
+- **Event Streaming**: Live monitoring and alerts
 
 ## 🏗️ Architecture
 
-AMI-WEB uses a layered architecture for maintainability and extensibility:
-
-```
-┌─────────────────────────────────────────────┐
-│            MCP WebSocket Server             │  <- AI Agents, Clients
-├─────────────────────────────────────────────┤
-│             Chrome Manager                  │  <- Orchestration Layer
-├─────────────────────────────────────────────┤
-│    Instance Pool  │  Session Manager        │  <- Resource Management
-├─────────────────────────────────────────────┤
-│         Browser Instance + Anti-Detect      │  <- Core Automation
-├─────────────────────────────────────────────┤
-│  Navigation │ Input │ Screenshot │ DevTools │  <- Facade Controllers
-├─────────────────────────────────────────────┤
-│           Selenium WebDriver + CDP          │  <- Browser Control
-└─────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[AI Agents & Applications] --> B[MCP Protocol / WebSocket API]
+    B --> C[Chrome Manager Core]
+    C --> D[Profile Manager]
+    C --> E[Security Manager]
+    D --> F[Browser Instances - Isolated]
+    E --> F
 ```
 
-### MCP Server Modes
+## 📈 Performance
 
-AMI-WEB provides two MCP server implementations:
+- **Startup Time**: < 1 second with warm pool
+- **Concurrent Sessions**: 40+ browsers per server
+- **Memory Efficiency**: ~100MB per instance
+- **Response Time**: < 10ms API overhead
 
-1. **Stdio Server** (`mcp_stdio_server.py`): For direct integration with MCP clients
-   - Used by: Claude Desktop, Gemini CLI, MCP-compatible tools
-   - Protocol: JSON-RPC over stdin/stdout
-   - Best for: AI assistants and chatbots
+## 🚀 Roadmap
 
-2. **WebSocket Server** (`server.py`): For custom integrations
-   - Used by: Web apps, custom clients, distributed systems
-   - Protocol: JSON-RPC over WebSocket
-   - Best for: Real-time applications and multi-client scenarios
+### Q1 2025: Network Security Suite
+**Traffic Analysis & Inspection via mitmproxy**
+- Request/response filtering and modification
+- SSL/TLS interception with certificate management
+- Source/destination whitelisting
+- API mocking and replay
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
+### Q2 2025: Advanced Automation
+**Action Recording & Replay**
+- Selenium IDE compatible format
+- Visual test generation
+- Cross-browser playback
+- CI/CD integration
 
-## 🧪 Testing
+### Q3 2025: Enhanced Content Tools
+**Intelligent Search & Processing**
+- AI-powered content extraction
+- Smart pagination and truncation
+- Context-aware search with regex
+- Performance testing suite
 
-```bash
-# Run all tests
-pytest
+## 🤝 Support & Services
 
-# Run anti-detection tests
-pytest tests/integration/test_antidetection.py -v
+### Community
+- [GitHub Issues](https://github.com/Independent-AI-Labs/AMI-WEB/issues) - Bug reports and features
+- [Discussions](https://github.com/Independent-AI-Labs/AMI-WEB/discussions) - Questions and ideas
+- [Documentation](README_EXTENDED.md) - Detailed technical documentation
 
-# Run with coverage
-pytest --cov=chrome_manager --cov-report=html
-
-# Test MCP WebSocket server
-pytest tests/integration/test_mcp_server.py -v
-
-# Test stdio server
-python mcp_stdio_server.py --test
-```
-
-## 📊 Performance
-
-- **Startup Time**: < 1s with warm pool
-- **Page Navigation**: 0.5-2s average
-- **Screenshot Capture**: 50-200ms
-- **Script Execution**: < 10ms overhead
-- **Memory per Instance**: ~100-150MB
-- **Concurrent Instances**: 10-50+ depending on resources
-
-## 🔒 Security Features
-
-- No credential storage in code
-- Isolated browser profiles
-- Automatic cookie cleanup
-- Sandboxed JavaScript execution
-- Request/response filtering
-- Domain-based access control
-
-## 🎨 Use Cases
-
-### Web Scraping at Scale
-Extract data from JavaScript-heavy sites without detection. Handle dynamic content, infinite scrolling, and AJAX requests seamlessly.
-
-### Automated Testing
-Replace flaky Selenium tests with reliable, undetectable automation. Perfect for E2E testing of anti-bot protected applications.
-
-### AI Web Agents
-Enable LLMs to browse the web naturally. The MCP protocol provides structured tool access for autonomous web navigation. Works seamlessly with:
-- **Claude Desktop**: Native MCP integration for web browsing capabilities
-- **Gemini CLI**: Add browser automation to Google's AI
-- **Custom Agents**: Build your own AI agents with WebSocket or stdio integration
-
-### Price Monitoring
-Track prices across e-commerce sites that block bots. Maintain persistent sessions for authenticated monitoring.
-
-### Social Media Automation
-Manage multiple accounts safely with unique browser fingerprints. Avoid platform detection algorithms.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+### Enterprise
+- **Professional Support**: SLA-backed assistance
+- **Custom Development**: Tailored features for your needs
+- **Security Consulting**: Compliance and audit support
+- **Training**: Team onboarding and best practices
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENCE) for details.
+MIT License - see [LICENSE](LICENSE) for details
 
 ## 🙏 Acknowledgments
 
-Built with:
+Built with industry-leading technologies:
 - [Selenium WebDriver](https://www.selenium.dev/) - Browser automation
+- [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) - Deep browser control
 - [Model Context Protocol](https://github.com/anthropics/mcp) - AI integration standard
-- [Loguru](https://github.com/Delgan/loguru) - Beautiful logging
-- [Pydantic](https://pydantic-docs.helpmanual.io/) - Data validation
 
 ---
 
-**⭐ Star us on GitHub if this helps you bypass bot detection!**
+**🛡️ Enterprise-Grade Browser Automation**
 
-**🤖 Using with Claude or Gemini? Check out our [MCP Integration Guide](MCP.md)**
+Built for security. Designed for agentic AI at scale.
 
-**🐛 Found a detection issue? Open an issue with the site URL!**
+[Get Started](https://github.com/Independent-AI-Labs/AMI-WEB) | [Documentation](README_EXTENDED.md)

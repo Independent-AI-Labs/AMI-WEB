@@ -34,6 +34,7 @@ class ChromeManager:
         self.session_manager = SessionManager(session_dir=self.config.get("storage.session_dir", "./sessions"))
         self._instances: dict[str, BrowserInstance] = {}
         self._initialized = False
+        self._next_security_config: "SecurityConfig | None" = None  # For MCP security configuration
 
     async def initialize(self):
         if self._initialized:
@@ -78,6 +79,11 @@ class ChromeManager:
     ) -> BrowserInstance:
         if not self._initialized:
             await self.initialize()
+
+        # Use _next_security_config if set via MCP and no security_config provided
+        if not security_config and self._next_security_config:
+            security_config = self._next_security_config
+            self._next_security_config = None  # Reset after use
 
         if use_pool:
             opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
@@ -169,8 +175,28 @@ class ChromeManager:
         return session_id
 
     async def restore_session(self, session_id: str) -> BrowserInstance:
-        instance = await self.session_manager.restore_session(session_id)
-        self._instances[instance.id] = instance
+        # Get session metadata
+        sessions = await self.session_manager.list_sessions()
+        session_data = next((s for s in sessions if s["id"] == session_id), None)
+
+        if not session_data:
+            raise ValueError(f"Session {session_id} not found")
+
+        # Create new instance with the saved profile
+        instance = await self.get_or_create_instance(
+            headless=False,  # Sessions typically restored in visible mode
+            profile=session_data.get("profile"),
+            use_pool=False,  # Don't use pool for restored sessions
+            anti_detect=True,
+        )
+
+        # Navigate to saved URL
+        if session_data.get("url"):
+            instance.driver.get(session_data["url"])
+
+        # Load saved cookies if profile has them
+        instance.load_cookies()
+
         logger.info(f"Restored session {session_id} as instance {instance.id}")
         return instance
 
