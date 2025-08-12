@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from loguru import logger  # noqa: E402
 
-from chrome_manager.core.manager import ChromeManager  # noqa: E402
+from chrome_manager.core import ChromeManager  # noqa: E402
 from chrome_manager.mcp.server import MCPServer  # noqa: E402
 
 
