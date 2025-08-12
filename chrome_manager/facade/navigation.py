@@ -1,6 +1,5 @@
 import asyncio
 import threading
-from datetime import datetime
 from typing import Any
 
 from loguru import logger
@@ -8,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
 
-from ..core.instance import BrowserInstance
+from ..core.browser.instance import BrowserInstance
 from ..models.browser import PageResult, WaitCondition
 from ..utils.exceptions import NavigationError
 from ..utils.parser import HTMLParser
@@ -76,7 +75,7 @@ class NavigationController:
                 current_url = self.driver.current_url
                 content_length = self.driver.execute_script("return document.documentElement.innerHTML.length")
 
-                self.instance.last_activity = datetime.now()
+                self.instance.update_activity()
 
                 result = PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
                 logger.debug(f"Navigation result: {result}")
@@ -105,7 +104,7 @@ class NavigationController:
 
                 content_length = await loop.run_in_executor(None, self.driver.execute_script, "return document.documentElement.innerHTML.length")
 
-                self.instance.last_activity = datetime.now()
+                self.instance.update_activity()
 
                 return PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
 

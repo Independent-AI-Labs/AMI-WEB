@@ -3,16 +3,16 @@ from typing import Any
 
 from loguru import logger
 
-from ..facade.media import ScreenshotController
-from ..facade.navigation import NavigationController
-from ..models.browser import ChromeOptions, InstanceInfo
-from ..models.browser_properties import BrowserProperties
-from ..models.security import SecurityConfig
-from ..utils.config import Config
-from .instance import BrowserInstance
-from .pool import InstancePool
+from ...facade.media import ScreenshotController
+from ...facade.navigation import NavigationController
+from ...models.browser import ChromeOptions, InstanceInfo
+from ...models.browser_properties import BrowserProperties
+from ...models.security import SecurityConfig
+from ...utils.config import Config
+from ..browser.instance import BrowserInstance
+from ..browser.properties_manager import PropertiesManager
+from .pool import BrowserPool
 from .profile_manager import ProfileManager
-from .properties_manager import PropertiesManager
 from .session_manager import SessionManager
 
 
@@ -21,7 +21,7 @@ class ChromeManager:
         self.config = Config.load(config_file) if config_file else Config()
         self.properties_manager = PropertiesManager(self.config)
         self.profile_manager = ProfileManager(base_dir=self.config.get("chrome_manager.storage.profiles_dir", "./browser_profiles"))
-        self.pool = InstancePool(
+        self.pool = BrowserPool(
             min_instances=self.config.get("chrome_manager.pool.min_instances", 1),
             max_instances=self.config.get("chrome_manager.pool.max_instances", 10),
             warm_instances=self.config.get("chrome_manager.pool.warm_instances", 2),

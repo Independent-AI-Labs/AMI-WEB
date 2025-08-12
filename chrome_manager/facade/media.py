@@ -13,7 +13,7 @@ from loguru import logger
 from PIL import Image
 from selenium.webdriver.common.by import By
 
-from ..core.instance import BrowserInstance
+from ..core.browser.instance import BrowserInstance
 from ..models.media import ImageFormat, RecordingSession
 from ..utils.exceptions import MediaError
 

@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from ..utils.exceptions import SessionError
+from ...utils.exceptions import SessionError
 
 if TYPE_CHECKING:
-    from .instance import BrowserInstance
+    from ..browser.instance import BrowserInstance
 
 
 class SessionManager:

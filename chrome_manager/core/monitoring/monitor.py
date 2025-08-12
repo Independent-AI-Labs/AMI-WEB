@@ -7,7 +7,7 @@ from typing import Any
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from ..models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics, TabInfo
+from ...models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics, TabInfo
 
 
 class BrowserMonitor:

@@ -10,13 +10,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from ..models.browser import BrowserStatus
-from ..models.security import SecurityConfig, SecurityLevel
-from ..utils.config import Config
-from ..utils.exceptions import InstanceError
+from ...models.browser import BrowserStatus
+from ...models.security import SecurityConfig, SecurityLevel
+from ...utils.config import Config
+from ...utils.exceptions import InstanceError
 
 if TYPE_CHECKING:
-    from .simple_tab_injector import SimpleTabInjector
+    from ..security.tab_injector import SimpleTabInjector
 
 # Timeout constants
 DEFAULT_PAGE_LOAD_TIMEOUT = 30  # seconds
@@ -66,7 +66,7 @@ class BrowserLifecycle:
 
             # Setup tab injection monitor if anti-detect
             if anti_detect and driver:
-                from .simple_tab_injector import SimpleTabInjector
+                from ..security.tab_injector import SimpleTabInjector
 
                 self.window_monitor = SimpleTabInjector(driver)
                 logger.debug(f"Tab injection monitor setup for instance {self.instance_id}")
@@ -96,7 +96,7 @@ class BrowserLifecycle:
         logger.info(f"ChromeDriver path from config: {chromedriver_path}")
 
         if chromedriver_path and Path(chromedriver_path).exists():
-            from .antidetect import ChromeDriverPatcher
+            from ..security.antidetect import ChromeDriverPatcher
 
             patcher = ChromeDriverPatcher(chromedriver_path)
             if not patcher.is_patched():
@@ -121,7 +121,7 @@ class BrowserLifecycle:
         driver.implicitly_wait(DEFAULT_IMPLICIT_WAIT)
 
         # Inject anti-detection script
-        from .antidetect import execute_anti_detection_scripts
+        from ..security.antidetect import execute_anti_detection_scripts
 
         execute_anti_detection_scripts(driver)
 

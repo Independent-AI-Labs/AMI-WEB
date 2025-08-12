@@ -7,8 +7,8 @@ from typing import Any
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from chrome_manager.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
-from chrome_manager.utils.config import Config
+from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
+from ...utils.config import Config
 
 
 class PropertiesManager:

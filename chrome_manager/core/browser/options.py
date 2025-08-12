@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
 
-from ..models.browser import ChromeOptions
-from ..models.browser_properties import BrowserProperties
-from ..models.security import SecurityConfig
-from ..utils.config import Config
+from ...models.browser import ChromeOptions
+from ...models.browser_properties import BrowserProperties
+from ...models.security import SecurityConfig
+from ...utils.config import Config
 
 if TYPE_CHECKING:
-    from .profile_manager import ProfileManager
+    from ..management.profile_manager import ProfileManager
 
 
 class BrowserOptionsBuilder:
@@ -91,7 +91,7 @@ class BrowserOptionsBuilder:
 
     def _configure_anti_detect_mode(self, chrome_options: Options, headless: bool) -> None:
         """Configure options for anti-detection mode."""
-        from .antidetect import get_anti_detection_arguments
+        from ..security.antidetect import get_anti_detection_arguments
 
         # Get anti-detection arguments
         anti_args = get_anti_detection_arguments()
@@ -185,7 +185,7 @@ class BrowserOptionsBuilder:
 
         # Anti-detection preferences
         if browser_properties:
-            from .antidetect import get_anti_detection_prefs
+            from ..security.antidetect import get_anti_detection_prefs
 
             anti_prefs = get_anti_detection_prefs()
             prefs.update(anti_prefs)

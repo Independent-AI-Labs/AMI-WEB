@@ -1,7 +1,6 @@
 import asyncio
 import threading
 import time
-from datetime import datetime
 
 from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
@@ -11,7 +10,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
-from ..core.instance import BrowserInstance
+from ..core.browser.instance import BrowserInstance
 from ..models.browser import ClickOptions
 from ..utils.exceptions import InputError
 
@@ -111,7 +110,7 @@ class InputController:
                 if options.wait_after > 0:
                     await asyncio.sleep(options.wait_after / 1000)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Clicked element: {selector}")
 
         except Exception as e:
@@ -152,7 +151,7 @@ class InputController:
                 else:
                     await loop.run_in_executor(None, element.send_keys, text)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Typed text into: {selector}")
 
         except Exception as e:
@@ -193,7 +192,7 @@ class InputController:
 
             await loop.run_in_executor(None, actions.perform)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Sent keyboard event: {key} with modifiers {modifiers}")
 
         except Exception as e:
@@ -225,7 +224,7 @@ class InputController:
 
             await loop.run_in_executor(None, actions.perform)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Moved mouse to x={x}, y={y}, element={element}")
 
         except Exception as e:
@@ -253,7 +252,7 @@ class InputController:
 
             await loop.run_in_executor(None, actions.perform)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Dragged from {source} to {target}")
 
         except Exception as e:
@@ -278,7 +277,7 @@ class InputController:
 
             await loop.run_in_executor(None, actions.perform)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Hovered over: {selector}")
 
         except Exception as e:
@@ -306,7 +305,7 @@ class InputController:
             else:
                 raise InputError("Must specify value, text, or index")
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Selected option in: {selector}")
 
         except Exception as e:
@@ -325,7 +324,7 @@ class InputController:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, element.send_keys, file_path)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Uploaded file to: {selector}")
 
         except Exception as e:
@@ -478,7 +477,7 @@ class InputController:
                 """
                 await loop.run_in_executor(None, self.driver.execute_script, script)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Clicked at coordinates: ({x}, {y})")
 
         except Exception as e:
@@ -565,7 +564,7 @@ class InputController:
                 await loop.run_in_executor(None, self.driver.execute_script, script)
                 await asyncio.sleep(duration)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Dragged from ({start_x}, {start_y}) to ({end_x}, {end_y})")
 
         except Exception as e:
@@ -599,7 +598,7 @@ class InputController:
             """
             await loop.run_in_executor(None, self.driver.execute_script, script)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Zoomed to {scale}x at ({center_x}, {center_y})")
 
         except Exception as e:
@@ -692,7 +691,7 @@ class InputController:
 
             await loop.run_in_executor(None, self.driver.execute_script, script)
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Pinch zoomed to {scale}x at ({center_x}, {center_y})")
 
         except Exception as e:
@@ -782,7 +781,7 @@ class InputController:
             await loop.run_in_executor(None, self.driver.execute_script, script)
             await asyncio.sleep(duration)  # Wait for swipe to complete
 
-            self.instance.last_activity = datetime.now()
+            self.instance.update_activity()
             logger.debug(f"Swiped from ({start_x}, {start_y}) to ({end_x}, {end_y})")
 
         except Exception as e:
