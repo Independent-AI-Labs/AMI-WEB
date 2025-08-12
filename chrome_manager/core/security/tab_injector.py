@@ -18,7 +18,8 @@ class SimpleTabInjector:
 
     def _load_script(self):
         """Load the anti-detection script."""
-        script_path = Path(__file__).parent.parent / "scripts" / "complete-antidetect.js"
+        # Path: chrome_manager/core/security -> chrome_manager/scripts
+        script_path = Path(__file__).parent.parent.parent / "scripts" / "complete-antidetect.js"
         if script_path.exists():
             with script_path.open("r", encoding="utf-8") as f:
                 self.antidetect_script = f.read()
