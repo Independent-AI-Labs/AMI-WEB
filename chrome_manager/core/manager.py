@@ -13,7 +13,7 @@ from .instance import BrowserInstance
 from .pool import InstancePool
 from .profile_manager import ProfileManager
 from .properties_manager import PropertiesManager
-from .session import SessionManager
+from .session_manager import SessionManager
 
 
 class ChromeManager:
@@ -22,16 +22,16 @@ class ChromeManager:
         self.properties_manager = PropertiesManager(self.config)
         self.profile_manager = ProfileManager(base_dir=self.config.get("chrome_manager.storage.profiles_dir", "./browser_profiles"))
         self.pool = InstancePool(
-            min_instances=self.config.get("pool.min_instances", 1),
-            max_instances=self.config.get("pool.max_instances", 10),
-            warm_instances=self.config.get("pool.warm_instances", 2),
-            instance_ttl=self.config.get("pool.instance_ttl", 3600),
-            health_check_interval=self.config.get("pool.health_check_interval", 30),
+            min_instances=self.config.get("chrome_manager.pool.min_instances", 1),
+            max_instances=self.config.get("chrome_manager.pool.max_instances", 10),
+            warm_instances=self.config.get("chrome_manager.pool.warm_instances", 2),
+            instance_ttl=self.config.get("chrome_manager.pool.instance_ttl", 3600),
+            health_check_interval=self.config.get("chrome_manager.pool.health_check_interval", 30),
             config=self.config,
             properties_manager=self.properties_manager,
             profile_manager=self.profile_manager,
         )
-        self.session_manager = SessionManager(session_dir=self.config.get("storage.session_dir", "./sessions"))
+        self.session_manager = SessionManager(session_dir=self.config.get("chrome_manager.storage.session_dir", "./sessions"))
         self._instances: dict[str, BrowserInstance] = {}
         self._initialized = False
         self._next_security_config: "SecurityConfig | None" = None  # For MCP security configuration
