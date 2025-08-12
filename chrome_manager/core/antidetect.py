@@ -12,18 +12,20 @@ from loguru import logger
 class ChromeDriverPatcher:
     """Patches ChromeDriver binary to avoid detection."""
 
-    def __init__(self, chromedriver_path: str):
+    def __init__(self, chromedriver_path: str, drivers_dir: Path | None = None):
         self.original_path = Path(chromedriver_path)
-        # Create a patched version in a writable location (project directory)
+        # Create a patched version in a writable location
         # Use the same extension as the original file (or no extension)
         suffix = self.original_path.suffix
         name_without_ext = self.original_path.stem
         patched_name = f"{name_without_ext}_patched{suffix}"
 
-        # Store patched version in project directory instead of system directory
-        project_root = Path(__file__).parent.parent.parent
-        drivers_dir = project_root / "drivers"
-        drivers_dir.mkdir(exist_ok=True)
+        # Use provided drivers_dir or default to project/drivers
+        if drivers_dir is None:
+            project_root = Path(__file__).parent.parent.parent
+            drivers_dir = project_root / "drivers"
+
+        drivers_dir.mkdir(exist_ok=True, parents=True)
         self.chromedriver_path = drivers_dir / patched_name
         self.backup_path: Path | None = None
 
@@ -120,13 +122,23 @@ class ChromeDriverPatcher:
             logger.info("ChromeDriver restored from backup")
 
 
-def get_anti_detection_arguments() -> list[str]:
+def get_anti_detection_arguments(user_agent: str | None = None, window_size: tuple[int, int] | None = None) -> list[str]:
     """
     Get Chrome arguments for anti-detection.
 
+    Args:
+        user_agent: Optional custom user agent string
+        window_size: Optional window size as (width, height) tuple
+
     Returns a list of Chrome arguments that help avoid detection.
     """
-    return [
+    # Use defaults if not provided
+    if user_agent is None:
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+    if window_size is None:
+        window_size = (1920, 1080)
+
+    args = [
         # Disable automation features
         "--disable-blink-features=AutomationControlled",
         # Exclude switches that indicate automation
@@ -134,7 +146,7 @@ def get_anti_detection_arguments() -> list[str]:
         # Disable the automation extension
         "--disable-dev-shm-usage",
         # Set user agent to remove HeadlessChrome
-        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+        f"--user-agent={user_agent}",
         # Disable the infobar that says Chrome is being controlled
         "--disable-infobars",
         # Start maximized to look more natural
@@ -148,31 +160,38 @@ def get_anti_detection_arguments() -> list[str]:
         # Disable automation-related features
         "--disable-features=ChromeWhatsNewUI,TranslateUI",
         # Use a more natural window size
-        "--window-size=1920,1080",
-        # Set language
-        "--lang=en-US,en;q=0.9",
-        # Enable WebGL explicitly
-        "--enable-webgl",
-        "--enable-webgl2",
-        # Use hardware acceleration when available
-        "--enable-accelerated-2d-canvas",
-        "--enable-accelerated-video-decode",
-        # Ignore GPU blocklist to ensure WebGL works
-        "--ignore-gpu-blocklist",
-        # Don't use software renderer - we want real WebGL
-        "--disable-software-rasterizer",
-        # Use ANGLE (more compatible on Windows)
-        "--use-angle=default",
-        # Use GL implementation auto-selection
-        "--use-gl=angle",
-        # Enable GPU rasterization
-        "--enable-gpu-rasterization",
-        # Ensure GPU process isn't sandboxed (helps with WebGL)
-        "--disable-gpu-sandbox",
-        # Additional GPU flags for better WebGL support
-        "--enable-gpu",
-        "--enable-features=VaapiVideoDecoder",
+        f"--window-size={window_size[0]},{window_size[1]}",
     ]
+
+    args.extend(
+        [
+            # Set language
+            "--lang=en-US,en;q=0.9",
+            # Enable WebGL explicitly
+            "--enable-webgl",
+            "--enable-webgl2",
+            # Use hardware acceleration when available
+            "--enable-accelerated-2d-canvas",
+            "--enable-accelerated-video-decode",
+            # Ignore GPU blocklist to ensure WebGL works
+            "--ignore-gpu-blocklist",
+            # Don't use software renderer - we want real WebGL
+            "--disable-software-rasterizer",
+            # Use ANGLE (more compatible on Windows)
+            "--use-angle=default",
+            # Use GL implementation auto-selection
+            "--use-gl=angle",
+            # Enable GPU rasterization
+            "--enable-gpu-rasterization",
+            # Ensure GPU process isn't sandboxed (helps with WebGL)
+            "--disable-gpu-sandbox",
+            # Additional GPU flags for better WebGL support
+            "--enable-gpu",
+            "--enable-features=VaapiVideoDecoder",
+        ]
+    )
+
+    return args
 
 
 def get_anti_detection_prefs() -> dict:
@@ -276,8 +295,9 @@ def execute_anti_detection_scripts(driver) -> None:
         # Also inject into runtime for immediate effect
         try:
             driver.execute_script(script_content)
-        except Exception:
-            logger.debug("Script injection failed on current page (likely about:blank)")
+        except Exception as e:
+            # This is expected for about:blank or other special pages
+            logger.debug(f"Script injection failed on current page (likely about:blank): {e}")
 
         logger.debug("Complete anti-detection script injected into main target")
 
