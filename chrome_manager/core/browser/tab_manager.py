@@ -7,7 +7,7 @@ from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
 if TYPE_CHECKING:
-    from ..models.browser_properties import BrowserProperties
+    from ...models.browser_properties import BrowserProperties
     from .properties_manager import PropertiesManager
 
 

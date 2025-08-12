@@ -8,7 +8,7 @@ from typing import Any
 
 from loguru import logger
 
-from ..utils.exceptions import ProfileError
+from ...utils.exceptions import ProfileError
 
 
 class ProfileManager:

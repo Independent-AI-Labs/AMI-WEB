@@ -10,18 +10,18 @@ import psutil
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from ..models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, PerformanceMetrics, TabInfo
-from ..models.browser_properties import BrowserProperties
-from ..models.security import SecurityConfig
-from ..utils.config import Config
-from ..utils.exceptions import InstanceError
-from .browser_lifecycle import BrowserLifecycle
-from .browser_monitor import BrowserMonitor
-from .browser_options import BrowserOptionsBuilder
-from .browser_storage import BrowserStorage
+from ...models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, PerformanceMetrics, TabInfo
+from ...models.browser_properties import BrowserProperties
+from ...models.security import SecurityConfig
+from ...utils.config import Config
+from ...utils.exceptions import InstanceError
+from ..monitoring.monitor import BrowserMonitor
+from ..storage.storage import BrowserStorage
+from .lifecycle import BrowserLifecycle
+from .options import BrowserOptionsBuilder
 
 if TYPE_CHECKING:
-    from .profile_manager import ProfileManager
+    from ..management.profile_manager import ProfileManager
     from .properties_manager import PropertiesManager
 
 
@@ -69,6 +69,10 @@ class BrowserInstance:
     def last_activity(self) -> datetime:
         """Get last activity timestamp."""
         return self._monitor.last_activity
+
+    def update_activity(self):
+        """Update last activity timestamp."""
+        self._monitor.update_activity()
 
     async def launch(
         self,
