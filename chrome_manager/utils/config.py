@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 from pathlib import Path
 from typing import Any
 
@@ -59,12 +60,37 @@ class Config:
 
         return default
 
+    def _get_platform_paths(self) -> tuple[str | None, str | None]:
+        """Get platform-specific default paths for Chrome and ChromeDriver."""
+        system = platform.system()
+
+        # Look for local project binaries first
+        project_root = Path(__file__).parent.parent.parent
+
+        if system == "Windows":
+            chrome_path = project_root / "chromium-win" / "chrome.exe"
+            driver_path = project_root / "chromedriver.exe"
+        elif system == "Darwin":  # macOS
+            chrome_path = project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+            driver_path = project_root / "chromedriver"
+        else:  # Linux
+            chrome_path = project_root / "chromium-linux" / "chrome"
+            driver_path = project_root / "chromedriver"
+
+        # Return paths if they exist, otherwise None for auto-detection
+        chrome = str(chrome_path) if chrome_path.exists() else None
+        driver = str(driver_path) if driver_path.exists() else None
+
+        return chrome, driver
+
     def _get_defaults(self) -> dict[str, Any]:
+        chrome_path, driver_path = self._get_platform_paths()
+
         return {
             "chrome_manager": {
                 "browser": {
-                    "chrome_binary_path": "chrome",
-                    "chromedriver_path": "chromedriver",
+                    "chrome_binary_path": chrome_path,  # Platform-specific or None
+                    "chromedriver_path": driver_path,  # Platform-specific or None
                     "default_headless": True,
                     "default_window_size": [1920, 1080],
                     "user_agent": None,
@@ -89,7 +115,7 @@ class Config:
                     "log_dir": "./logs",
                 },
                 "mcp": {
-                    "server_host": "0.0.0.0",  # noqa: S104
+                    "server_host": "127.0.0.1",  # Secure: Only bind to localhost
                     "server_port": 8765,
                     "max_connections": 100,
                     "auth_required": False,
@@ -102,9 +128,8 @@ class Config:
                         "--disable-blink-features=AutomationControlled",
                         "--disable-dev-shm-usage",
                         "--no-sandbox",
-                        "--disable-web-security",
-                        "--disable-features=IsolateOrigins,site-per-process",
-                        "--allow-running-insecure-content",
+                        # SECURITY: Removed dangerous flags that disable security
+                        # Only add these for specific test scenarios, not as defaults
                     ],
                     "experimental_options": {
                         "excludeSwitches": ["enable-automation"],

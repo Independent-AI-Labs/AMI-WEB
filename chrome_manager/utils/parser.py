@@ -2,20 +2,46 @@
 
 import re
 from typing import Any
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, NavigableString, Tag
+from loguru import logger
+
+# Size limits to prevent DoS attacks
+MAX_HTML_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_TEXT_LENGTH = 1024 * 1024  # 1MB
+
+# Pre-compiled regex patterns for performance
+HIDDEN_STYLE_PATTERN = re.compile(r"display:\s*none", re.I)
+HIDDEN_CLASS_PATTERN = re.compile(r"hidden|invisible", re.I)
+WHITESPACE_PATTERN = re.compile(r" +")
+NEWLINE_CLEANUP_PATTERN = re.compile(r" *\n *")
 
 
 class HTMLParser:
     """HTML parser with text extraction capabilities."""
 
-    def __init__(self, html: str):
+    def __init__(self, html: str, max_size: int = MAX_HTML_SIZE):
         """Initialize parser with HTML content.
 
         Args:
             html: Raw HTML string to parse
+            max_size: Maximum allowed HTML size in bytes
+
+        Raises:
+            ValueError: If HTML exceeds maximum size
         """
-        self.soup = BeautifulSoup(html, "lxml")
+        if len(html) > max_size:
+            raise ValueError(f"HTML size ({len(html)} bytes) exceeds maximum " f"allowed size ({max_size} bytes)")
+
+        # Use html.parser for better security, lxml only if explicitly needed
+        self.soup = BeautifulSoup(html, "html.parser")
+        self._compiled_patterns = {
+            "hidden_style": HIDDEN_STYLE_PATTERN,
+            "hidden_class": HIDDEN_CLASS_PATTERN,
+            "whitespace": WHITESPACE_PATTERN,
+            "newline_cleanup": NEWLINE_CLEANUP_PATTERN,
+        }
 
     @classmethod
     def from_url(cls, driver, url: str | None = None) -> "HTMLParser":
@@ -66,18 +92,25 @@ class HTMLParser:
                 style.decompose()
 
         if remove_comments:
-            for comment in soup.find_all(string=lambda text: isinstance(text, NavigableString) and isinstance(text, type(text))):
-                if "<!--" in str(comment):
-                    comment.extract()
+            # More efficient comment removal using BS4's Comment type
+            from bs4 import Comment
 
-        # Remove hidden elements
-        for hidden in soup.find_all(attrs={"style": re.compile(r"display:\s*none", re.I)}):
+            for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+                comment.extract()
+
+        # Remove hidden elements using pre-compiled patterns
+        for hidden in soup.find_all(attrs={"style": self._compiled_patterns["hidden_style"]}):
             hidden.decompose()
-        for hidden in soup.find_all(class_=re.compile(r"hidden|invisible", re.I)):
+        for hidden in soup.find_all(class_=self._compiled_patterns["hidden_class"]):
             hidden.decompose()
 
         # Extract text
         text = self._extract_with_structure(soup) if preserve_structure else soup.get_text()
+
+        # Limit text length to prevent memory issues
+        if len(text) > MAX_TEXT_LENGTH:
+            logger.warning(f"Extracted text exceeds {MAX_TEXT_LENGTH} chars, truncating")
+            text = text[:MAX_TEXT_LENGTH]
 
         # Clean up whitespace
         text = self._clean_whitespace(text, max_whitespace)
@@ -149,17 +182,22 @@ class HTMLParser:
         # Replace tabs with spaces
         text = text.replace("\t", " ")
 
-        # Replace multiple spaces with single space
-        text = re.sub(r" +", " ", text)
+        # Replace multiple spaces with single space using pre-compiled pattern
+        text = self._compiled_patterns["whitespace"].sub(" ", text)
 
         # Limit consecutive newlines
         if max_consecutive > 0:
-            pattern = r"\n{" + str(max_consecutive + 1) + ",}"
-            replacement = "\n" * max_consecutive
-            text = re.sub(pattern, replacement, text)
+            # Compile pattern once if not cached
+            pattern_key = f"newline_{max_consecutive}"
+            if pattern_key not in self._compiled_patterns:
+                pattern = r"\n{" + str(max_consecutive + 1) + ",}"
+                self._compiled_patterns[pattern_key] = re.compile(pattern)
 
-        # Clean up space around newlines
-        return re.sub(r" *\n *", "\n", text)
+            replacement = "\n" * max_consecutive
+            text = self._compiled_patterns[pattern_key].sub(replacement, text)
+
+        # Clean up space around newlines using pre-compiled pattern
+        return self._compiled_patterns["newline_cleanup"].sub("\n", text)
 
     def extract_links(self, absolute: bool = True, base_url: str = "") -> list[dict[str, Any]]:
         """Extract all links from the page.
@@ -176,19 +214,18 @@ class HTMLParser:
         for link in self.soup.find_all("a", href=True):
             if not isinstance(link, Tag):
                 continue
-            href = str(link.get("href", ""))
+            href = link.get("href", "")
+            if not isinstance(href, str):
+                href = str(href) if href else ""
 
-            # Convert to absolute URL if needed
-            if absolute and base_url and not href.startswith(("http://", "https://", "//")):
-                if href.startswith("/"):
-                    # Absolute path
-                    from urllib.parse import urlparse
-
-                    parsed = urlparse(base_url)
-                    href = f"{parsed.scheme}://{parsed.netloc}{href}"
-                else:
-                    # Relative path
-                    href = f"{base_url.rstrip('/')}/{href}"
+            # Convert to absolute URL if needed using proper URL joining
+            if absolute and base_url and href:
+                try:
+                    # Use urljoin for proper URL resolution
+                    if not href.startswith(("http://", "https://", "//", "mailto:", "tel:", "#")):
+                        href = urljoin(base_url, href)
+                except Exception as e:
+                    logger.debug(f"Failed to resolve URL {href}: {e}")
 
             links.append(
                 {
@@ -317,19 +354,29 @@ class HTMLParser:
                 rows.append(row)
         return rows
 
-    def find_by_text(self, text: str, tag: str | None = None) -> list[Any]:
+    def find_by_text(self, text: str, tag: str | None = None, limit: int = 100) -> list[Any]:
         """Find elements containing specific text.
 
         Args:
             text: Text to search for
             tag: Optional tag name to limit search
+            limit: Maximum number of results to return
 
         Returns:
             List of matching elements
         """
+        # Limit search text length to prevent regex DoS
+        max_search_length = 1000
+        if len(text) > max_search_length:
+            logger.warning(f"Search text too long, truncating to {max_search_length} chars")
+            text = text[:max_search_length]
+
+        # Cache compiled pattern for this session
+        pattern = re.compile(re.escape(text), re.I)
+
         if tag:
-            return self.soup.find_all(tag, string=re.compile(re.escape(text), re.I))
-        return self.soup.find_all(string=re.compile(re.escape(text), re.I))
+            return self.soup.find_all(tag, string=pattern, limit=limit)
+        return self.soup.find_all(string=pattern, limit=limit)
 
     def get_meta_data(self) -> dict[str, str]:
         """Extract metadata from the page.
