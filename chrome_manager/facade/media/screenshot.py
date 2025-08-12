@@ -130,7 +130,7 @@ class ScreenshotController(BaseController):
         current_position = 0
 
         while current_position < total_height:
-            self.driver.execute_script(f"window.scrollTo(0, {current_position})")
+            self.driver.execute_script("window.scrollTo(0, arguments[0])", current_position)
             time.sleep(FACADE_CONFIG.screenshot_stitch_delay)
             screenshot_base64 = self.driver.get_screenshot_as_base64()
             screenshots.append(base64.b64decode(screenshot_base64))
@@ -172,7 +172,7 @@ class ScreenshotController(BaseController):
         current_position = 0
 
         while current_position < total_height:
-            await loop.run_in_executor(None, self.driver.execute_script, f"window.scrollTo(0, {current_position})")
+            await loop.run_in_executor(None, self.driver.execute_script, "window.scrollTo(0, arguments[0])", current_position)
             await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
             screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
             screenshots.append(base64.b64decode(screenshot_base64))
