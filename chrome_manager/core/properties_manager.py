@@ -52,6 +52,28 @@ class PropertiesManager:
         logger.info(f"Loaded browser properties with preset '{preset_name}' and {len(overrides)} overrides")
         return properties
 
+    def get_default_properties(self) -> BrowserProperties:
+        """Get the default properties."""
+        return self._default_properties
+
+    def set_default_properties(self, properties: BrowserProperties | dict[str, Any]) -> None:
+        """Set the default properties."""
+        if isinstance(properties, dict):
+            # Create new properties from dict, using current defaults as base
+            base_props = self._default_properties.model_copy()
+            for key, value in properties.items():
+                if hasattr(base_props, key):
+                    if key == "codec_support" and isinstance(value, dict):
+                        for codec_key, codec_value in value.items():
+                            if hasattr(base_props.codec_support, codec_key):
+                                setattr(base_props.codec_support, codec_key, codec_value)
+                    else:
+                        setattr(base_props, key, value)
+            self._default_properties = base_props
+        else:
+            self._default_properties = properties
+        logger.info("Updated default browser properties")
+
     def get_instance_properties(self, instance_id: str) -> BrowserProperties:
         """Get properties for a specific instance."""
         return self._instance_properties.get(instance_id, self._default_properties)
