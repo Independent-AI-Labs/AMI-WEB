@@ -1,109 +1,329 @@
 # CRITICAL INSTRUCTIONS FOR CLAUDE - MUST READ
 
-## CHROME AND CHROMEDRIVER PATHS - ALWAYS CONFIGURED
+## 🚨 ABSOLUTE REQUIREMENTS
 
-**NEVER ASK WHERE CHROME IS - IT'S ALWAYS HERE:**
-- Chrome binary: `./chromium-win/chrome.exe` (relative to project root)
-- ChromeDriver: `./chromedriver.exe` (relative to project root)
-- These are automatically configured in `chrome_manager/utils/config.py`
-- The Config class automatically converts these to absolute paths
-- Tests will use these paths automatically
-- STOP LOOKING FOR CHROME - IT'S FUCKING CONFIGURED
+### NO POLLING - USE EVENTS ONLY
+**Polling is FORBIDDEN. Use event-driven architecture ALWAYS.**
 
-## ABSOLUTE REQUIREMENTS - NO EXCEPTIONS
+```python
+# ❌ FORBIDDEN - NO POLLING AT ALL
+while True:
+    check_something()  # NO!
+    time.sleep(ANY_VALUE)  # NO POLLING!
 
-### 1. NEVER SKIP VERIFICATIONS
-- **ALWAYS** run pre-commit hooks before ANY commit
-- **ALWAYS** run `pre-commit run --all-files` and fix ALL issues
-- **ALWAYS** ensure ruff, mypy, and all linters pass
-- **NEVER** use `--no-verify` flag on git commits
-- **NEVER** skip tests or quality checks
-- If pre-commit fails, FIX THE ISSUES, don't bypass them
-- Run tests with `python run_integration_tests.py` or `pytest` as appropriate
-- Verify all code works BEFORE committing
+# ❌ FORBIDDEN - JavaScript polling
+setInterval(() => { check(); }, ANY_INTERVAL);  # NO!
 
-### 2. NO SHORTCUTS OR PLACEHOLDERS
-- **NEVER** create placeholder code unless EXPLICITLY told "create a placeholder"
-- **NEVER** use `pass` statements as temporary implementations
-- **NEVER** leave TODO comments unless specifically requested
-- **ALWAYS** implement complete, working functionality
-- **ALWAYS** write full implementations, not stubs
-- If something seems complex, IMPLEMENT IT FULLY anyway
-- No "we'll implement this later" - DO IT NOW
-- No abbreviated or simplified versions - FULL IMPLEMENTATION ONLY
-
-### 3. GIT COMMIT RULES
-- **NEVER** add "Co-Authored-By" to commit messages
-- **NEVER** add emoji or decorative elements to commits
-- **NEVER** add "Generated with Claude" or similar attributions
-- Keep commit messages professional and descriptive
-- Format:
-  ```
-  Short summary line (50 chars or less)
-  
-  - Bullet point of what was done
-  - Another change that was made
-  - More details as needed
-  ```
-
-## CODE QUALITY STANDARDS
-
-### Pre-commit Hooks MUST Pass
-The following hooks are configured and MUST pass:
-- `ruff` - Python linter and formatter
-- `ruff-format` - Python code formatting
-- `mypy` - Static type checking
-- All other configured hooks
-
-### Testing Requirements
-- Run integration tests before marking any task complete
-- Ensure all existing tests still pass after changes
-- Add tests for new functionality
-- Never commit broken tests
-
-### When You Get Errors
-1. READ the error message completely
-2. FIX the actual issue, don't work around it
-3. Run the checks again to verify the fix
-4. Only proceed when everything passes
-
-## COMMANDS TO REMEMBER
-
-```bash
-# ALWAYS run before committing
-pre-commit run --all-files
-
-# Run integration tests
-python run_integration_tests.py
-
-# Run specific test file
-python -m pytest tests/integration/test_browser_integration.py -v
-
-# Check git status
-git status
-
-# Proper commit (NO --no-verify)
-git add -A
-git commit -m "Clear, descriptive message"
+# ✅ REQUIRED - Event-driven only
+await page.on('target.created', handle_new_tab)
+# Use CDP events, MutationObserver, callbacks, promises
+# If you can't use events, DON'T IMPLEMENT IT
 ```
+
+### SECURE BY DEFAULT - NO EXCEPTIONS
+```python
+# ❌ NEVER SET THESE AS DEFAULTS - EVER!
+"--disable-web-security"  # FORBIDDEN as default
+"--disable-features=IsolateOrigins"  # FORBIDDEN as default
+"--allow-running-insecure-content"  # FORBIDDEN as default
+server_host = "0.0.0.0"  # FORBIDDEN - security disaster!
+
+# ✅ REQUIRED DEFAULTS
+server_host = "127.0.0.1"  # Local only
+headless = True  # Safe default
+# Security flags ONLY when user explicitly requests with warnings
+```
+
+### NO CODE DUPLICATION - PERIOD
+```python
+# If code appears in 2+ places, it MUST be extracted
+# Create base classes, utilities, or services
+# NO COPY-PASTE EVER
+```
+
+---
+
+## 📋 MANDATORY CHECKLIST FOR EVERY CHANGE
+
+**Before ANY code modification, verify:**
+
+- [ ] **NO POLLING** - Events only, no loops checking state
+- [ ] **SECURE DEFAULTS** - No security-reducing defaults
+- [ ] **NO DUPLICATION** - Shared code extracted to base/utils
+- [ ] **NO GOD CLASSES** - Classes <300 lines, methods <50 lines
+- [ ] **NO INLINE JAVASCRIPT** - JS in .js files only
+- [ ] **NO GLOBAL NAMESPACE** - Use IIFE or modules in JS
+- [ ] **NO SILENT FAILURES** - Log and propagate errors
+- [ ] **NO HARDCODED VALUES** - Use constants or config
+- [ ] **NO BUSINESS LOGIC IN MODELS** - Models are data-only
+- [ ] **NO BROAD PERMISSIONS** - Limit scope always
+
+---
+
+## 🏗️ ARCHITECTURE RULES
+
+### File Size Limits
+- **Classes**: Maximum 300 lines (split if larger)
+- **Methods**: Maximum 50 lines (extract if larger)
+- **Files**: Maximum 500 lines (modularize if larger)
+
+### Module Organization
+```python
+# ✅ CORRECT MODULE STRUCTURE
+module/
+├── __init__.py          # Minimal exports only
+├── base.py             # Base classes with shared code
+├── models.py           # Data models (NO business logic)
+├── services.py         # Business logic here
+├── utils.py            # Stateless utilities
+└── constants.py        # All constants in one place
+```
+
+### JavaScript Management
+```javascript
+// ✅ ALWAYS use this pattern for browser scripts
+(function() {
+    'use strict';
+    try {
+        // Your code here - NO POLLING
+    } catch (e) {
+        // Silent fail, don't expose automation
+    }
+})();
+```
+
+---
+
+## ⚡ PERFORMANCE REQUIREMENTS
+
+### Event-Driven Architecture
+```python
+# ✅ REQUIRED - Use events
+page.on('load', handle_load)
+page.on('domcontentloaded', handle_dom)
+driver.implicitly_wait(timeout)  # Let driver handle waiting
+
+# ❌ FORBIDDEN - Polling
+while not element_found:  # NO!
+    time.sleep(0.1)  # NO POLLING!
+```
+
+### Timing Constants (USE THESE!)
+```python
+# constants.py - Create this file!
+class Timing:
+    DEFAULT_WAIT = 0.5            # Standard wait time
+    DEFAULT_TIMEOUT = 30          # Standard timeout
+    # NO POLLING INTERVALS - WE DON'T POLL
+```
+
+---
+
+## 🔒 SECURITY REQUIREMENTS
+
+### Default Configuration
+```python
+# ✅ SECURE DEFAULTS - NO EXCEPTIONS
+DEFAULT_CONFIG = {
+    "server_host": "127.0.0.1",  # NEVER 0.0.0.0
+    "headless": True,             # NEVER False by default
+    "disable_security": False,    # NEVER True by default
+    "permissions": "limited"      # NEVER "all" by default
+}
+```
+
+### Input Validation
+```python
+# ✅ ALWAYS sanitize JavaScript inputs
+def sanitize_selector(selector: str) -> str:
+    # Escape special characters
+    return selector.replace("'", "\\'").replace('"', '\\"')
+
+# ✅ ALWAYS validate paths
+def validate_path(path: str) -> Path:
+    path = Path(path).resolve()
+    if not path.is_relative_to(BASE_DIR):
+        raise SecurityError("Path traversal attempt")
+    return path
+```
+
+---
+
+## 🧪 TESTING REQUIREMENTS
+
+### Test Isolation
+```python
+# ✅ NEVER use global state in tests
+@pytest.fixture(scope="function")  # NOT "session"!
+async def browser():
+    browser = await create_browser()
+    yield browser
+    await browser.cleanup()  # Guaranteed cleanup
+```
+
+### Error Handling
+```python
+# ✅ ALWAYS handle errors properly
+try:
+    result = await operation()
+except SpecificError as e:
+    logger.error(f"Operation failed: {e}")
+    # Take corrective action or raise
+    raise
+except Exception as e:
+    logger.exception("Unexpected error")
+    raise  # Don't hide unexpected errors
+```
+
+---
+
+## 🚫 FORBIDDEN PATTERNS
+
+### NEVER Create These
+- Duplicate files (e.g., `session.py` when `session_manager.py` exists)
+- Inline JavaScript in Python strings over 10 lines
+- God classes over 500 lines
+- Methods over 100 lines
+- Polling loops of ANY kind
+
+### NEVER Use These Patterns
+```python
+# ❌ ALL FORBIDDEN
+except: pass                     # Silent failure
+except Exception: pass           # Swallowing exceptions
+while True: time.sleep(X)        # NO POLLING
+for i in range(N): time.sleep(X) # NO POLLING
+"<all_urls>"                     # Broad permissions
+lambda in Pydantic fields        # Serialization issues
+_private_var access from outside # Encapsulation violation
+```
+
+---
+
+## ✅ REQUIRED PATTERNS
+
+### Event-Driven Only
+```python
+# ✅ Use WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+element = WebDriverWait(driver, timeout).until(
+    EC.presence_of_element_located((By.ID, "myId"))
+)
+
+# ✅ Use CDP events
+await page.on('framenavigated', handle_navigation)
+
+# ✅ Use MutationObserver in JS
+const observer = new MutationObserver(callback);
+observer.observe(document, config);
+```
+
+### Error Handling
+```python
+# ✅ ALWAYS use this pattern
+try:
+    result = await risky_operation()
+except SpecificException as e:
+    logger.warning(f"Expected issue: {e}")
+    # Handle gracefully
+except Exception as e:
+    logger.exception("Unexpected error in risky_operation")
+    raise  # Re-raise for debugging
+```
+
+### Resource Management
+```python
+# ✅ ALWAYS use context managers
+async with get_browser() as browser:
+    # Use browser
+    pass  # Automatic cleanup
+
+# ✅ ALWAYS cleanup in finally
+resource = None
+try:
+    resource = acquire_resource()
+    # Use resource
+finally:
+    if resource:
+        resource.cleanup()
+```
+
+### Configuration
+```python
+# ✅ ALWAYS use configuration files
+CONFIG = Config.load("config.yaml")
+timeout = CONFIG.get("timeout", DEFAULT_TIMEOUT)
+
+# ❌ NEVER hardcode
+timeout = 30  # Bad!
+```
+
+---
+
+## 📝 CODE REVIEW CHECKLIST
+
+Before committing, verify:
+
+1. **Performance**
+   - [ ] NO polling loops (use events only)
+   - [ ] No unnecessary sleeps
+   - [ ] WebDriverWait or CDP events used
+
+2. **Security**
+   - [ ] No security-disabling defaults
+   - [ ] Server binds to localhost only
+   - [ ] All inputs sanitized
+   - [ ] Paths validated
+
+3. **Code Quality**
+   - [ ] No duplicated code
+   - [ ] No god classes/methods
+   - [ ] Proper error handling
+   - [ ] Type hints added
+
+4. **Testing**
+   - [ ] Tests are isolated
+   - [ ] Cleanup guaranteed
+   - [ ] No global state
+
+5. **Documentation**
+   - [ ] Complex logic explained
+   - [ ] TODOs include context
+   - [ ] Breaking changes noted
+
+---
+
+## 🎯 WHEN IN DOUBT
+
+If you're unsure about something:
+
+1. **Use events, not polling** - If you can't use events, don't implement it
+2. **Secure by default** - Make the safe choice
+3. **Extract shared code** - Don't duplicate
+4. **Keep it simple** - Readable > clever
+5. **Ask for clarification** - Better to ask than assume
+
+---
 
 ## CONSEQUENCES OF VIOLATIONS
 
-The user has made it EXTREMELY clear that:
-- Skipping verifications is UNACCEPTABLE
-- Using --no-verify will result in EXTREME displeasure
-- Placeholders and incomplete work are NOT tolerated
-- Co-authored commit messages are FORBIDDEN
+**Every violation creates technical debt that compounds.**
+
+---
 
 ## FINAL REMINDER
 
 **QUALITY OVER SPEED**
-- It's better to take time and do it right
-- Run all checks, fix all issues
-- Implement everything completely
-- No shortcuts, no excuses
 
-This is not a suggestion - this is a REQUIREMENT.
+Write less code that's correct rather than more code with issues.
+
+**Rules are NOT optional:**
+- NO POLLING - Use events or don't implement
+- SECURE DEFAULTS - No exceptions
+- NO DUPLICATION - Extract shared code
+- PROPER ERROR HANDLING - Log and propagate
 
 P.S. NEVER ADD SHIT LIKE 2>nul TO SHELL COMMANDS!!! This creates a write-protected file in the repo...
 
