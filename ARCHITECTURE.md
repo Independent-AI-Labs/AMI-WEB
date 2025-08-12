@@ -84,7 +84,33 @@ graph TB
 
 ## Core Components
 
-### 1. Chrome Manager (`chrome_manager/core/manager.py`)
+### Module Organization (Refactored)
+
+The core module has been refactored from a monolithic structure into well-organized submodules:
+
+```
+chrome_manager/core/
+├── browser/          # Core browser functionality
+│   ├── instance.py   # Main browser instance (composition pattern)
+│   ├── lifecycle.py  # Browser launch, terminate, restart
+│   ├── options.py    # Chrome options configuration
+│   ├── properties_manager.py # Browser property injection
+│   └── tab_manager.py # Tab management with auto-cleanup
+├── management/       # Instance management
+│   ├── manager.py    # High-level Chrome manager
+│   ├── pool.py       # Browser pool with smart health checks
+│   ├── profile_manager.py # Chrome profile management
+│   └── session_manager.py # Session persistence
+├── monitoring/       # Browser monitoring
+│   └── monitor.py    # Console, network, performance monitoring
+├── security/         # Anti-detection & security
+│   ├── antidetect.py # ChromeDriver patching & anti-detection
+│   └── tab_injector.py # CDP-based script injection (NO POLLING!)
+└── storage/         # Storage management
+    └── storage.py   # Cookies, downloads, localStorage
+```
+
+### 1. Chrome Manager (`chrome_manager/core/management/manager.py`)
 
 The central orchestrator that manages the lifecycle of browser instances.
 
@@ -104,9 +130,9 @@ async def terminate_instance(instance_id: str) -> None
 async def shutdown() -> None
 ```
 
-### 2. Browser Instance (`chrome_manager/core/instance.py`)
+### 2. Browser Instance (`chrome_manager/core/browser/instance.py`)
 
-Individual browser instance wrapper with anti-detection capabilities.
+Individual browser instance using **composition pattern** (refactored from 738-line god class).
 
 **Features:**
 - Selenium WebDriver integration
@@ -124,7 +150,7 @@ class BrowserStatus(Enum):
     ERROR = "error"
 ```
 
-### 3. Instance Pool (`chrome_manager/core/pool.py`)
+### 3. Browser Pool (`chrome_manager/core/management/pool.py`)
 
 Efficient resource pooling for browser instances.
 
@@ -203,7 +229,7 @@ The anti-detection system is the crown jewel of AMI-WEB, making browser automati
 
 ### Implementation Layers
 
-#### 1. Chrome Launch Arguments (`chrome_manager/core/antidetect.py`)
+#### 1. Chrome Launch Arguments (`chrome_manager/core/security/antidetect.py`)
 ```python
 --disable-blink-features=AutomationControlled
 --exclude-switches=enable-automation
@@ -269,39 +295,42 @@ const pluginData = [
 ];
 ```
 
-#### 4. Tab Injection System (`chrome_manager/core/simple_tab_injector.py`)
+#### 4. Tab Injection System (`chrome_manager/core/security/tab_injector.py`)
 
-Monitors for new tabs/windows and injects anti-detection:
+**EVENT-DRIVEN - NO POLLING!** Uses CDP events to inject anti-detection:
 
 ```python
 class SimpleTabInjector:
-    def __init__(self, driver, script_content):
-        self.monitoring = True
-        self.monitor_thread = Thread(target=self._monitor_loop)
+    def __init__(self, driver):
+        self.driver = driver
+        self.antidetect_script = self._load_script()
+        self._setup_cdp_injection()
         
-    def _monitor_loop(self):
-        while self.monitoring:
-            new_handles = set(driver.window_handles) - self.known_handles
-            for handle in new_handles:
-                self._inject_into_tab(handle)
-            time.sleep(0.02)  # 20ms polling interval
+    def _setup_cdp_injection(self):
+        """Setup CDP to inject script on all new documents automatically."""
+        self.driver.execute_cdp_cmd(
+            "Page.addScriptToEvaluateOnNewDocument",
+            {
+                "source": self.antidetect_script,
+                "worldName": "",  # Main world
+                "runImmediately": True,  # Also inject into existing pages
+            }
+        )
 ```
 
 ```mermaid
 flowchart LR
-    subgraph "Tab Monitoring System"
-        Monitor[Monitor Thread] -->|20ms interval| Check{New Tab?}
-        Check -->|Yes| Switch[Switch to Tab]
-        Check -->|No| Monitor
-        Switch --> Inject[Inject Script]
-        Inject --> CDP[CDP Evaluate]
-        CDP --> Success[Tab Protected]
-        Success --> Monitor
+    subgraph "Event-Driven Tab Protection (NO POLLING)"
+        CDP[CDP Event System] -->|Page.addScriptToEvaluateOnNewDocument| Auto[Automatic Injection]
+        Auto -->|New Document| Inject[Script Injected]
+        Auto -->|New Tab| Inject
+        Auto -->|Navigation| Inject
+        Inject --> Protected[Tab Protected]
     end
     
-    style Monitor fill:#e3f2fd
-    style Inject fill:#fff3e0
-    style Success fill:#e8f5e9
+    style CDP fill:#e8f5e9
+    style Auto fill:#fff3e0
+    style Protected fill:#c8e6c9
 ```
 
 ### Detection Tests Passed
@@ -566,32 +595,44 @@ stateDiagram-v2
 
 ## Performance Optimizations
 
+### Recent Improvements (2025-08-12)
+- **ELIMINATED CPU KILLER**: Removed 1ms polling loop that consumed 100% CPU
+- **EVENT-DRIVEN ARCHITECTURE**: Replaced all polling with CDP events
+- **MEMORY LEAK FIXES**: Automatic cleanup of closed tabs
+- **SMART HEALTH CHECKS**: Skip instances in use, TTL only for idle
+- **CONFIGURABLE ANTI-DETECT**: Pool anti-detection now configurable
+
 ### 1. Connection Pooling
 - Pre-warmed instances for instant availability
 - Lazy initialization of expensive resources
 - Connection reuse across requests
+- Smart instance matching based on configuration
 
 ### 2. Async Architecture
 - Non-blocking I/O operations
 - Concurrent request handling
 - Event loop optimization
+- Zero polling loops
 
 ### 3. Caching Strategies
 - CDP script caching
 - Compiled regex patterns
 - Browser profile templates
+- Script injection via CDP events
 
 ### 4. Resource Management
 - Automatic garbage collection
-- Memory leak prevention
-- Periodic health checks
+- Memory leak prevention via cleanup hooks
+- Non-intrusive health checks
 - Graceful degradation
+- TTL only applies to idle instances
 
 ### 5. Script Optimization
 - Minified injection scripts
 - Efficient DOM traversal
 - Batched operations
 - Minimal overhead injection
+- One-time CDP setup for all documents
 
 ## Testing Architecture
 
