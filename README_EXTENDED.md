@@ -178,7 +178,7 @@ export CHROME_MANAGER_CONFIG=/path/to/config.yaml
 The central orchestrator that manages all browser instances and operations.
 
 ```python
-from chrome_manager.core.manager import ChromeManager
+from chrome_manager.core import ChromeManager
 
 # Initialize manager
 manager = ChromeManager(config_file="config.yaml")
@@ -204,7 +204,7 @@ await manager.shutdown()
 Manages persistent browser profiles with isolated storage.
 
 ```python
-from chrome_manager.core.profile_manager import ProfileManager
+from chrome_manager.core.management import ProfileManager
 
 profile_manager = ProfileManager(base_dir="./browser_profiles")
 
@@ -229,7 +229,7 @@ profile_manager.delete_profile("old_profile")
 Saves and restores complete browser states.
 
 ```python
-from chrome_manager.core.session_manager import SessionManager
+from chrome_manager.core.management import SessionManager
 
 session_manager = SessionManager(session_dir="./sessions")
 
@@ -269,7 +269,7 @@ custom_config = SecurityConfig(
 Manages browser fingerprinting and anti-detection properties.
 
 ```python
-from chrome_manager.core.properties_manager import PropertiesManager
+from chrome_manager.core.browser import PropertiesManager
 from chrome_manager.models.browser_properties import BrowserProperties
 
 properties_manager = PropertiesManager(config)

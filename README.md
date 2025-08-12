@@ -44,7 +44,7 @@ cp config.sample.yaml config.yaml
 ### Basic Usage
 
 ```python
-from chrome_manager.core.manager import ChromeManager
+from chrome_manager.core import ChromeManager
 
 async def main():
     # Initialize the platform
@@ -125,6 +125,8 @@ graph TD
 - **Concurrent Sessions**: 40+ browsers per server
 - **Memory Efficiency**: ~100MB per instance
 - **Response Time**: < 10ms API overhead
+- **CPU Usage**: Zero polling - event-driven architecture
+- **Resource Management**: Automatic cleanup prevents memory leaks
 
 ## 🚧 Work in Progress
 
