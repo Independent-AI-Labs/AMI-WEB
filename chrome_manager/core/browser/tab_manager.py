@@ -33,6 +33,8 @@ class TabManager:
 
     def ensure_antidetect_on_current_tab(self):
         """Ensure anti-detection is applied to the current tab."""
+        # Cleanup closed tabs automatically to prevent memory leak
+        self.cleanup_closed_tabs()
         current_handle = self.driver.current_window_handle
 
         # Inject browser properties if available
@@ -43,7 +45,7 @@ class TabManager:
                 self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": props_script})
                 logger.debug(f"Injected browser properties into tab {current_handle}")
             except Exception as e:
-                logger.warning(f"Failed to inject browser properties into tab: {e}")
+                logger.error(f"Failed to inject browser properties into tab {current_handle}: {e}")
 
         # Inject anti-detect script
         if not self.antidetect_script:
@@ -57,7 +59,7 @@ class TabManager:
                 self._injected_tabs.add(current_handle)
                 logger.debug(f"Injected anti-detect into tab {current_handle}")
             except Exception as e:
-                logger.warning(f"Failed to inject anti-detect into tab: {e}")
+                logger.error(f"Failed to inject anti-detect into tab {current_handle}: {e}")
 
     def open_new_tab(self, url: str = None, properties: "BrowserProperties | None" = None):
         """Open a new tab with anti-detection and optionally custom properties."""
@@ -80,6 +82,8 @@ class TabManager:
 
     def switch_to_tab(self, window_handle: str):
         """Switch to a tab and ensure anti-detection is applied."""
+        # Cleanup before switching
+        self.cleanup_closed_tabs()
         self.driver.switch_to.window(window_handle)
         self.ensure_antidetect_on_current_tab()
 
