@@ -1,5 +1,28 @@
 # CRITICAL INSTRUCTIONS FOR CLAUDE - MUST READ
 
+## ENVIRONMENT SETUP - USE UV AND .VENV
+
+**ALWAYS USE UV FOR DEPENDENCY MANAGEMENT:**
+- Virtual environment is at `.venv/` (created with `uv venv .venv`)
+- Python executable: `".venv/Scripts/python.exe"` (USE QUOTES!)
+- Install deps: `uv pip install -r requirements.txt`
+- Run tests: `python run_tests.py [args]` or `".venv/Scripts/python.exe" -m pytest`
+- NEVER modify requirements.txt without testing the exact version first
+- To add a new dependency:
+  1. `uv pip install <package>` (install it first)
+  2. `uv pip list | grep <package>` (check exact version)
+  3. Add to requirements.txt with the EXACT version installed
+
+## CHROME AND CHROMEDRIVER PATHS - ALWAYS CONFIGURED
+
+**NEVER ASK WHERE CHROME IS - IT'S ALWAYS HERE:**
+- Chrome binary: `./chromium-win/chrome.exe` (relative to project root)
+- ChromeDriver: `./chromedriver.exe` (relative to project root)
+- These are automatically configured in `chrome_manager/utils/config.py`
+- The Config class automatically converts these to absolute paths
+- Tests will use these paths automatically
+- STOP LOOKING FOR CHROME - IT'S FUCKING CONFIGURED
+
 ## 🚨 ABSOLUTE REQUIREMENTS
 
 ### NO POLLING - USE EVENTS ONLY
