@@ -21,6 +21,22 @@ class BrowserOptionsBuilder:
     def __init__(self, config: Config | None = None, profile_manager: "ProfileManager | None" = None):
         self._config = config or Config()
         self._profile_manager = profile_manager
+        self._temp_profile_dir: Path | None = None  # Track temp dir for cleanup
+
+    def get_temp_profile_dir(self) -> Path | None:
+        """Get the temporary profile directory if one was created."""
+        return self._temp_profile_dir
+
+    def cleanup_temp_profile(self) -> None:
+        """Clean up temporary profile directory."""
+        if self._temp_profile_dir and self._temp_profile_dir.exists():
+            import shutil
+
+            try:
+                shutil.rmtree(self._temp_profile_dir)
+                self._temp_profile_dir = None
+            except Exception as e:
+                logger.debug(f"Failed to cleanup temp profile directory: {e}")
 
     def build(
         self,
@@ -43,7 +59,24 @@ class BrowserOptionsBuilder:
         if profile and self._profile_manager:
             profile_dir = self._profile_manager.get_profile_dir(profile)
             if profile_dir:
-                chrome_options.add_argument(f"--user-data-dir={profile_dir}")
+                # Chrome doesn't allow multiple instances with the same user-data-dir
+                # We need to create a completely separate copy for each instance
+                import shutil
+                import tempfile
+                import uuid
+
+                # Create a temporary directory for this instance
+                temp_dir = Path(tempfile.gettempdir()) / f"chrome_profile_{profile}_{uuid.uuid4().hex[:8]}"
+
+                # Copy the profile directory if it exists and has content
+                if profile_dir.exists() and any(profile_dir.iterdir()):
+                    shutil.copytree(profile_dir, temp_dir, dirs_exist_ok=True)
+                else:
+                    temp_dir.mkdir(parents=True, exist_ok=True)
+
+                # Store for cleanup later
+                self._temp_profile_dir = temp_dir
+                chrome_options.add_argument(f"--user-data-dir={temp_dir}")
 
         # Configure based on mode
         if anti_detect:

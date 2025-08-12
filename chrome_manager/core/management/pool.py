@@ -160,7 +160,8 @@ class BrowserPool:
     async def _is_healthy(self, instance: BrowserInstance) -> bool:
         try:
             health = await instance.health_check()
-            return health["healthy"]
+            # Check if browser is alive and responsive
+            return health.get("alive", False) and health.get("responsive", False)
         except Exception as e:
             logger.debug(f"Health check failed for instance {instance.id}: {e}")
             return False

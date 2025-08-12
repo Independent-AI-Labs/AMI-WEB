@@ -13,5 +13,5 @@ selenium==4.34.2
 websockets==15.0.1
 jinja2==3.1.6
 lxml==6.0.0
-numpy==2.3.2
+numpy==2.2.6
 python-dotenv==1.1.1

@@ -145,6 +145,8 @@ class BrowserInstance:
         await self._lifecycle.terminate(force)
         self.process = None
         self._monitor.clear_logs()
+        # Clean up temporary profile directory if used
+        self._options_builder.cleanup_temp_profile()
         logger.info(f"Browser instance {self.id} terminated")
 
     async def restart(self) -> WebDriver | None:
