@@ -225,15 +225,7 @@ class ChromeManager:
 
         # Set default properties if no instance specified
         if not instance_id:
-            if isinstance(properties, dict):
-                base_props = self.properties_manager._default_properties.model_copy()
-                for key, value in properties.items():
-                    if hasattr(base_props, key):
-                        setattr(base_props, key, value)
-                self.properties_manager._default_properties = base_props
-            else:
-                self.properties_manager._default_properties = properties
-            logger.info("Updated default browser properties")
+            self.properties_manager.set_default_properties(properties)
             return True
 
         # Set instance or tab properties

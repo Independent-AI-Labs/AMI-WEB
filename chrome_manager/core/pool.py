@@ -1,6 +1,4 @@
 import asyncio
-import builtins
-import contextlib
 from collections import deque
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -14,6 +12,10 @@ from .instance import BrowserInstance
 if TYPE_CHECKING:
     from .profile_manager import ProfileManager
     from .properties_manager import PropertiesManager
+
+# Constants for pool management
+DEFAULT_ACQUIRE_TIMEOUT = 30  # seconds
+WARMUP_CHECK_INTERVAL = 10  # seconds
 
 
 class InstancePool:
@@ -80,7 +82,7 @@ class InstancePool:
         self.in_use.clear()
         self.all_instances.clear()
 
-    async def acquire(self, options: ChromeOptions | None = None, timeout: int = 30) -> BrowserInstance:
+    async def acquire(self, options: ChromeOptions | None = None, timeout: int = DEFAULT_ACQUIRE_TIMEOUT) -> BrowserInstance:
         async with self._lock:
             instance = await self._get_available_instance(options)
             if instance:
@@ -180,8 +182,10 @@ class InstancePool:
             logger.warning(f"Failed to reset instance {instance.id}: {e}")
 
     async def _remove_instance(self, instance: BrowserInstance):
-        with contextlib.suppress(builtins.BaseException):
+        try:
             await instance.terminate()
+        except Exception as e:
+            logger.warning(f"Error terminating instance {instance.id}: {e}")
 
         self.all_instances.pop(instance.id, None)
         if instance in self.available:
@@ -237,7 +241,7 @@ class InstancePool:
     async def _warmup_loop(self):
         while True:
             try:
-                await asyncio.sleep(10)
+                await asyncio.sleep(WARMUP_CHECK_INTERVAL)
                 await self._ensure_warm_instances()
             except asyncio.CancelledError:
                 break
