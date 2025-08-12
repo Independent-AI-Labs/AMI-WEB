@@ -1,13 +1,11 @@
 """Base controller class for facade controllers."""
 
-import asyncio
-import threading
 from typing import Any
 
-from loguru import logger
 from selenium.webdriver.common.by import By
 
 from ..core.browser.instance import BrowserInstance
+from ..utils import is_in_thread_context, parse_selector
 
 
 class BaseController:
@@ -30,30 +28,9 @@ class BaseController:
         Returns:
             bool: True if running in a thread with an active event loop
         """
-        try:
-            # Check if we're in the main thread
-            current_thread = threading.current_thread()
-            main_thread = threading.main_thread()
+        return is_in_thread_context()
 
-            # Log the thread info for debugging
-            logger.debug(f"Thread check: current={current_thread.name}, " f"main={main_thread.name}, is_main={current_thread is main_thread}")
-
-            if current_thread is not main_thread:
-                # Check if this thread has an event loop
-                try:
-                    loop = asyncio.get_event_loop()
-                    is_running = loop.is_running()
-                    logger.debug(f"Thread has event loop, running={is_running}")
-                    return is_running
-                except RuntimeError as e:
-                    logger.debug(f"Thread has no event loop: {e}")
-                    return False
-            return False
-        except Exception as e:
-            logger.debug(f"Error in thread check: {e}")
-            return False
-
-    def _parse_selector(self, selector: str) -> tuple[Any, str]:  # noqa: PLR0911
+    def _parse_selector(self, selector: str) -> tuple[Any, str]:
         """Parse a selector string into a Selenium By locator.
 
         Supports various selector formats:
@@ -61,7 +38,7 @@ class BaseController:
         - XPath selectors (starting with // or /)
         - ID selectors (starting with #)
         - Class selectors (starting with .)
-        - Name selectors (starting with name=)
+        - Name selectors (starting with @)
         - Tag selectors (simple tag names)
 
         Args:
@@ -70,48 +47,16 @@ class BaseController:
         Returns:
             Tuple[By, str]: The By locator type and the selector value
         """
-        if selector.startswith(("//", "/")):
-            return (By.XPATH, selector)
-        if selector.startswith("#"):
-            # ID selector - use By.ID for better performance
-            return (By.ID, selector[1:])
-        if selector.startswith("."):
-            # Class selector - use By.CLASS_NAME for single classes
-            class_name = selector[1:]
-            if " " not in class_name and "." not in class_name:
-                return (By.CLASS_NAME, class_name)
-            # Multiple classes or complex selector - use CSS
-            return (By.CSS_SELECTOR, selector)
-        if selector.startswith("name="):
-            return (By.NAME, selector[5:])
+        by_str, value = parse_selector(selector)
 
-        tag_names = {
-            "a",
-            "button",
-            "div",
-            "span",
-            "input",
-            "select",
-            "textarea",
-            "img",
-            "p",
-            "h1",
-            "h2",
-            "h3",
-            "h4",
-            "h5",
-            "h6",
-            "ul",
-            "li",
-            "table",
-            "tr",
-            "td",
-            "th",
-            "form",
-            "label",
+        # Convert string By type to actual By constant
+        by_map = {
+            "xpath": By.XPATH,
+            "id": By.ID,
+            "class name": By.CLASS_NAME,
+            "name": By.NAME,
+            "tag name": By.TAG_NAME,
+            "css selector": By.CSS_SELECTOR,
         }
-        if selector.lower() in tag_names:
-            # Simple tag name
-            return (By.TAG_NAME, selector)
-        # Default to CSS selector
-        return (By.CSS_SELECTOR, selector)
+
+        return by_map.get(by_str, By.CSS_SELECTOR), value
