@@ -5,6 +5,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+def default_disable_blink_features() -> list[str]:
+    """Default list of blink features to disable."""
+    return ["AutomationControlled"]
+
+
 class BrowserStatus(Enum):
     IDLE = "idle"
     BUSY = "busy"
@@ -68,7 +73,7 @@ class ChromeOptions(BaseModel):
     disable_gpu: bool = True
     no_sandbox: bool = True
     disable_dev_shm_usage: bool = True
-    disable_blink_features: list[str] = Field(default_factory=lambda: ["AutomationControlled"])
+    disable_blink_features: list[str] = Field(default_factory=default_disable_blink_features)
     arguments: list[str] = Field(default_factory=list)
     experimental_options: dict[str, Any] = Field(default_factory=dict)
     extensions: list[str] = Field(default_factory=list)
