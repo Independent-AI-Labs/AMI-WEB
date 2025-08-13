@@ -3,8 +3,6 @@ import json
 from pathlib import Path
 
 import pytest
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 
 
 class TestAntidetectionScripts:
@@ -171,63 +169,51 @@ class TestAntidetectionIntegration:
     """Integration tests for antidetection with real browser."""
 
     @pytest.mark.integration
-    def test_webdriver_property_removed(self):
+    @pytest.mark.asyncio
+    async def test_webdriver_property_removed(self, antidetect_browser):
         """Test that webdriver property is removed in browser."""
-        options = Options()
-        options.add_argument("--headless")
+        driver = antidetect_browser.driver
 
-        driver = webdriver.Chrome(options=options)
+        # Navigate to a test page
+        driver.get("data:text/html,<html><body>Test</body></html>")
 
-        try:
-            # Navigate to a test page
-            driver.get("data:text/html,<html><body>Test</body></html>")
+        # Inject our antidetect script directly
+        script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
+        with open(script_path) as f:
+            script = f.read()
 
-            # Inject our antidetect script directly
-            script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
-            with open(script_path) as f:
-                script = f.read()
+        driver.execute_script(script)
 
-            driver.execute_script(script)
-
-            # Check webdriver property after our script
-            check_result = driver.execute_script(
-                """
-                return {
-                    webdriver: navigator.webdriver,
-                    exists: 'webdriver' in navigator,
-                    type: typeof navigator.webdriver,
-                    isUndefined: navigator.webdriver === undefined
-                };
+        # Check webdriver property after our script
+        check_result = driver.execute_script(
             """
-            )
+            return {
+                webdriver: navigator.webdriver,
+                exists: 'webdriver' in navigator,
+                type: typeof navigator.webdriver,
+                isUndefined: navigator.webdriver === undefined
+            };
+        """
+        )
 
-            # The script should make webdriver return undefined
-            assert check_result["webdriver"] is None or check_result["isUndefined"], f"webdriver property not properly removed: {check_result}"
-
-        finally:
-            driver.quit()
+        # The script should make webdriver return undefined
+        assert check_result["webdriver"] is None or check_result["isUndefined"], f"webdriver property not properly removed: {check_result}"
 
     @pytest.mark.integration
-    def test_chrome_object_exists(self):
+    @pytest.mark.asyncio
+    async def test_chrome_object_exists(self, antidetect_browser):
         """Test that chrome object is properly defined."""
-        options = Options()
-        options.add_argument("--headless")
+        driver = antidetect_browser.driver
 
-        driver = webdriver.Chrome(options=options)
+        driver.get("data:text/html,<html><body>Test</body></html>")
 
-        try:
-            driver.get("data:text/html,<html><body>Test</body></html>")
+        # Inject our script
+        script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
+        with open(script_path) as f:
+            script = f.read()
 
-            # Inject our script
-            script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
-            with open(script_path) as f:
-                script = f.read()
+        driver.execute_script(script)
 
-            driver.execute_script(script)
-
-            # Check chrome object
-            has_chrome = driver.execute_script("return typeof window.chrome !== 'undefined'")
-            assert has_chrome, "Chrome object not defined"
-
-        finally:
-            driver.quit()
+        # Check chrome object
+        has_chrome = driver.execute_script("return typeof window.chrome !== 'undefined'")
+        assert has_chrome, "Chrome object not defined"
