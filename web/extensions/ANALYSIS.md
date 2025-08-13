@@ -1,7 +1,7 @@
 # backend/extensions Module Analysis
 
 ## Module Overview
-The `backend/extensions` module contains Chrome extensions for anti-detection and browser manipulation. Currently has only one extension (antidetect) that injects scripts to hide automation traces.
+The `web/extensions` module contains Chrome extensions for anti-detection and browser manipulation. Currently has only one extension (antidetect) that injects scripts to hide automation traces.
 
 ## Files in Module
 1. `antidetect/manifest.json` - Extension manifest (19 lines)
