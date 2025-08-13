@@ -25,6 +25,7 @@ class BrowserOptionsBuilder:
         self._config = config or Config()
         self._profile_manager = profile_manager
         self._temp_profile_dir: Path | None = None  # Track temp dir for cleanup
+        self._original_profile_dir: Path | None = None  # Track original profile for sync
         self._debug_port: int | None = None  # Track debug port for cleanup
 
     @classmethod
@@ -48,9 +49,13 @@ class BrowserOptionsBuilder:
         if self._temp_profile_dir and self._temp_profile_dir.exists():
             import shutil
 
+            # No need to sync back Chrome profile data since we handle persistence
+            # through explicit save/load methods in BrowserStorage
+
             try:
                 shutil.rmtree(self._temp_profile_dir)
                 self._temp_profile_dir = None
+                self._original_profile_dir = None
             except Exception as e:
                 logger.debug(f"Failed to cleanup temp profile directory: {e}")
 
@@ -76,6 +81,10 @@ class BrowserOptionsBuilder:
         # Add basic options
         self._add_basic_options(chrome_options, headless)
 
+        # Always assign a unique remote debugging port to avoid conflicts
+        self._debug_port = self._get_free_port()
+        chrome_options.add_argument(f"--remote-debugging-port={self._debug_port}")
+
         # Add profile if specified
         if profile and self._profile_manager:
             profile_dir = self._profile_manager.get_profile_dir(profile)
@@ -95,15 +104,12 @@ class BrowserOptionsBuilder:
                 else:
                     temp_dir.mkdir(parents=True, exist_ok=True)
 
-                # Store for cleanup later
+                # Store both directories for proper sync
                 self._temp_profile_dir = temp_dir
-
-                # Assign a unique remote debugging port for this instance
-                self._debug_port = self._get_free_port()
+                self._original_profile_dir = profile_dir
 
                 logger.info(f"Using temporary profile directory: {temp_dir} with debug port: {self._debug_port}")
                 chrome_options.add_argument(f"--user-data-dir={temp_dir}")
-                chrome_options.add_argument(f"--remote-debugging-port={self._debug_port}")
 
         # Configure based on mode
         if anti_detect:

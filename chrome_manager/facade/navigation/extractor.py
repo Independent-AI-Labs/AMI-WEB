@@ -257,3 +257,38 @@ class ContentExtractor(BaseController):
             return await self.execute_script(script)
         except Exception as e:
             raise NavigationError(f"Failed to extract images: {e}") from e
+
+    async def extract_forms(self) -> list[dict[str, Any]]:
+        """Extract all forms from the page.
+
+        Returns:
+            List of dictionaries containing form information
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        script = """
+        const forms = Array.from(document.querySelectorAll('form'));
+        return forms.map(form => {
+            const fields = Array.from(form.elements).map(el => ({
+                name: el.name || '',
+                type: el.type || el.tagName.toLowerCase(),
+                id: el.id || '',
+                value: el.value || '',
+                required: el.required || false,
+                placeholder: el.placeholder || ''
+            }));
+            return {
+                id: form.id || '',
+                name: form.name || '',
+                action: form.action || '',
+                method: form.method || 'get',
+                fields: fields
+            };
+        });
+        """
+
+        try:
+            return await self.execute_script(script) or []
+        except Exception as e:
+            raise NavigationError(f"Failed to extract forms: {e}") from e
