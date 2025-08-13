@@ -18,17 +18,33 @@ if TYPE_CHECKING:
 class BrowserOptionsBuilder:
     """Builds Chrome options for different configurations."""
 
+    # Class variable to track used ports
+    _used_ports: set[int] = set()
+
     def __init__(self, config: Config | None = None, profile_manager: "ProfileManager | None" = None):
         self._config = config or Config()
         self._profile_manager = profile_manager
         self._temp_profile_dir: Path | None = None  # Track temp dir for cleanup
+        self._debug_port: int | None = None  # Track debug port for cleanup
+
+    @classmethod
+    def _get_free_port(cls) -> int:
+        """Get a free port for remote debugging."""
+        # Start from a high port range to avoid conflicts
+        base_port = 29000
+        for port in range(base_port, base_port + 1000):
+            if port not in cls._used_ports:
+                cls._used_ports.add(port)
+                return port
+        # Fallback to incrementing port if all are used
+        return base_port + 1000 + len(cls._used_ports)
 
     def get_temp_profile_dir(self) -> Path | None:
         """Get the temporary profile directory if one was created."""
         return self._temp_profile_dir
 
     def cleanup_temp_profile(self) -> None:
-        """Clean up temporary profile directory."""
+        """Clean up temporary profile directory and release port."""
         if self._temp_profile_dir and self._temp_profile_dir.exists():
             import shutil
 
@@ -37,6 +53,11 @@ class BrowserOptionsBuilder:
                 self._temp_profile_dir = None
             except Exception as e:
                 logger.debug(f"Failed to cleanup temp profile directory: {e}")
+
+        # Release the debug port
+        if self._debug_port and self._debug_port in self._used_ports:
+            self._used_ports.discard(self._debug_port)
+            self._debug_port = None
 
     def build(
         self,
@@ -76,7 +97,13 @@ class BrowserOptionsBuilder:
 
                 # Store for cleanup later
                 self._temp_profile_dir = temp_dir
+
+                # Assign a unique remote debugging port for this instance
+                self._debug_port = self._get_free_port()
+
+                logger.info(f"Using temporary profile directory: {temp_dir} with debug port: {self._debug_port}")
                 chrome_options.add_argument(f"--user-data-dir={temp_dir}")
+                chrome_options.add_argument(f"--remote-debugging-port={self._debug_port}")
 
         # Configure based on mode
         if anti_detect:
