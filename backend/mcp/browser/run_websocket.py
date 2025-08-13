@@ -3,7 +3,30 @@
 
 import asyncio
 import contextlib
+import subprocess
 import sys
+from pathlib import Path
+
+# Ensure base module is available before imports
+project_root = Path(__file__).parent.parent.parent.parent.resolve()
+parent_base = project_root.parent / "base"
+local_base = project_root / "base"
+BASE_REPO_URL = "https://github.com/Independent-AI-Labs/AMI-BASE.git"
+
+if parent_base.exists() and (parent_base / "mcp").exists():
+    # Using base from parent directory
+    sys.path.insert(0, str(parent_base.parent))
+elif local_base.exists() and (local_base / "mcp").exists():
+    # Using local base
+    sys.path.insert(0, str(project_root))
+else:
+    # Clone the base module repository
+    try:
+        subprocess.run(["git", "clone", BASE_REPO_URL, str(local_base)], check=True, cwd=project_root, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        sys.path.insert(0, str(project_root))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # If cloning fails, try to continue anyway
+        pass
 
 from loguru import logger
 
