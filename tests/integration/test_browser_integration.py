@@ -499,6 +499,9 @@ class TestBrowserPool:
         # Total instances shouldn't increase (no new instance created)
         assert stats_after_get["total_instances"] == stats_after_return["total_instances"]
 
+        # Return instance2 back to pool
+        await session_manager.return_to_pool(instance2.id)
+
     @pytest.mark.asyncio
     async def test_parallel_operations(self, session_manager):
         """Test parallel operations on multiple instances - lightweight version."""
