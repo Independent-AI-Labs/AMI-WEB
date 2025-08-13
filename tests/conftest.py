@@ -14,9 +14,9 @@ from loguru import logger
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from chrome_manager.core.browser.instance import BrowserInstance  # noqa: E402
-from chrome_manager.core.management.manager import ChromeManager  # noqa: E402
-from chrome_manager.utils.config import Config  # noqa: E402
+from backend.core.browser.instance import BrowserInstance  # noqa: E402
+from backend.core.management.manager import ChromeManager  # noqa: E402
+from backend.utils.config import Config  # noqa: E402
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
@@ -181,9 +181,9 @@ async def browser():
 
 # DEPRECATED - use session_manager instead
 @pytest_asyncio.fixture(scope="class")
-async def chrome_manager():
+async def backend():
     """DEPRECATED: Create a Chrome manager for testing - one per test class."""
-    logger.warning("Using deprecated 'chrome_manager' fixture - use 'session_manager' instead")
+    logger.warning("Using deprecated 'backend' fixture - use 'session_manager' instead")
     # Use test config for all tests
     test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
     manager = ChromeManager(config_file=test_config)

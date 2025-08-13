@@ -25,9 +25,20 @@ The following are **non-negotiable** and will result in rejected PRs:
 ```bash
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt -r requirements-test.txt
+
+# Install uv for fast dependency management
+pip install uv
+
+# Create virtual environment with uv
+uv venv .venv
+.venv\Scripts\activate  # Windows
+# or
+source .venv/bin/activate  # macOS/Linux
+
+# Install dependencies (much faster with uv)
+uv pip install -r requirements.txt -r requirements-test.txt
+
+# Install pre-commit hooks
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
@@ -89,10 +100,14 @@ except:
 
 ### Commands
 ```bash
-pytest                                              # Run all tests
-pytest --cov=chrome_manager --cov-report=html      # With coverage
-pytest tests/integration/test_antidetection.py -v  # Specific tests
-pre-commit run --all-files                         # Pre-commit checks
+# Using the test runner script (handles environment)
+python scripts/run_tests.py                        # Run all tests
+python scripts/run_tests.py --cov=backend          # With coverage
+python scripts/run_tests.py tests/integration/test_antidetection.py -v  # Specific tests
+
+# Pre-commit checks
+pre-commit run --all-files                         # Run all checks
+pre-commit run ruff --all-files                    # Just ruff linting
 ```
 
 ### Test Structure
@@ -114,7 +129,7 @@ pre-commit run --all-files
 # 2. Fix ALL issues - don't bypass
 
 # 3. Run tests
-pytest
+python scripts/run_tests.py
 
 # 4. Commit only when everything passes
 git add -A

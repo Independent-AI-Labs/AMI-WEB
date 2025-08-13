@@ -4,11 +4,11 @@ from typing import Any
 
 from loguru import logger
 
-from chrome_manager.core.management.manager import ChromeManager
-from chrome_manager.mcp.base.mcp_server import BaseMCPServer
-from chrome_manager.mcp.browser.tools.definitions import register_all_tools
-from chrome_manager.mcp.browser.tools.executor import ToolExecutor
-from chrome_manager.mcp.browser.tools.registry import ToolRegistry
+from backend.core.management.manager import ChromeManager
+from backend.mcp.base.mcp_server import BaseMCPServer
+from backend.mcp.browser.tools.definitions import register_all_tools
+from backend.mcp.browser.tools.executor import ToolExecutor
+from backend.mcp.browser.tools.registry import ToolRegistry
 
 
 class BrowserMCPServer(BaseMCPServer):

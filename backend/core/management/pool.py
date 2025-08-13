@@ -140,7 +140,7 @@ class BrowserPool:
         )
         opts = options or ChromeOptions()
         # Use anti_detect from options if provided, otherwise from config, default to True
-        default_anti_detect = self._config.get("chrome_manager.pool.anti_detect_default", True)
+        default_anti_detect = self._config.get("backend.pool.anti_detect_default", True)
         anti_detect = getattr(opts, "anti_detect", default_anti_detect)
         await instance.launch(headless=opts.headless, extensions=opts.extensions, options=opts, anti_detect=anti_detect)
         return instance

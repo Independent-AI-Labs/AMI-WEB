@@ -44,7 +44,7 @@ class BrowserLifecycle:
             self._security_config = config
         else:
             # Load from config or use default
-            security_level = self._config.get("chrome_manager.security.level", "standard")
+            security_level = self._config.get("backend.security.level", "standard")
             self._security_config = SecurityConfig.from_level(SecurityLevel(security_level))
 
     async def launch(self, chrome_options: Options, anti_detect: bool = False) -> WebDriver:
@@ -84,8 +84,8 @@ class BrowserLifecycle:
         loop = asyncio.get_event_loop()
 
         # Get Chrome and ChromeDriver paths
-        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
-        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path")
+        chrome_binary_path = self._config.get("backend.browser.chrome_binary_path")
+        chromedriver_path = self._config.get("backend.browser.chromedriver_path")
 
         # Set Chrome binary location
         if chrome_binary_path and Path(chrome_binary_path).exists():
@@ -132,12 +132,12 @@ class BrowserLifecycle:
         loop = asyncio.get_event_loop()
 
         # Get Chrome binary path
-        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
+        chrome_binary_path = self._config.get("backend.browser.chrome_binary_path")
         if chrome_binary_path and Path(chrome_binary_path).exists():
             chrome_options.binary_location = str(chrome_binary_path)
 
         # Get ChromeDriver path
-        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path")
+        chromedriver_path = self._config.get("backend.browser.chromedriver_path")
 
         # Create service and driver
         self._service = Service(executable_path=chromedriver_path) if chromedriver_path else Service()

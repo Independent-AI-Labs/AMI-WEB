@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from chrome_manager.mcp.base.auth import (
+from backend.mcp.base.auth import (
     AuthenticationMiddleware,
     HMACAuthProvider,
     TokenAuthProvider,

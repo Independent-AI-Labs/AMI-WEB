@@ -1,7 +1,7 @@
-# chrome_manager/scripts Module Analysis
+# backend/scripts Module Analysis
 
 ## Module Overview
-The `chrome_manager/scripts` module contains JavaScript files that are injected into web pages for anti-detection and browser property spoofing. Currently contains only one file but should be expanded to organize different script types.
+The `backend/scripts` module contains JavaScript files that are injected into web pages for anti-detection and browser property spoofing. Currently contains only one file but should be expanded to organize different script types.
 
 ## Files in Module
 1. `complete-antidetect.js` - Comprehensive anti-detection script (295 lines)
@@ -152,7 +152,7 @@ The scripts module should be organized by functionality:
 
 ### Suggested Structure:
 ```
-chrome_manager/scripts/
+backend/scripts/
 ├── antidetect/
 │   ├── webdriver.js        # Webdriver removal only
 │   ├── canvas.js           # Canvas fingerprint protection

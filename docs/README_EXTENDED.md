@@ -98,10 +98,10 @@ sequenceDiagram
 ### System Requirements
 
 - **Operating System**: Windows 10/11, macOS 11+, Ubuntu 20.04+
-- **Python**: 3.10 or higher
+- **Python**: 3.12 recommended (3.10+ supported)
 - **Memory**: Minimum 4GB RAM (8GB+ recommended)
 - **Storage**: 2GB free space
-- **Chrome**: Version 120+ (auto-downloaded if not present)
+- **Chrome**: Included in repository (chromium-win/chrome.exe)
 
 ### Detailed Installation
 
@@ -110,26 +110,36 @@ sequenceDiagram
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
 
-# 2. Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 2. Install uv for fast dependency management
+pip install uv
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Create virtual environment with uv
+uv venv .venv
+.venv\Scripts\activate  # Windows
+# or
+source .venv/bin/activate  # macOS/Linux
 
-# 4. Download Chrome and ChromeDriver
-python setup_chrome.py  # Auto-downloads compatible versions
+# 4. Install dependencies with uv (much faster than pip)
+uv pip install -r requirements.txt
+uv pip install -r requirements-test.txt  # For development/testing
 
 # 5. Configure settings
 cp config.sample.yaml config.yaml
 # Edit config.yaml with your preferences
+
+# Note: Chrome and ChromeDriver are included in the repository
+# Located at: chromium-win/chrome.exe and chromedriver.exe
+
+# 6. Run MCP server (optional)
+python scripts/start_mcp_server.py              # Stdio mode for Claude Desktop
+python scripts/start_mcp_server.py websocket    # WebSocket mode
 ```
 
 ### Configuration File Structure
 
 ```yaml
 # config.yaml
-chrome_manager:
+backend:
   browser:
     chrome_binary_path: "./chromium-win/chrome.exe"
     chromedriver_path: "./chromedriver.exe"
@@ -168,7 +178,7 @@ server:
 # Optional environment variables
 export TEST_HEADLESS=true           # Run tests in headless mode
 export LOG_LEVEL=INFO              # Logging verbosity
-export CHROME_MANAGER_CONFIG=/path/to/config.yaml
+export backend_CONFIG=/path/to/config.yaml
 ```
 
 ## Core Components
@@ -178,7 +188,7 @@ export CHROME_MANAGER_CONFIG=/path/to/config.yaml
 The central orchestrator that manages all browser instances and operations.
 
 ```python
-from chrome_manager.core import ChromeManager
+from backend.core.management.manager import ChromeManager
 
 # Initialize manager
 manager = ChromeManager(config_file="config.yaml")
@@ -204,7 +214,7 @@ await manager.shutdown()
 Manages persistent browser profiles with isolated storage.
 
 ```python
-from chrome_manager.core.management import ProfileManager
+from backend.core.management.profile_manager import ProfileManager
 
 profile_manager = ProfileManager(base_dir="./browser_profiles")
 
@@ -229,7 +239,7 @@ profile_manager.delete_profile("old_profile")
 Saves and restores complete browser states.
 
 ```python
-from chrome_manager.core.management import SessionManager
+from backend.core.management.session_manager import SessionManager
 
 session_manager = SessionManager(session_dir="./sessions")
 
@@ -248,7 +258,7 @@ restored_instance = await session_manager.restore_session(session_id)
 Configures browser security policies.
 
 ```python
-from chrome_manager.models.security import SecurityConfig, SecurityLevel
+from backend.models.security import SecurityConfig, SecurityLevel
 
 # Use preset levels
 strict_config = SecurityConfig.from_level(SecurityLevel.STRICT)
@@ -269,8 +279,8 @@ custom_config = SecurityConfig(
 Manages browser fingerprinting and anti-detection properties.
 
 ```python
-from chrome_manager.core.browser import PropertiesManager
-from chrome_manager.models.browser_properties import BrowserProperties
+from backend.core.browser import PropertiesManager
+from backend.models.browser_properties import BrowserProperties
 
 properties_manager = PropertiesManager(config)
 
@@ -718,37 +728,46 @@ graph LR
 ### Running Tests
 
 ```bash
-# Run all tests
-pytest
+# Method 1: Using the test runner script (Recommended)
+python scripts/run_tests.py                    # Run all tests
+python scripts/run_tests.py tests/unit/        # Run unit tests only
+python scripts/run_tests.py -k test_properties # Run tests matching pattern
+python scripts/run_tests.py -x                 # Stop on first failure
+python scripts/run_tests.py --lf               # Run last failed tests
+
+# Method 2: Direct pytest (ensure .venv is activated)
+.venv\Scripts\python.exe -m pytest             # Windows
+.venv/bin/python -m pytest                     # macOS/Linux
 
 # Run specific test file
-pytest tests/integration/test_antidetection.py -v
+python scripts/run_tests.py tests/integration/test_antidetection.py -v
 
 # Run with coverage
-pytest --cov=chrome_manager --cov-report=html
+python scripts/run_tests.py --cov=backend --cov-report=html
 
-# Run in parallel
-pytest -n auto
-
-# Run with specific markers
-pytest -m "not slow"
+# Run specific test
+python scripts/run_tests.py tests/unit/test_chrome_manager.py::test_basic_operations -xvs
 ```
 
 ### Test Configuration
 
-```python
+```ini
 # pytest.ini
 [tool:pytest]
 testpaths = tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
-asyncio_mode = mode
+asyncio_mode = auto
 timeout = 300
+timeout_method = thread
+timeout_func_only = False
+addopts = -v --tb=short --strict-markers
 markers =
     slow: marks tests as slow
     integration: integration tests
     unit: unit tests
+    asyncio: marks async tests
 ```
 
 ### Continuous Integration
@@ -771,8 +790,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install -r requirements.txt
-      - run: pytest --cov
+      - run: pip install uv
+      - run: uv venv .venv
+      - run: uv pip install -r requirements.txt -r requirements-test.txt
+      - run: .venv/bin/python -m pytest --cov
 ```
 
 ## Performance Optimization

@@ -34,8 +34,17 @@ AMI-WEB is an enterprise-grade browser automation platform that prioritizes secu
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
 
-# Install dependencies
-pip install -r requirements.txt
+# Install uv for fast dependency management (recommended)
+pip install uv
+
+# Create virtual environment and install dependencies
+uv venv .venv
+.venv\Scripts\activate  # Windows
+# or
+source .venv/bin/activate  # macOS/Linux
+
+uv pip install -r requirements.txt
+uv pip install -r requirements-test.txt  # For development
 
 # Copy and configure settings
 cp config.sample.yaml config.yaml
@@ -44,7 +53,7 @@ cp config.sample.yaml config.yaml
 ### Basic Usage
 
 ```python
-from chrome_manager.core import ChromeManager
+from backend.core.management.manager import ChromeManager
 
 async def main():
     # Initialize the platform
@@ -71,7 +80,7 @@ async def main():
   "mcpServers": {
     "ami-web": {
       "command": "python",
-      "args": ["mcp_stdio_server.py"],
+      "args": ["scripts/start_mcp_server.py"],  // Defaults to stdio mode
       "cwd": "/path/to/AMI-WEB"
     }
   }

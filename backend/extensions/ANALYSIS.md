@@ -1,7 +1,7 @@
-# chrome_manager/extensions Module Analysis
+# backend/extensions Module Analysis
 
 ## Module Overview
-The `chrome_manager/extensions` module contains Chrome extensions for anti-detection and browser manipulation. Currently has only one extension (antidetect) that injects scripts to hide automation traces.
+The `backend/extensions` module contains Chrome extensions for anti-detection and browser manipulation. Currently has only one extension (antidetect) that injects scripts to hide automation traces.
 
 ## Files in Module
 1. `antidetect/manifest.json` - Extension manifest (19 lines)
@@ -150,7 +150,7 @@ The extensions module should support multiple extensions with better organizatio
 
 ### Suggested Structure:
 ```
-chrome_manager/extensions/
+backend/extensions/
 ├── antidetect/
 │   ├── manifest.json
 │   ├── background.js        # Background service worker

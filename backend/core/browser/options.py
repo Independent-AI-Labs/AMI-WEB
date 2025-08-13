@@ -174,11 +174,11 @@ class BrowserOptionsBuilder:
     def _add_conditional_options(self, chrome_options: Options) -> None:
         """Add conditional options based on configuration."""
         # Window size
-        window_size = self._config.get("chrome_manager.browser.window_size", "1920,1080")
+        window_size = self._config.get("backend.browser.window_size", "1920,1080")
         chrome_options.add_argument(f"--window-size={window_size}")
 
         # User agent
-        user_agent = self._config.get("chrome_manager.browser.user_agent")
+        user_agent = self._config.get("backend.browser.user_agent")
         if user_agent:
             chrome_options.add_argument(f"--user-agent={user_agent}")
 
@@ -218,7 +218,7 @@ class BrowserOptionsBuilder:
             "--no-default-browser-check",
             "--disable-dev-shm-usage",
             "--disable-extensions-file-access-check",
-            "--disable-web-security" if self._config.get("chrome_manager.browser.disable_web_security", False) else None,
+            "--disable-web-security" if self._config.get("backend.browser.disable_web_security", False) else None,
             "--disable-features=VizDisplayCompositor",
             "--disable-breakpad",
             "--disable-features=TranslateUI",
