@@ -14,7 +14,7 @@ class PropertyInjectionService:
 
     def __init__(self):
         """Initialize the service with Jinja2 template environment."""
-        template_dir = Path(__file__).parent.parent / "templates"
+        template_dir = Path(__file__).parent.parent.parent / "web" / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(["html", "xml"]),

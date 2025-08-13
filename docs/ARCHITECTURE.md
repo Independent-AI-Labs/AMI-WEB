@@ -197,7 +197,7 @@ driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
 })
 ```
 
-### Anti-Detection Script (`backend/scripts/complete-antidetect.js`)
+### Anti-Detection Script (`web/scripts/complete-antidetect.js`)
 Comprehensive fingerprint spoofing:
 - WebDriver property removal
 - Plugin array simulation
