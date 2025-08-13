@@ -5,7 +5,8 @@ from typing import Any
 from selenium.webdriver.common.by import By
 
 from ..core.browser.instance import BrowserInstance
-from ..utils import is_in_thread_context, parse_selector
+from ..utils.selectors import parse_selector
+from ..utils.threading import is_in_thread_context
 
 
 class BaseController:

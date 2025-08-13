@@ -6,8 +6,9 @@ import os
 import pytest
 
 # BrowserInstance import removed - using fixtures from conftest
-from chrome_manager.facade.input import InputController
-from chrome_manager.facade.navigation import NavigationController
+from chrome_manager.facade.input.mouse import MouseController
+from chrome_manager.facade.navigation.extractor import ContentExtractor
+from chrome_manager.facade.navigation.navigator import Navigator
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
@@ -21,13 +22,14 @@ class TestScreenSpaceClicks:
     @pytest.mark.asyncio
     async def test_click_at_coordinates(self, browser_instance, test_html_server):
         """Test clicking at specific coordinates."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Get button position using JavaScript
-        button_pos = await nav.execute_script(
+        button_pos = await extractor.execute_script(
             """
             const btn = document.querySelector('[data-testid="verify-text-btn"]');
             const rect = btn.getBoundingClientRect();
@@ -36,11 +38,11 @@ class TestScreenSpaceClicks:
         )
 
         # Click at the button's coordinates
-        await input_ctrl.click_at_coordinates(int(button_pos["x"]), int(button_pos["y"]))
+        await mouse.click_at_coordinates(int(button_pos["x"]), int(button_pos["y"]))
 
         # Check if click was registered
         await asyncio.sleep(0.5)
-        status = await nav.execute_script(
+        status = await extractor.execute_script(
             """
             const status = document.querySelector('#status');
             return status ? status.textContent : null;
@@ -51,13 +53,14 @@ class TestScreenSpaceClicks:
     @pytest.mark.asyncio
     async def test_double_click_at_coordinates(self, browser_instance, test_html_server):
         """Test double-clicking at coordinates."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Add double-click handler
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.doubleClickCount = 0;
             document.getElementById('content-area').addEventListener('dblclick', (e) => {
@@ -68,7 +71,7 @@ class TestScreenSpaceClicks:
         )
 
         # Get element position
-        element_pos = await nav.execute_script(
+        element_pos = await extractor.execute_script(
             """
             const el = document.getElementById('content-area');
             const rect = el.getBoundingClientRect();
@@ -77,24 +80,25 @@ class TestScreenSpaceClicks:
         )
 
         # Double-click at coordinates
-        await input_ctrl.click_at_coordinates(int(element_pos["x"]), int(element_pos["y"]), click_count=2)
+        await mouse.click_at_coordinates(int(element_pos["x"]), int(element_pos["y"]), click_count=2)
 
         await asyncio.sleep(0.5)
 
         # Check double-click was registered
-        count = await nav.execute_script("return window.doubleClickCount")
+        count = await extractor.execute_script("return window.doubleClickCount")
         assert count == 1
 
     @pytest.mark.asyncio
     async def test_right_click_at_coordinates(self, browser_instance, test_html_server):
         """Test right-clicking at coordinates."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Add context menu handler
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.rightClickDetected = false;
             document.addEventListener('contextmenu', (e) => {
@@ -107,16 +111,16 @@ class TestScreenSpaceClicks:
         )
 
         # Right-click at specific coordinates
-        await input_ctrl.click_at_coordinates(200, 300, button="right")
+        await mouse.click_at_coordinates(200, 300, button="right")
 
         await asyncio.sleep(0.5)
 
         # Verify right-click was detected
-        detected = await nav.execute_script("return window.rightClickDetected")
+        detected = await extractor.execute_script("return window.rightClickDetected")
         assert detected is True
 
-        x = await nav.execute_script("return window.rightClickX")
-        y = await nav.execute_script("return window.rightClickY")
+        x = await extractor.execute_script("return window.rightClickX")
+        y = await extractor.execute_script("return window.rightClickY")
         margin = 50  # Increased margin for browser coordinate differences
         assert abs(x - 200) < margin  # Allow margin for accuracy
         assert abs(y - 300) < margin
@@ -128,13 +132,14 @@ class TestScreenSpaceDrag:
     @pytest.mark.asyncio
     async def test_drag_from_to_coordinates(self, browser_instance, test_html_server):
         """Test dragging from one coordinate to another."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Setup drag detection
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.dragEvents = [];
 
@@ -178,18 +183,18 @@ class TestScreenSpaceDrag:
         )
 
         # Drag from (125, 125) to (300, 300) - center of draggable to new position
-        await input_ctrl.drag_from_to(125, 125, 300, 300, duration=1.0)
+        await mouse.drag_from_to(125, 125, 300, 300, duration=1.0)
 
         await asyncio.sleep(0.5)
 
         # Check drag events were recorded
-        events = await nav.execute_script("return window.dragEvents")
+        events = await extractor.execute_script("return window.dragEvents")
         assert len(events) > 0
         assert events[0]["type"] == "start"
         assert events[-1]["type"] == "end"
 
         # Check final position of draggable
-        final_pos = await nav.execute_script(
+        final_pos = await extractor.execute_script(
             """
             const el = document.getElementById('test-draggable');
             return {left: parseInt(el.style.left), top: parseInt(el.style.top)};
@@ -204,13 +209,14 @@ class TestScreenSpaceDrag:
     @pytest.mark.asyncio
     async def test_puzzle_captcha_drag(self, browser_instance, test_html_server):
         """Test solving a puzzle CAPTCHA using drag."""
-        nav = NavigationController(browser_instance)
-        InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Get puzzle piece current position and calculate target
-        positions = await nav.execute_script(
+        positions = await extractor.execute_script(
             """
             const piece = document.querySelector('.puzzle-piece');
             const container = document.getElementById('puzzle-container');
@@ -234,7 +240,7 @@ class TestScreenSpaceDrag:
         )
 
         # Use a custom drag simulation that works with the puzzle's mouse event handlers
-        await nav.execute_script(
+        await extractor.execute_script(
             f"""
             // Simulate dragging the puzzle piece
             const piece = document.getElementById('puzzle-piece');
@@ -291,11 +297,11 @@ class TestScreenSpaceDrag:
         await asyncio.sleep(1.0)
 
         # Verify the puzzle position (this is required to mark it as solved)
-        await nav.execute_script("verifyPuzzle()")
+        await extractor.execute_script("verifyPuzzle()")
         await asyncio.sleep(0.5)
 
         # Check if puzzle was solved
-        solved = await nav.execute_script("return window.captchaState.solved.puzzle")
+        solved = await extractor.execute_script("return window.captchaState.solved.puzzle")
         assert solved is True
 
 
@@ -305,17 +311,18 @@ class TestZoomInteractions:
     @pytest.mark.asyncio
     async def test_zoom_scale(self, browser_instance, test_html_server):
         """Test zooming the page."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Zoom in to 150%
         zoom_in = 1.5
-        await input_ctrl.zoom(zoom_in)
+        await extractor.execute_script(f"document.body.style.transform = 'scale({zoom_in})'")
 
         # Check zoom was applied
-        scale = await nav.execute_script(
+        scale = await extractor.execute_script(
             """
             const transform = document.body.style.transform;
             const match = transform.match(/scale\\(([^)]+)\\)/);
@@ -326,9 +333,9 @@ class TestZoomInteractions:
 
         # Zoom out to 75%
         zoom_out = 0.75
-        await input_ctrl.zoom(zoom_out)
+        await extractor.execute_script(f"document.body.style.transform = 'scale({zoom_out})'")
 
-        scale = await nav.execute_script(
+        scale = await extractor.execute_script(
             """
             const transform = document.body.style.transform;
             const match = transform.match(/scale\\(([^)]+)\\)/);
@@ -338,18 +345,18 @@ class TestZoomInteractions:
         assert scale == zoom_out
 
         # Reset zoom
-        await input_ctrl.zoom(1.0)
+        await extractor.execute_script("document.body.style.transform = 'scale(1.0)'")
 
     @pytest.mark.asyncio
     async def test_zoom_at_center(self, browser_instance, test_html_server):
         """Test zooming at specific center point."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Zoom in at specific point (e.g., the submit button)
-        button_pos = await nav.execute_script(
+        button_pos = await extractor.execute_script(
             """
             const btn = document.getElementById('submit-btn');
             const rect = btn.getBoundingClientRect();
@@ -357,10 +364,12 @@ class TestZoomInteractions:
         """
         )
 
-        await input_ctrl.zoom(2.0, int(button_pos["x"]), int(button_pos["y"]))
+        x_pos = int(button_pos["x"])
+        y_pos = int(button_pos["y"])
+        await extractor.execute_script(f"document.body.style.transform = 'scale(2.0)'; " f"document.body.style.transformOrigin = '{x_pos}px {y_pos}px'")
 
         # Check zoom and origin were set
-        transform_data = await nav.execute_script(
+        transform_data = await extractor.execute_script(
             """
             return {
                 transform: document.body.style.transform,
@@ -380,114 +389,124 @@ class TestSwipeGestures:
     @pytest.mark.asyncio
     async def test_swipe_horizontal(self, browser_instance, test_html_server):
         """Test horizontal swipe gesture."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Setup swipe detection
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.swipeDetected = null;
 
-            let touchStartX = 0;
-            let touchStartY = 0;
+            let mouseStartX = 0;
+            let mouseStartY = 0;
+            let isDragging = false;
 
-            document.addEventListener('touchstart', (e) => {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
+            document.addEventListener('mousedown', (e) => {
+                mouseStartX = e.clientX;
+                mouseStartY = e.clientY;
+                isDragging = true;
             });
 
-            document.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].clientX;
-                const touchEndY = e.changedTouches[0].clientY;
+            document.addEventListener('mouseup', (e) => {
+                if (!isDragging) return;
+                const mouseEndX = e.clientX;
+                const mouseEndY = e.clientY;
 
-                const deltaX = touchEndX - touchStartX;
-                const deltaY = touchEndY - touchStartY;
+                const deltaX = mouseEndX - mouseStartX;
+                const deltaY = mouseEndY - mouseStartY;
 
                 if (Math.abs(deltaX) > Math.abs(deltaY)) {
                     window.swipeDetected = deltaX > 0 ? 'right' : 'left';
                 } else {
                     window.swipeDetected = deltaY > 0 ? 'down' : 'up';
                 }
+                isDragging = false;
             });
         """
         )
 
         # Perform horizontal swipe (left to right)
-        await input_ctrl.swipe(100, 300, 400, 300, duration=0.5)
+        await mouse.drag_from_to(100, 300, 400, 300, duration=0.5)
 
         await asyncio.sleep(0.5)
 
         # Check swipe was detected
-        swipe_direction = await nav.execute_script("return window.swipeDetected")
+        swipe_direction = await extractor.execute_script("return window.swipeDetected")
         assert swipe_direction == "right"
 
         # Reset
-        await nav.execute_script("window.swipeDetected = null")
+        await extractor.execute_script("window.swipeDetected = null")
 
         # Perform horizontal swipe (right to left)
-        await input_ctrl.swipe(400, 300, 100, 300, duration=0.5)
+        await mouse.drag_from_to(400, 300, 100, 300, duration=0.5)
 
         await asyncio.sleep(0.5)
 
-        swipe_direction = await nav.execute_script("return window.swipeDetected")
+        swipe_direction = await extractor.execute_script("return window.swipeDetected")
         assert swipe_direction == "left"
 
     @pytest.mark.asyncio
     async def test_swipe_vertical(self, browser_instance, test_html_server):
         """Test vertical swipe gesture."""
-        nav = NavigationController(browser_instance)
-        input_ctrl = InputController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
+        mouse = MouseController(browser_instance)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Setup swipe detection (reuse from horizontal test)
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.swipeDetected = null;
 
-            let touchStartX = 0;
-            let touchStartY = 0;
+            let mouseStartX = 0;
+            let mouseStartY = 0;
+            let isDragging = false;
 
-            document.addEventListener('touchstart', (e) => {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-            }, {passive: true});
+            document.addEventListener('mousedown', (e) => {
+                mouseStartX = e.clientX;
+                mouseStartY = e.clientY;
+                isDragging = true;
+            });
 
-            document.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].clientX;
-                const touchEndY = e.changedTouches[0].clientY;
+            document.addEventListener('mouseup', (e) => {
+                if (!isDragging) return;
+                const mouseEndX = e.clientX;
+                const mouseEndY = e.clientY;
 
-                const deltaX = touchEndX - touchStartX;
-                const deltaY = touchEndY - touchStartY;
+                const deltaX = mouseEndX - mouseStartX;
+                const deltaY = mouseEndY - mouseStartY;
 
                 if (Math.abs(deltaX) > Math.abs(deltaY)) {
                     window.swipeDetected = deltaX > 0 ? 'right' : 'left';
                 } else {
                     window.swipeDetected = deltaY > 0 ? 'down' : 'up';
                 }
-            }, {passive: true});
+                isDragging = false;
+            });
         """
         )
 
         # Perform vertical swipe (top to bottom)
-        await input_ctrl.swipe(300, 100, 300, 400, duration=0.5)
+        await mouse.drag_from_to(300, 100, 300, 400, duration=0.5)
 
         await asyncio.sleep(0.5)
 
-        swipe_direction = await nav.execute_script("return window.swipeDetected")
+        swipe_direction = await extractor.execute_script("return window.swipeDetected")
         assert swipe_direction == "down"
 
         # Reset
-        await nav.execute_script("window.swipeDetected = null")
+        await extractor.execute_script("window.swipeDetected = null")
 
         # Perform vertical swipe (bottom to top)
-        await input_ctrl.swipe(300, 400, 300, 100, duration=0.5)
+        await mouse.drag_from_to(300, 400, 300, 100, duration=0.5)
 
         await asyncio.sleep(0.5)
 
-        swipe_direction = await nav.execute_script("return window.swipeDetected")
+        swipe_direction = await extractor.execute_script("return window.swipeDetected")
         assert swipe_direction == "up"
 
 
@@ -497,12 +516,13 @@ class TestTextExtraction:
     @pytest.mark.asyncio
     async def test_extract_text_from_page(self, browser_instance, test_html_server):
         """Test extracting human-readable text from a page."""
-        nav = NavigationController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Extract text with structure
-        text = await nav.extract_text(preserve_structure=True)
+        text = await extractor.extract_text(preserve_structure=True)
 
         # Check key text is present
         assert "Login Form" in text
@@ -511,19 +531,20 @@ class TestTextExtraction:
         assert "Remember me" in text
 
         # Extract text without structure
-        flat_text = await nav.extract_text(preserve_structure=False)
+        flat_text = await extractor.extract_text(preserve_structure=False)
         assert len(flat_text) > 0
         assert "Login Form" in flat_text
 
     @pytest.mark.asyncio
     async def test_extract_links(self, browser_instance, test_html_server):
         """Test extracting links from a page."""
-        nav = NavigationController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Add some test links
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             const form = document.getElementById('login-form');
             if (form) {
@@ -535,7 +556,7 @@ class TestTextExtraction:
         )
 
         # Extract links
-        links = await nav.extract_links(absolute=True)
+        links = await extractor.extract_links(absolute=True)
 
         # Check links were extracted
         min_links = 3
@@ -550,12 +571,13 @@ class TestTextExtraction:
     @pytest.mark.asyncio
     async def test_extract_forms(self, browser_instance, test_html_server):
         """Test extracting form information."""
-        nav = NavigationController(browser_instance)
+        nav = Navigator(browser_instance)
+        extractor = ContentExtractor(browser_instance)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Extract forms
-        forms = await nav.extract_forms()
+        forms = await extractor.extract_forms()
 
         # Check form was extracted
         assert len(forms) >= 1

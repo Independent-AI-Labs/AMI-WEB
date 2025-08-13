@@ -5,7 +5,7 @@ from typing import Any
 
 from loguru import logger
 
-from chrome_manager.core import ChromeManager
+from chrome_manager.core.management.manager import ChromeManager
 
 
 class ToolExecutor:
@@ -62,9 +62,9 @@ class ToolExecutor:
 
         # Navigation tools
         if tool_name == "browser_navigate":
-            from chrome_manager.facade.navigation import NavigationController
+            from chrome_manager.facade.navigation.navigator import Navigator
 
-            nav = NavigationController(instance)
+            nav = Navigator(instance)
             # Don't pass wait_for as a string - Navigator expects None or a WaitCondition object
             await nav.navigate(
                 arguments["url"],
@@ -74,23 +74,23 @@ class ToolExecutor:
             return {"status": "navigated", "url": arguments["url"]}
 
         if tool_name == "browser_back":
-            from chrome_manager.facade.navigation import NavigationController
+            from chrome_manager.facade.navigation.navigator import Navigator
 
-            nav = NavigationController(instance)
+            nav = Navigator(instance)
             await nav.back()
             return {"status": "navigated_back"}
 
         if tool_name == "browser_forward":
-            from chrome_manager.facade.navigation import NavigationController
+            from chrome_manager.facade.navigation.navigator import Navigator
 
-            nav = NavigationController(instance)
+            nav = Navigator(instance)
             await nav.forward()
             return {"status": "navigated_forward"}
 
         if tool_name == "browser_refresh":
-            from chrome_manager.facade.navigation import NavigationController
+            from chrome_manager.facade.navigation.navigator import Navigator
 
-            nav = NavigationController(instance)
+            nav = Navigator(instance)
             await nav.refresh()
             return {"status": "refreshed"}
 
@@ -99,18 +99,18 @@ class ToolExecutor:
 
         # Input tools
         if tool_name == "browser_click":
-            from chrome_manager.facade.input import InputController
+            from chrome_manager.facade.input.mouse import MouseController
 
-            input_ctrl = InputController(instance)
+            mouse = MouseController(instance)
             # MouseController.click doesn't take button/click_count params
             # Just use the selector for now
-            await input_ctrl.click(arguments["selector"])
+            await mouse.click(arguments["selector"])
             return {"status": "clicked"}
 
         if tool_name == "browser_type":
-            from chrome_manager.facade.input import InputController
+            from chrome_manager.facade.input.keyboard import KeyboardController
 
-            input_ctrl = InputController(instance)
+            input_ctrl = KeyboardController(instance)
             await input_ctrl.type_text(
                 arguments["selector"],
                 arguments["text"],
@@ -119,28 +119,33 @@ class ToolExecutor:
             return {"status": "typed"}
 
         if tool_name == "browser_select":
-            from chrome_manager.facade.input import InputController
+            from chrome_manager.facade.input.forms import FormsController
 
-            input_ctrl = InputController(instance)
-            await input_ctrl.select_option(arguments["selector"], arguments["value"])
+            forms = FormsController(instance)
+            await forms.select_option(arguments["selector"], arguments["value"])
             return {"status": "selected"}
 
         if tool_name == "browser_scroll":
-            from chrome_manager.facade.input import InputController
+            from chrome_manager.facade.navigation.scroller import Scroller
 
-            input_ctrl = InputController(instance)
-            # InputController doesn't have scroll method
-            # Use execute_script to scroll
+            scroller = Scroller(instance)
+            # Use the Scroller to handle scrolling
             direction = arguments.get("direction", "down")
             amount = arguments.get("amount", 300)
+
+            # Map direction to x/y offsets
+            x_offset = 0
+            y_offset = 0
             if direction == "down":
-                instance.driver.execute_script(f"window.scrollBy(0, {amount})")
+                y_offset = amount
             elif direction == "up":
-                instance.driver.execute_script(f"window.scrollBy(0, -{amount})")
+                y_offset = -amount
             elif direction == "left":
-                instance.driver.execute_script(f"window.scrollBy(-{amount}, 0)")
+                x_offset = -amount
             elif direction == "right":
-                instance.driver.execute_script(f"window.scrollBy({amount}, 0)")
+                x_offset = amount
+
+            await scroller.scroll_by(x=x_offset, y=y_offset)
             return {"status": "scrolled"}
 
         if tool_name == "browser_execute_script":
@@ -151,14 +156,14 @@ class ToolExecutor:
 
         # Content extraction tools
         if tool_name == "browser_get_text":
-            from chrome_manager.facade.navigation import ContentExtractor
+            from chrome_manager.facade.navigation.extractor import ContentExtractor
 
             extractor = ContentExtractor(instance)
             text = await extractor.extract_text()
             return {"text": text}
 
         if tool_name == "browser_get_html":
-            from chrome_manager.facade.navigation import ContentExtractor
+            from chrome_manager.facade.navigation.extractor import ContentExtractor
 
             extractor = ContentExtractor(instance)
             if selector := arguments.get("selector"):
@@ -168,14 +173,14 @@ class ToolExecutor:
             return {"html": html}
 
         if tool_name == "browser_extract_forms":
-            from chrome_manager.facade.navigation import ContentExtractor
+            from chrome_manager.facade.navigation.extractor import ContentExtractor
 
             extractor = ContentExtractor(instance)
-            forms = await extractor.extract_forms()
-            return {"forms": forms}
+            forms_data = await extractor.extract_forms()
+            return {"forms": forms_data}
 
         if tool_name == "browser_extract_links":
-            from chrome_manager.facade.navigation import ContentExtractor
+            from chrome_manager.facade.navigation.extractor import ContentExtractor
 
             extractor = ContentExtractor(instance)
             links = await extractor.extract_links(absolute=arguments.get("absolute", True))

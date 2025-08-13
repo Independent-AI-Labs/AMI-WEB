@@ -6,9 +6,9 @@ Test script for Chrome Manager
 import asyncio
 import json
 
-from chrome_manager import ChromeManager
-from chrome_manager.facade.media import ScreenshotController
-from chrome_manager.facade.navigation import NavigationController
+from chrome_manager.core.management.manager import ChromeManager
+from chrome_manager.facade.media.screenshot import ScreenshotController
+from chrome_manager.facade.navigation.navigator import Navigator
 
 
 async def test_basic_operations():
@@ -26,7 +26,7 @@ async def test_basic_operations():
 
         # Navigate to a website
         print("\n2. Navigating to example.com...")
-        nav = NavigationController(instance)
+        nav = Navigator(instance)
         result = await nav.navigate("https://example.com")
         print(f"   [OK] Loaded: {result.title} in {result.load_time:.2f}s")
 
@@ -38,7 +38,7 @@ async def test_basic_operations():
 
         # Execute JavaScript
         print("\n4. Executing JavaScript...")
-        js_result = await nav.execute_script("return document.title")
+        js_result = instance.driver.execute_script("return document.title")
         print(f"   [OK] JS Result: {js_result}")
 
         # Get browser info

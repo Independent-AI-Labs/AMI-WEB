@@ -12,8 +12,8 @@ import pytest_asyncio
 import websockets
 from loguru import logger
 
-from chrome_manager.core import ChromeManager
-from chrome_manager.mcp.server import MCPServer
+from chrome_manager.core.management.manager import ChromeManager
+from chrome_manager.mcp.browser.server import BrowserMCPServer
 
 # Set headless mode for tests
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
@@ -58,7 +58,7 @@ class MCPTestServer:
         self.manager.pool.max_instances = 2
 
         config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10}
-        self.server = MCPServer(self.manager, config)
+        self.server = BrowserMCPServer(self.manager, config)
         await self.server.start()
 
         logger.info(f"Test MCP server started on port {self.port}")

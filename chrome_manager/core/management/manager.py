@@ -3,8 +3,8 @@ from typing import Any
 
 from loguru import logger
 
-from ...facade.media import ScreenshotController
-from ...facade.navigation import NavigationController
+from ...facade.media.screenshot import ScreenshotController
+from ...facade.navigation.navigator import Navigator
 from ...models.browser import ChromeOptions, InstanceInfo
 from ...models.browser_properties import BrowserProperties
 from ...models.security import SecurityConfig
@@ -288,7 +288,7 @@ class ChromeManager:
         params = task.get("params", {})
 
         if task_type == "navigate":
-            nav = NavigationController(instance)
+            nav = Navigator(instance)
             return await nav.navigate(params.get("url"))
 
         if task_type == "screenshot":

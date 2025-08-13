@@ -59,7 +59,7 @@ class NetworkController(BaseController):
             if not self._monitoring_enabled:
                 await self.enable_monitoring()
 
-            logs = self.driver.get_log("performance")
+            logs = self.driver.get_log("performance")  # type: ignore[attr-defined]
             entries = []
 
             for log in logs:

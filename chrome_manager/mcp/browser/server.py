@@ -1,17 +1,17 @@
-"""Chrome Manager MCP Server - Only defines browser automation tools."""
+"""Browser MCP Server - Only defines browser automation tools."""
 
 from typing import Any
 
 from loguru import logger
 
-from chrome_manager.core import ChromeManager
+from chrome_manager.core.management.manager import ChromeManager
 from chrome_manager.mcp.base.mcp_server import BaseMCPServer
-from chrome_manager.mcp.tools import ToolRegistry
-from chrome_manager.mcp.tools.definitions import register_all_tools
-from chrome_manager.mcp.tools.executor import ToolExecutor
+from chrome_manager.mcp.browser.tools.definitions import register_all_tools
+from chrome_manager.mcp.browser.tools.executor import ToolExecutor
+from chrome_manager.mcp.browser.tools.registry import ToolRegistry
 
 
-class ChromeMCPServer(BaseMCPServer):
+class BrowserMCPServer(BaseMCPServer):
     """MCP server for Chrome Manager - defines browser automation tools only."""
 
     def __init__(self, manager: ChromeManager, config: dict | None = None):
@@ -31,7 +31,7 @@ class ChromeMCPServer(BaseMCPServer):
         # Initialize base with config
         super().__init__(config)
 
-        logger.info(f"Chrome MCP server initialized with {len(self.tools)} tools")
+        logger.info(f"Browser MCP server initialized with {len(self.tools)} tools")
 
     def register_tools(self) -> None:
         """Register all Chrome Manager tools."""
