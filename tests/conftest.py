@@ -14,7 +14,8 @@ from loguru import logger
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from chrome_manager.core import BrowserInstance, ChromeManager  # noqa: E402
+from chrome_manager.core.browser.instance import BrowserInstance  # noqa: E402
+from chrome_manager.core.management.manager import ChromeManager  # noqa: E402
 from chrome_manager.utils.config import Config  # noqa: E402
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402

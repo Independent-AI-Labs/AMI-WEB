@@ -9,8 +9,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from chrome_manager.core import ChromeManager
-from chrome_manager.mcp.chrome_server import ChromeMCPServer
+from chrome_manager.core.management.manager import ChromeManager
+from chrome_manager.mcp.browser.server import BrowserMCPServer
 
 # Configure minimal logging to stderr only
 log_level = os.environ.get("MCP_LOG_LEVEL", "WARNING")
@@ -25,7 +25,7 @@ if log_level == "DEBUG":
 async def main():
     """Run Chrome MCP server with stdio transport."""
     # Initialize Chrome Manager
-    project_root = Path(__file__).parent.parent.parent.resolve()
+    project_root = Path(__file__).parent.parent.parent.parent.resolve()
     config_file = project_root / "config.yaml"
 
     if config_file.exists():
@@ -42,7 +42,7 @@ async def main():
     manager.pool.warm_instances = 0
 
     # Create and run MCP server
-    server = ChromeMCPServer(manager)
+    server = BrowserMCPServer(manager)
 
     try:
         await server.run_stdio()

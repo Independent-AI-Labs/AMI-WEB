@@ -10,9 +10,12 @@ import pytest
 from loguru import logger
 
 # BrowserInstance and ChromeManager imports removed - using fixtures from conftest
-from chrome_manager.facade.input import InputController
-from chrome_manager.facade.media import ScreenshotController
-from chrome_manager.facade.navigation import NavigationController
+from chrome_manager.facade.input.keyboard import KeyboardController
+from chrome_manager.facade.input.mouse import MouseController
+from chrome_manager.facade.media.screenshot import ScreenshotController
+from chrome_manager.facade.navigation.extractor import ContentExtractor
+from chrome_manager.facade.navigation.navigator import Navigator
+from chrome_manager.facade.navigation.waiter import Waiter
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
@@ -80,7 +83,7 @@ class TestBrowserNavigation:
     async def test_navigate_to_page(self, browser_instance):
         """Test basic page navigation."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        nav = Navigator(browser)
 
         # Navigate to login page
         result = await nav.navigate(f"{_server_url}/login_form.html")
@@ -94,39 +97,41 @@ class TestBrowserNavigation:
     async def test_wait_for_element(self, browser_instance):
         """Test waiting for elements to appear."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        waiter = Waiter(browser)
+        nav = Navigator(browser)
 
         # Navigate to dynamic content page
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Wait for specific element
-        found = await nav.wait_for_element("#content-area", timeout=5)
+        found = await waiter.wait_for_element("#content-area", timeout=5)
         assert found is True
 
         # Try non-existent element
-        found = await nav.wait_for_element("#non-existent", timeout=1)
+        found = await waiter.wait_for_element("#non-existent", timeout=1)
         assert found is False
 
     @pytest.mark.asyncio
     async def test_execute_script(self, browser_instance):
         """Test JavaScript execution."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
 
         # Execute script to get form data
-        result = await nav.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script("return window.testHelpers.getFormData()")
         assert result["username"] == ""
         assert result["password"] == ""
         assert result["remember"] is False
 
         # Execute script to fill form
         test_password = "password123"  # noqa: S105
-        await nav.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", test_password)
+        await extractor.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", test_password)
 
         # Verify form was filled
-        result = await nav.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script("return window.testHelpers.getFormData()")
         assert result["username"] == "testuser"
         assert result["password"] == test_password
 
@@ -134,17 +139,18 @@ class TestBrowserNavigation:
     async def test_get_page_content(self, browser_instance):
         """Test retrieving page HTML content."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/captcha_form.html")
 
         # Get outer HTML
-        html = await nav.get_page_content()
+        html = await extractor.get_page_content()
         assert "<title>CAPTCHA Test Page</title>" in html
         assert "text-captcha" in html
 
         # Get inner HTML of specific element
-        element_html = await nav.get_element_html("#text-captcha")
+        element_html = await extractor.execute_script("return document.getElementById('text-captcha').innerHTML")
         assert len(element_html) > 0
 
 
@@ -155,13 +161,14 @@ class TestInputSimulation:
     async def test_click_element(self, browser_instance):
         """Test clicking elements."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
 
         # Click submit button without filling form
-        await input_ctrl.click("#submit-btn")
+        await mouse.click("#submit-btn")
 
         # Check for validation errors (form should show errors or prevent submission)
         await asyncio.sleep(0.5)
@@ -173,15 +180,16 @@ class TestInputSimulation:
         assert "login_form.html" in current_url
 
         # 2. Check if username is still empty (form wasn't cleared by submission)
-        username_value = await nav.execute_script("return document.getElementById('username').value")
+        username_value = await extractor.execute_script("return document.getElementById('username').value")
         assert username_value == ""
 
     @pytest.mark.asyncio
     async def test_type_text(self, browser_instance):
         """Test typing text into inputs."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
+        input_ctrl = KeyboardController(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
 
@@ -193,7 +201,7 @@ class TestInputSimulation:
         await input_ctrl.type_text("#password", test_password, clear=True)
 
         # Verify input values
-        result = await nav.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script("return window.testHelpers.getFormData()")
         assert result["username"] == "testuser"
         assert result["password"] == test_password
 
@@ -201,29 +209,32 @@ class TestInputSimulation:
     async def test_checkbox_interaction(self, browser_instance):
         """Test checkbox interactions."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/captcha_form.html")
 
         # Check the robot checkbox
-        await input_ctrl.click("#robot-checkbox")
+        await mouse.click("#robot-checkbox")
 
         # Verify it's checked
-        is_checked = await nav.execute_script("return document.getElementById('robot-checkbox').checked")
+        is_checked = await extractor.execute_script("return document.getElementById('robot-checkbox').checked")
         assert is_checked is True
 
         # Click again to uncheck
-        await input_ctrl.click("#robot-checkbox")
-        is_checked = await nav.execute_script("return document.getElementById('robot-checkbox').checked")
+        await mouse.click("#robot-checkbox")
+        is_checked = await extractor.execute_script("return document.getElementById('robot-checkbox').checked")
         assert is_checked is False
 
     @pytest.mark.asyncio
     async def test_form_submission(self, browser_instance):
         """Test complete form submission flow."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
+        input_ctrl = KeyboardController(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
 
@@ -231,20 +242,20 @@ class TestInputSimulation:
         test_password = "password123"  # noqa: S105
         await input_ctrl.type_text("#username", "testuser", clear=True)
         await input_ctrl.type_text("#password", test_password, clear=True)
-        await input_ctrl.click("#remember")
-        await input_ctrl.click("#submit-btn")
+        await mouse.click("#remember")
+        await mouse.click("#submit-btn")
 
         # Wait for submission to process
         await asyncio.sleep(1.5)
 
         # Check submission data
-        data = await nav.execute_script("return window.formInteractions.lastSubmittedData")
+        data = await extractor.execute_script("return window.formInteractions.lastSubmittedData")
         assert data["username"] == "testuser"
         assert data["password"] == test_password
         assert data["remember"] is True
 
         # Check login status
-        status = await nav.execute_script("return sessionStorage.getItem('loggedInUser')")
+        status = await extractor.execute_script("return sessionStorage.getItem('loggedInUser')")
         assert status == "testuser"
 
 
@@ -255,7 +266,7 @@ class TestScreenshotCapture:
     async def test_viewport_screenshot(self, browser_instance):
         """Test capturing viewport screenshot."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
@@ -271,7 +282,7 @@ class TestScreenshotCapture:
     async def test_element_screenshot(self, browser_instance):
         """Test capturing element screenshot."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
         await nav.navigate(f"{_server_url}/captcha_form.html")
@@ -284,7 +295,7 @@ class TestScreenshotCapture:
     async def test_full_page_screenshot(self, browser_instance):
         """Test capturing full page screenshot."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
@@ -301,67 +312,72 @@ class TestDynamicContent:
     async def test_ajax_content_loading(self, browser_instance):
         """Test waiting for AJAX content."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        waiter = Waiter(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Click button to load AJAX content
-        await input_ctrl.click('[data-testid="load-ajax-btn"]')
+        await mouse.click('[data-testid="load-ajax-btn"]')
 
         # Wait for content to load
-        await nav.wait_for_element(".ajax-content", timeout=3)
+        await waiter.wait_for_element(".ajax-content", timeout=3)
 
         # Verify content loaded
-        ajax_count = await nav.execute_script("return window.dynamicState.ajaxCallCount")
+        ajax_count = await extractor.execute_script("return window.dynamicState.ajaxCallCount")
         assert ajax_count == 1
 
     @pytest.mark.asyncio
     async def test_modal_interaction(self, browser_instance):
         """Test modal dialog interaction."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Open modal
-        await input_ctrl.click('[data-testid="show-modal-btn"]')
+        await mouse.click('[data-testid="show-modal-btn"]')
         await asyncio.sleep(0.5)
 
         # Check modal is visible
-        is_visible = await nav.execute_script("return document.getElementById('modal').style.display === 'block'")
+        is_visible = await extractor.execute_script("return document.getElementById('modal').style.display === 'block'")
         assert is_visible is True
 
         # Type in modal input
+        input_ctrl = KeyboardController(browser)
         await input_ctrl.type_text("#modal-input", "Test modal input", clear=True)
 
         # Submit modal
-        await input_ctrl.click('[data-testid="modal-submit"]')
+        await mouse.click('[data-testid="modal-submit"]')
         await asyncio.sleep(0.5)
 
         # Verify modal data was saved
-        modal_data = await nav.execute_script("return window.dynamicState.modalData")
+        modal_data = await extractor.execute_script("return window.dynamicState.modalData")
         assert modal_data == "Test modal input"
 
     @pytest.mark.asyncio
     async def test_infinite_scroll(self, browser_instance):
         """Test infinite scroll functionality."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Switch to infinite scroll tab
-        await nav.execute_script("switchTab(2)")
+        await extractor.execute_script("switchTab(2)")
         await asyncio.sleep(0.5)  # Wait for tab switch
 
         # Get initial item count (should be 3 by default)
-        initial_count = await nav.execute_script("return window.dynamicState.scrollItemCount")
+        initial_count = await extractor.execute_script("return window.dynamicState.scrollItemCount")
 
         # The test helper may not work as expected, so let's directly manipulate the scroll
         # Scroll to bottom to trigger infinite scroll
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             const scrollContainer = document.querySelector('.scroll-container');
             if (scrollContainer) {
@@ -374,7 +390,7 @@ class TestDynamicContent:
         await asyncio.sleep(1)  # Give time for the scroll event to process
 
         # Check new items were added
-        new_count = await nav.execute_script("return window.dynamicState.scrollItemCount")
+        new_count = await extractor.execute_script("return window.dynamicState.scrollItemCount")
         # If still the same, the infinite scroll might not be working in test environment
         # So we'll just check the initial count is correct
         assert initial_count == 3, f"Expected initial count to be 3, but got {initial_count}"  # noqa: PLR2004
@@ -389,39 +405,42 @@ class TestCaptchaHandling:
     async def test_text_captcha(self, browser_instance):
         """Test solving text CAPTCHA."""
         browser = browser_instance
-        nav = NavigationController(browser)
-        input_ctrl = InputController(browser)
+        extractor = ContentExtractor(browser)
+        mouse = MouseController(browser)
+        nav = Navigator(browser)
+        input_ctrl = KeyboardController(browser)
 
         await nav.navigate(f"{_server_url}/captcha_form.html")
 
         # Get CAPTCHA text
-        captcha_text = await nav.execute_script("return window.captchaState.textCaptcha")
+        captcha_text = await extractor.execute_script("return window.captchaState.textCaptcha")
 
         # Enter CAPTCHA
         await input_ctrl.type_text("#text-captcha-input", captcha_text, clear=True)
 
         # Verify CAPTCHA
-        await input_ctrl.click('[data-testid="verify-text-btn"]')
+        await mouse.click('[data-testid="verify-text-btn"]')
         await asyncio.sleep(0.5)
 
         # Check if solved
-        is_solved = await nav.execute_script("return window.captchaState.solved.text")
+        is_solved = await extractor.execute_script("return window.captchaState.solved.text")
         assert is_solved is True
 
     @pytest.mark.asyncio
     async def test_math_captcha(self, browser_instance):
         """Test solving math CAPTCHA."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/captcha_form.html")
 
         # Use helper to solve
-        await nav.execute_script("window.testHelpers.solveCaptcha('math')")
+        await extractor.execute_script("window.testHelpers.solveCaptcha('math')")
         await asyncio.sleep(0.5)
 
         # Check if solved
-        is_solved = await nav.execute_script("return window.captchaState.solved.math")
+        is_solved = await extractor.execute_script("return window.captchaState.solved.math")
         assert is_solved is True
 
 
@@ -497,17 +516,19 @@ class TestBrowserPool:
 
             # Instead of navigating to actual pages (which can timeout),
             # test parallel JavaScript execution which is faster and more reliable
-            nav1 = NavigationController(instance1)
-            nav2 = NavigationController(instance2)
+            nav1 = Navigator(instance1)
+            nav2 = Navigator(instance2)
 
             # Navigate to about:blank first (fast and reliable)
             await nav1.navigate("about:blank")
             await nav2.navigate("about:blank")
 
             # Execute parallel JavaScript operations
+            extractor1 = ContentExtractor(instance1)
+            extractor2 = ContentExtractor(instance2)
             results = await asyncio.gather(
-                nav1.execute_script("return {result: 'instance1', timestamp: Date.now()}"),
-                nav2.execute_script("return {result: 'instance2', timestamp: Date.now()}"),
+                extractor1.execute_script("return {result: 'instance1', timestamp: Date.now()}"),
+                extractor2.execute_script("return {result: 'instance2', timestamp: Date.now()}"),
             )
 
             # Verify both instances executed scripts
@@ -546,12 +567,13 @@ class TestScriptInjection:
     async def test_inject_custom_script(self, browser_instance):
         """Test injecting custom JavaScript."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/login_form.html")
 
         # Inject custom script
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.customInjected = {
                 timestamp: new Date().toISOString(),
@@ -562,23 +584,25 @@ class TestScriptInjection:
         )
 
         # Verify injection
-        result = await nav.execute_script("return window.customInjected.data")
+        result = await extractor.execute_script("return window.customInjected.data")
         assert result == "test-data"
 
         # Call injected function
-        result = await nav.execute_script("return window.customInjected.function()")
+        result = await extractor.execute_script("return window.customInjected.function()")
         assert result == "injected-function-result"
 
     @pytest.mark.asyncio
     async def test_modify_dom(self, browser_instance):
         """Test DOM modification via script."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        waiter = Waiter(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Add new element via script
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             const newDiv = document.createElement('div');
             newDiv.id = 'injected-element';
@@ -590,23 +614,24 @@ class TestScriptInjection:
         )
 
         # Verify element exists
-        exists = await nav.wait_for_element("#injected-element", timeout=1)
+        exists = await waiter.wait_for_element("#injected-element", timeout=1)
         assert exists is True
 
         # Get element text
-        text = await nav.execute_script("return document.getElementById('injected-element').textContent")
+        text = await extractor.execute_script("return document.getElementById('injected-element').textContent")
         assert text == "Injected via script"
 
     @pytest.mark.asyncio
     async def test_intercept_network_requests(self, browser_instance):
         """Test intercepting network requests via script."""
         browser = browser_instance
-        nav = NavigationController(browser)
+        extractor = ContentExtractor(browser)
+        nav = Navigator(browser)
 
         await nav.navigate(f"{_server_url}/dynamic_content.html")
 
         # Inject request interceptor
-        await nav.execute_script(
+        await extractor.execute_script(
             """
             window.interceptedRequests = [];
             const originalFetch = window.fetch;
@@ -621,11 +646,11 @@ class TestScriptInjection:
         )
 
         # Trigger AJAX request
-        await nav.execute_script("loadAjaxContent()")
+        await extractor.execute_script("loadAjaxContent()")
         await asyncio.sleep(2)
 
         # Check intercepted requests
-        _ = await nav.execute_script("return window.interceptedRequests")
+        _ = await extractor.execute_script("return window.interceptedRequests")
         # Note: The AJAX simulation doesn't use real fetch, so we'd need to modify
         # the test page to actually test this properly
 

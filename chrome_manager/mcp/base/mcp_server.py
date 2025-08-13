@@ -8,6 +8,9 @@ from typing import Any
 import websockets
 from loguru import logger
 
+from .auth import AuthenticationMiddleware
+from .protocol import JSONRPCHandler
+from .rate_limit import RateLimitMiddleware
 from .transport import StdioTransport, WebSocketTransport
 
 
@@ -29,13 +32,38 @@ class BaseMCPServer(ABC):
         self._websocket_server: Any = None
         self._connections: set[Any] = set()
 
+        # Initialize protocol handler
+        self.protocol_handler = JSONRPCHandler()
+
+        # Setup middlewares
+        self._auth_middleware = None
+        self._rate_limit_middleware = None
+        self._setup_middlewares()
+
         # Tool registry - populated by subclass
         self.tools: dict[str, dict] = {}
 
         # Register tools from subclass
         self.register_tools()
 
-        logger.info(f"Initialized {self.__class__.__name__} with {len(self.tools)} tools")
+        middleware_count = sum(1 for m in [self._auth_middleware, self._rate_limit_middleware] if m)
+        logger.info(f"Initialized {self.__class__.__name__} with {len(self.tools)} tools and {middleware_count} middlewares")
+
+    def _setup_middlewares(self):
+        """Setup server middlewares based on configuration."""
+        # Authentication middleware
+        if self.config.get("auth_enabled", False):
+            auth_tokens = self.config.get("auth_tokens", [])
+            if auth_tokens:
+                self._auth_middleware = AuthenticationMiddleware(auth_tokens)
+                logger.info(f"Authentication enabled with {len(auth_tokens)} tokens")
+
+        # Rate limiting middleware
+        if self.config.get("rate_limit_enabled", False):
+            max_requests = self.config.get("rate_limit_requests", 100)
+            window_seconds = self.config.get("rate_limit_window", 60)
+            self._rate_limit_middleware = RateLimitMiddleware(max_requests, window_seconds)
+            logger.info(f"Rate limiting enabled: {max_requests} requests per {window_seconds} seconds")
 
     @abstractmethod
     def register_tools(self) -> None:
@@ -75,7 +103,7 @@ class BaseMCPServer(ABC):
                 if request is None:
                     break
 
-                response = await self._handle_request(request)
+                response = await self._handle_request(request, "stdio")
                 if response:
                     await transport.send(response)
 
@@ -114,7 +142,9 @@ class BaseMCPServer(ABC):
                         await transport.send(response)
                         continue
 
-                    response = await self._handle_request(request)
+                    # Use websocket address as client ID for rate limiting
+                    client_id = f"{websocket.remote_address[0]}:{websocket.remote_address[1]}" if websocket.remote_address else None
+                    response = await self._handle_request(request, client_id)
                     if response:
                         await transport.send(response)
 
@@ -180,7 +210,9 @@ class BaseMCPServer(ABC):
                     await transport.send(response)
                     continue
 
-                response = await self._handle_request(request)
+                # Use websocket address as client ID for rate limiting
+                client_id = f"{websocket.remote_address[0]}:{websocket.remote_address[1]}" if websocket.remote_address else None
+                response = await self._handle_request(request, client_id)
                 if response:
                     await transport.send(response)
 
@@ -192,15 +224,45 @@ class BaseMCPServer(ABC):
 
     # Protocol handling
 
-    async def _handle_request(self, request: dict) -> dict | None:
+    async def _apply_middlewares(self, request: dict[str, Any], client_id: str | None = None) -> dict[str, Any] | None:
+        """Apply middleware checks to a request.
+
+        Args:
+            request: The request to check
+            client_id: Client identifier for rate limiting
+
+        Returns:
+            Error response if middleware check fails, None otherwise
+        """
+        # Apply authentication
+        if self._auth_middleware:
+            auth_result = await self._auth_middleware.process(request)
+            if auth_result:
+                return auth_result
+
+        # Apply rate limiting
+        if self._rate_limit_middleware and client_id:
+            rate_result = await self._rate_limit_middleware.process(request, client_id)
+            if rate_result:
+                return rate_result
+
+        return None
+
+    async def _handle_request(self, request: dict, client_id: str | None = None) -> dict | None:
         """Handle a JSON-RPC request.
 
         Args:
             request: JSON-RPC request
+            client_id: Client identifier for middleware
 
         Returns:
             JSON-RPC response or None for notifications
         """
+        # Apply middlewares first
+        middleware_response = await self._apply_middlewares(request, client_id)
+        if middleware_response:
+            return middleware_response
+
         # Validate JSON-RPC format
         if request.get("jsonrpc") != "2.0":
             return self._format_error(-32600, "Invalid Request: missing or invalid jsonrpc field", request.get("id"))
@@ -211,25 +273,28 @@ class BaseMCPServer(ABC):
 
         # Route to appropriate handler
         try:
-            if method == "initialize":
-                result = await self._handle_initialize(params)
-            elif method == "tools/list":
-                result = await self._handle_tools_list(params)
-            elif method == "tools/call":
-                result = await self._handle_tools_call(params)
-            elif method == "ping":
-                result = {"status": "pong"}
-            elif method == "notifications/cancelled":
-                # Handle cancellation notification
+            # Handle notification (no response needed)
+            if method == "notifications/cancelled":
                 logger.info(f"Request {params.get('requestId')} cancelled")
-                return None  # No response for notifications
-            else:
+                return None
+
+            # Get handler for method
+            handler_map = {
+                "initialize": self._handle_initialize,
+                "tools/list": self._handle_tools_list,
+                "tools/call": self._handle_tools_call,
+                "ping": lambda p: {"status": "pong"},  # noqa: ARG005
+            }
+
+            handler = handler_map.get(method)
+            if not handler:
                 return self._format_error(-32601, f"Method not found: {method}", request_id)
 
+            # Execute handler
+            result = await handler(params) if asyncio.iscoroutinefunction(handler) else handler(params)
+
             # Return response if not a notification
-            if request_id is not None:
-                return self._format_response(result, request_id)
-            return None
+            return self._format_response(result, request_id) if request_id is not None else None
 
         except Exception as e:
             logger.error(f"Error handling request: {e}")
