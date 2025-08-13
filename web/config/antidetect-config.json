@@ -1,0 +1,89 @@
+{
+  "enabled": true,
+  "features": {
+    "webdriver": {
+      "enabled": true,
+      "description": "Remove webdriver property from navigator"
+    },
+    "chrome": {
+      "enabled": true,
+      "description": "Spoof chrome object properties"
+    },
+    "permissions": {
+      "enabled": true,
+      "description": "Override permission queries",
+      "defaults": {
+        "notifications": "default",
+        "geolocation": "default",
+        "camera": "default",
+        "microphone": "default"
+      }
+    },
+    "plugins": {
+      "enabled": true,
+      "description": "Add fake Chrome plugins",
+      "list": ["Chrome PDF Plugin", "Chrome PDF Viewer", "Native Client"]
+    },
+    "languages": {
+      "enabled": true,
+      "description": "Set browser languages",
+      "primary": "en-US",
+      "secondary": ["en"]
+    },
+    "webgl": {
+      "enabled": true,
+      "description": "Spoof WebGL vendor and renderer",
+      "vendor": "Intel Inc.",
+      "renderer": "Intel Iris OpenGL Engine"
+    },
+    "canvas": {
+      "enabled": true,
+      "description": "Add noise to canvas fingerprinting",
+      "noise_level": 0.001
+    },
+    "media_codecs": {
+      "enabled": true,
+      "description": "Fix H264 codec support",
+      "h264_support": "probably"
+    },
+    "webrtc": {
+      "enabled": false,
+      "description": "Prevent WebRTC IP leaks"
+    },
+    "timezone": {
+      "enabled": false,
+      "description": "Spoof timezone",
+      "timezone": "America/New_York"
+    },
+    "screen": {
+      "enabled": false,
+      "description": "Spoof screen resolution",
+      "width": 1920,
+      "height": 1080
+    },
+    "fonts": {
+      "enabled": false,
+      "description": "Randomize font fingerprinting"
+    },
+    "audio": {
+      "enabled": false,
+      "description": "Add noise to audio fingerprinting"
+    }
+  },
+  "injection": {
+    "method": "extension",
+    "timing": "document_start",
+    "all_frames": true,
+    "run_in_isolated_world": false
+  },
+  "urls": {
+    "whitelist": [],
+    "blacklist": [],
+    "match_patterns": ["http://*/*", "https://*/*"]
+  },
+  "debug": {
+    "enabled": false,
+    "log_level": "error",
+    "expose_detection_results": false
+  }
+}

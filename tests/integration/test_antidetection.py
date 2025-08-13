@@ -294,7 +294,7 @@ class TestH264Codec:
                 """
                 const video = document.createElement('video');
                 return video.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '';
-            """
+                """
             )
 
             assert h264_support, "H.264 codec is not supported"
