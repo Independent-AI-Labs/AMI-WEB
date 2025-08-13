@@ -1,6 +1,7 @@
 """Tests for browser profiles, sessions, downloads, and security features."""
 
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,24 @@ def temp_profiles_dir():
     """Create a temporary directory for profiles."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_test_profiles(chrome_manager):
+    """Clean up test profiles before and after each test."""
+    # Clean up any leftover profiles before test
+    profile_names = ["cookie_test", "download_test", "download1", "download2", "profile1", "profile2", "persistent_test", "login_test"]
+
+    for name in profile_names:
+        with suppress(Exception):
+            chrome_manager.profile_manager.delete_profile(name)
+
+    yield
+
+    # Clean up after test
+    for name in profile_names:
+        with suppress(Exception):
+            chrome_manager.profile_manager.delete_profile(name)
 
 
 class TestProfileManagement:
