@@ -247,11 +247,13 @@ class ToolExecutor:
         # Logging tools
         if tool_name == "browser_get_console_logs":
             logs = await instance.get_console_logs()
-            return {"logs": [log.model_dump() for log in logs]}
+            # Convert datetime to string for JSON serialization
+            return {"logs": [log.model_dump(mode="json") for log in logs]}
 
         if tool_name == "browser_get_network_logs":
             logs = await instance._monitor.get_network_logs(instance.driver)
-            return {"logs": [log.model_dump() for log in logs]}
+            # Convert datetime to string for JSON serialization
+            return {"logs": [log.model_dump(mode="json") for log in logs]}
 
         raise ValueError(f"Unknown browser tool: {tool_name}")
 
@@ -278,23 +280,28 @@ class ToolExecutor:
 
     async def _execute_session_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute session-related tools."""
-        session_manager = self.manager.session_manager
-
         if tool_name == "session_save":
-            session_id = await session_manager.save_session(arguments["name"])
+            # Get the active instance to save
+            instance_id = arguments.get("instance_id") or self._active_instance_id
+            if not instance_id:
+                raise ValueError("No instance_id provided and no active instance")
+            # Save using the manager with the provided name
+            session_name = arguments.get("name")
+            session_id = await self.manager.save_session(instance_id, session_name)
             return {"status": "saved", "session_id": session_id}
 
         if tool_name == "session_load":
-            # SessionManager doesn't have load_session, it's restore_session
-            sessions = await session_manager.list_sessions()
-            session_exists = any(s["name"] == arguments["name"] for s in sessions)
-            if session_exists:
-                # Can't actually restore, just return success
-                return {"status": "loaded"}
-            return {"status": "not_found"}
+            # Restore the session
+            session_id = arguments["session_id"]
+            try:
+                instance = await self.manager.restore_session(session_id)
+                self._active_instance_id = instance.id
+                return {"status": "loaded", "instance_id": instance.id}
+            except Exception:
+                return {"status": "not_found"}
 
         if tool_name == "session_list":
-            sessions = await session_manager.list_sessions()
+            sessions = await self.manager.session_manager.list_sessions()
             return {"sessions": sessions}
 
         raise ValueError(f"Unknown session tool: {tool_name}")
@@ -314,4 +321,7 @@ class ToolExecutor:
                 instance = await self.manager.get_or_create_instance(headless=True, use_pool=False)
                 self._active_instance_id = instance.id
 
-        return await self.manager.get_instance(self._active_instance_id)
+        instance = await self.manager.get_instance(self._active_instance_id)
+        if not instance:
+            raise ValueError(f"Instance {self._active_instance_id} not found")
+        return instance
