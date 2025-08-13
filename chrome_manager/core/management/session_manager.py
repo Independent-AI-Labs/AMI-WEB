@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 class SessionManager:
     """Manages browser sessions for save and restore functionality."""
 
-    def __init__(self, session_dir: str = "./sessions"):
-        self.session_dir = Path(session_dir).resolve()
-        self.session_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, session_dir: str = "./data/sessions"):
+        self.session_dir = Path(session_dir)
+        # Don't create directory in __init__, create it when actually needed
         self.metadata_file = self.session_dir / "sessions.json"
-        self.sessions: dict[str, dict[str, Any]] = self._load_metadata()
+        self.sessions: dict[str, dict[str, Any]] = {}
 
     def _load_metadata(self) -> dict[str, dict[str, Any]]:
         """Load session metadata."""
@@ -37,6 +37,10 @@ class SessionManager:
 
     async def initialize(self) -> None:
         """Initialize session manager."""
+        # Create directory when actually initializing
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+        # Load metadata after directory is created
+        self.sessions = self._load_metadata()
         logger.info(f"Session manager initialized with directory: {self.session_dir}")
 
     async def shutdown(self) -> None:
