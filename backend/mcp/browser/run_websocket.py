@@ -3,35 +3,35 @@
 
 import asyncio
 import contextlib
-import subprocess
 import sys
 from pathlib import Path
 
-# Ensure base module is available before imports
+# Ensure environment is set up
 project_root = Path(__file__).parent.parent.parent.parent.resolve()
-parent_base = project_root.parent / "base"
-local_base = project_root / "base"
-BASE_REPO_URL = "https://github.com/Independent-AI-Labs/AMI-BASE.git"
+venv_path = project_root / ".venv"
 
-if parent_base.exists() and (parent_base / "mcp").exists():
-    # Using base from parent directory
-    sys.path.insert(0, str(parent_base.parent))
-elif local_base.exists() and (local_base / "mcp").exists():
-    # Using local base
-    sys.path.insert(0, str(project_root))
-else:
-    # Clone the base module repository
-    try:
-        subprocess.run(["git", "clone", BASE_REPO_URL, str(local_base)], check=True, cwd=project_root, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-        sys.path.insert(0, str(project_root))
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # If cloning fails, try to continue anyway
-        pass
+# Add project root to path
+sys.path.insert(0, str(project_root))
 
-from loguru import logger
+# Check if virtual environment exists, if not run setup
+if not venv_path.exists():
+    print("Setting up environment...", file=sys.stderr)
+    from setup import run_environment_setup
 
-from backend.core.management.manager import ChromeManager
-from backend.mcp.browser.server import BrowserMCPServer
+    result = run_environment_setup()
+    if result != 0:
+        print("Failed to set up environment", file=sys.stderr)
+        sys.exit(1)
+
+# Ensure base module is available
+from setup import ensure_base_module  # noqa: E402
+
+ensure_base_module()
+
+from loguru import logger  # noqa: E402
+
+from backend.core.management.manager import ChromeManager  # noqa: E402
+from backend.mcp.browser.server import BrowserMCPServer  # noqa: E402
 
 
 async def main(host: str = "localhost", port: int = 8765):
