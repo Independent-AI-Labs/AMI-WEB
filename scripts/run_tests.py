@@ -36,7 +36,7 @@ def setup_environment():
     print("Installing dependencies from requirements.txt...")
     requirements_file = PROJECT_ROOT / "requirements.txt"
     if requirements_file.exists():
-        subprocess.run(["uv", "pip", "install", "-r", str(requirements_file)], check=True, cwd=PROJECT_ROOT)
+        subprocess.run(["uv", "pip", "install", "--python", str(VENV_PYTHON), "-r", str(requirements_file)], check=True, cwd=PROJECT_ROOT)
     else:
         print("ERROR: requirements.txt not found!")
         sys.exit(1)
@@ -45,10 +45,10 @@ def setup_environment():
     test_requirements_file = PROJECT_ROOT / "requirements-test.txt"
     if test_requirements_file.exists():
         print("Installing test dependencies from requirements-test.txt...")
-        subprocess.run(["uv", "pip", "install", "-r", str(test_requirements_file)], check=True, cwd=PROJECT_ROOT)
+        subprocess.run(["uv", "pip", "install", "--python", str(VENV_PYTHON), "-r", str(test_requirements_file)], check=True, cwd=PROJECT_ROOT)
 
     # Install the package in editable mode
-    subprocess.run(["uv", "pip", "install", "-e", "."], check=True, cwd=PROJECT_ROOT)
+    subprocess.run(["uv", "pip", "install", "--python", str(VENV_PYTHON), "-e", "."], check=True, cwd=PROJECT_ROOT)
 
     if not VENV_PYTHON.exists():
         print(f"ERROR: Virtual environment Python not found at {VENV_PYTHON}")
