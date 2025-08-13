@@ -1,20 +1,11 @@
-"""Base classes and utilities for MCP servers."""
+"""Base classes for MCP servers - clean and simple."""
 
-from .auth import AuthenticationMiddleware, TokenAuthProvider
-from .protocol import BaseProtocolHandler, JSONRPCHandler
-from .rate_limit import RateLimiter, RateLimitMiddleware
-from .server import BaseMCPServer
-from .utils import AsyncExecutor, format_error, format_response
+from .mcp_server import BaseMCPServer
+from .transport import StdioTransport, Transport, WebSocketTransport
 
 __all__ = [
     "BaseMCPServer",
-    "BaseProtocolHandler",
-    "JSONRPCHandler",
-    "AuthenticationMiddleware",
-    "TokenAuthProvider",
-    "RateLimiter",
-    "RateLimitMiddleware",
-    "AsyncExecutor",
-    "format_error",
-    "format_response",
+    "Transport",
+    "StdioTransport",
+    "WebSocketTransport",
 ]
