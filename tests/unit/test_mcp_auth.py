@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from backend.mcp.base.auth import (
+from base.mcp.auth import (
     AuthenticationMiddleware,
     HMACAuthProvider,
     TokenAuthProvider,

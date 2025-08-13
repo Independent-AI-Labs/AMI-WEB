@@ -13,6 +13,8 @@ from loguru import logger
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add root directory to path for base module imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.core.browser.instance import BrowserInstance  # noqa: E402
 from backend.core.management.manager import ChromeManager  # noqa: E402
@@ -250,9 +252,13 @@ def cleanup_processes():
     except Exception:  # noqa: S110
         pass
 
-    with contextlib.suppress(Exception):
-        # Only log if logger is still available
-        logger.info("Cleaning up browser and server processes")
+    # Try to log cleanup, but suppress any errors if logger is closed
+    try:
+        if sys.stderr and not sys.stderr.closed:
+            logger.info("Cleaning up browser and server processes")
+    except (ValueError, AttributeError, RuntimeError):
+        # Logger or stderr might be closed during cleanup
+        pass
 
     with contextlib.suppress(Exception):
         if sys.platform == "win32":
@@ -274,3 +280,8 @@ def cleanup_at_exit():
     """Ensure cleanup happens at the end of the test session."""
     yield
     cleanup_processes()
+    # Remove logger handlers to prevent writing to closed streams
+    try:
+        logger.remove()
+    except Exception:  # noqa: S110
+        pass
