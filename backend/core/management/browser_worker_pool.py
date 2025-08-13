@@ -30,11 +30,12 @@ class BrowserWorker:
 
     def __init__(
         self,
-        worker_id: str,
+        worker_id: str,  # noqa: ARG002
         instance: BrowserInstance,
         created_at: datetime | None = None,
     ):
-        self.id = worker_id
+        # Use the browser instance ID as the worker ID for consistency
+        self.id = instance.id
         self.instance = instance
         self.state = WorkerState.IDLE
         self.created_at = created_at or datetime.now()
@@ -203,6 +204,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
     def _store_worker_instance(self, worker_id: str, worker: BrowserWorker) -> None:
         """Store a worker instance."""
         self._workers[worker_id] = worker
+        logger.debug(f"Stored worker {worker_id} in pool, total workers: {len(self._workers)}")
 
     async def _reset_worker(self, worker: BrowserWorker) -> None:
         """Reset a worker to clean state."""
@@ -245,6 +247,8 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
                 break
 
         if worker:
+            logger.debug(f"Found worker {worker.id} for instance {instance_id}, releasing...")
             await self.release_worker(worker.id)
+            logger.debug(f"Released worker {worker.id}")
         else:
             logger.warning(f"Browser instance {instance_id} not found in pool")
