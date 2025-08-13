@@ -1,1121 +1,216 @@
-import asyncio
+"""Refactored MCP Server implementation using tool registry."""
+
 import json
-import time
-import traceback
-import uuid
-from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 import websockets
 from loguru import logger
-from selenium.webdriver.support.ui import WebDriverWait
-from websockets.server import WebSocketServerProtocol  # type: ignore[attr-defined]
 
-from ..core import BrowserInstance, ChromeManager
-from ..facade.input import InputController
-from ..facade.media import ScreenshotController
-from ..facade.navigation import NavigationController
-from ..models.browser import ClickOptions, PageResult
-from ..models.mcp import MCPEvent, MCPTool
-from ..utils.exceptions import MCPError
+from chrome_manager.core import ChromeManager
+from chrome_manager.mcp.tools import ToolRegistry
+from chrome_manager.mcp.tools.definitions import register_all_tools
+from chrome_manager.mcp.tools.executor import ToolExecutor
 
 
 class MCPServer:
-    def __init__(self, manager: ChromeManager, config: dict[str, Any]):
-        self.manager = manager
-        self.config = config
-        self.clients: dict[str, WebSocketServerProtocol] = {}
-        self.tools = self._register_tools()
-        self.tool_handlers = None  # Will be set after methods are defined
-        self.server = None
-        # Initialize handlers after all methods exist
-        self._init_handlers()
+    """Model Context Protocol server for browser automation."""
 
-    def _register_tools(self) -> dict[str, MCPTool]:
-        return {
-            "browser_launch": MCPTool(
-                name="browser_launch",
-                description="Launch a new browser instance",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "headless": {"type": "boolean", "default": True},
-                        "profile": {"type": "string"},
-                        "extensions": {"type": "array", "items": {"type": "string"}},
-                    },
-                },
-            ),
-            "browser_navigate": MCPTool(
-                name="browser_navigate",
-                description="Navigate to a URL",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "url": {"type": "string"},
-                        "wait_for": {"type": "string", "enum": ["load", "networkidle", "element"]},
-                    },
-                    "required": ["instance_id", "url"],
-                },
-            ),
-            "browser_click": MCPTool(
-                name="browser_click",
-                description="Click an element",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "selector": {"type": "string"},
-                        "button": {"type": "string", "enum": ["left", "right", "middle"], "default": "left"},
-                    },
-                    "required": ["instance_id", "selector"],
-                },
-            ),
-            "browser_type": MCPTool(
-                name="browser_type",
-                description="Type text into an element",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "selector": {"type": "string"},
-                        "text": {"type": "string"},
-                        "clear": {"type": "boolean", "default": True},
-                    },
-                    "required": ["instance_id", "selector", "text"],
-                },
-            ),
-            "browser_screenshot": MCPTool(
-                name="browser_screenshot",
-                description="Take a screenshot",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "type": {"type": "string", "enum": ["full", "viewport", "element"], "default": "viewport"},
-                        "selector": {"type": "string"},
-                        "format": {"type": "string", "enum": ["png", "jpeg"], "default": "png"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_execute_script": MCPTool(
-                name="browser_execute_script",
-                description="Execute JavaScript in the browser",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}, "script": {"type": "string"}, "args": {"type": "array"}},
-                    "required": ["instance_id", "script"],
-                },
-            ),
-            "browser_get_cookies": MCPTool(
-                name="browser_get_cookies",
-                description="Get browser cookies",
-                parameters={"type": "object", "properties": {"instance_id": {"type": "string"}, "domain": {"type": "string"}}, "required": ["instance_id"]},
-            ),
-            "browser_set_cookies": MCPTool(
-                name="browser_set_cookies",
-                description="Set browser cookies",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}, "cookies": {"type": "array", "items": {"type": "object"}}},
-                    "required": ["instance_id", "cookies"],
-                },
-            ),
-            "browser_wait_for_element": MCPTool(
-                name="browser_wait_for_element",
-                description="Wait for an element to appear",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}, "selector": {"type": "string"}, "timeout": {"type": "number", "default": 30}},
-                    "required": ["instance_id", "selector"],
-                },
-            ),
-            "browser_close": MCPTool(
-                name="browser_close",
-                description="Close a browser instance",
-                parameters={"type": "object", "properties": {"instance_id": {"type": "string"}}, "required": ["instance_id"]},
-            ),
-            "browser_list": MCPTool(name="browser_list", description="List active browser instances", parameters={"type": "object", "properties": {}}),
-            "browser_get_tabs": MCPTool(
-                name="browser_get_tabs",
-                description="Get browser tabs",
-                parameters={"type": "object", "properties": {"instance_id": {"type": "string"}}, "required": ["instance_id"]},
-            ),
-            "browser_switch_tab": MCPTool(
-                name="browser_switch_tab",
-                description="Switch to a different tab",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}, "tab_id": {"type": "string"}},
-                    "required": ["instance_id", "tab_id"],
-                },
-            ),
-            "browser_scroll": MCPTool(
-                name="browser_scroll",
-                description="Scroll the page",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "x": {"type": "number"},
-                        "y": {"type": "number"},
-                        "element": {"type": "string"},
-                        "smooth": {"type": "boolean", "default": True},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_extract_text": MCPTool(
-                name="browser_extract_text",
-                description="Extract human-readable text from the current page",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "preserve_structure": {"type": "boolean", "default": True},
-                        "remove_scripts": {"type": "boolean", "default": True},
-                        "remove_styles": {"type": "boolean", "default": True},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_extract_links": MCPTool(
-                name="browser_extract_links",
-                description="Extract all links from the current page",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "absolute": {"type": "boolean", "default": True},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_html": MCPTool(
-                name="browser_get_html",
-                description="Get HTML with automatic token limiting (max 25000 tokens). Use selector for specific elements or let it auto-adjust depth.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "selector": {"type": "string", "description": "CSS selector for specific element (recommended for large pages)"},
-                        "max_depth": {"type": "integer", "description": "Maximum DOM depth (auto-adjusted if response too large)", "minimum": 1},
-                        "collapse_depth": {
-                            "type": "integer",
-                            "description": "Depth to collapse elements (auto-adjusted if needed)",
-                            "minimum": 1,
-                        },
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_console_logs": MCPTool(
-                name="browser_get_console_logs",
-                description="Get browser console logs",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_network_logs": MCPTool(
-                name="browser_get_network_logs",
-                description="Get network activity logs",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_local_storage": MCPTool(
-                name="browser_get_local_storage",
-                description="Get local storage data",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "key": {"type": "string", "description": "Optional key to get specific value"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_set_local_storage": MCPTool(
-                name="browser_set_local_storage",
-                description="Set a local storage item",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "key": {"type": "string"},
-                        "value": {"type": "string"},
-                    },
-                    "required": ["instance_id", "key", "value"],
-                },
-            ),
-            "browser_remove_local_storage": MCPTool(
-                name="browser_remove_local_storage",
-                description="Remove a local storage item",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "key": {"type": "string"},
-                    },
-                    "required": ["instance_id", "key"],
-                },
-            ),
-            "browser_clear_local_storage": MCPTool(
-                name="browser_clear_local_storage",
-                description="Clear all local storage items",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_session_storage": MCPTool(
-                name="browser_get_session_storage",
-                description="Get session storage data",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "key": {"type": "string", "description": "Optional key to get specific value"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_set_session_storage": MCPTool(
-                name="browser_set_session_storage",
-                description="Set a session storage item",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "key": {"type": "string"},
-                        "value": {"type": "string"},
-                    },
-                    "required": ["instance_id", "key", "value"],
-                },
-            ),
-            "browser_set_properties": MCPTool(
-                name="browser_set_properties",
-                description="Set browser properties for an instance or tab",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string", "description": "Optional instance ID"},
-                        "tab_id": {"type": "string", "description": "Optional tab ID"},
-                        "preset": {
-                            "type": "string",
-                            "enum": ["windows_chrome", "mac_safari", "linux_firefox", "mobile_chrome", "mobile_safari", "stealth", "minimal", "custom"],
-                            "description": "Preset configuration to use",
-                        },
-                        "properties": {
-                            "type": "object",
-                            "description": "Custom properties to set/override",
-                            "properties": {
-                                "user_agent": {"type": "string"},
-                                "platform": {"type": "string"},
-                                "language": {"type": "string"},
-                                "languages": {"type": "array", "items": {"type": "string"}},
-                                "screen_resolution": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2},
-                                "hardware_concurrency": {"type": "integer"},
-                                "device_memory": {"type": "integer"},
-                                "webgl_vendor": {"type": "string"},
-                                "webgl_renderer": {"type": "string"},
-                                "webdriver_visible": {"type": "boolean"},
-                                "automation_controlled": {"type": "boolean"},
-                                "canvas_noise": {"type": "boolean"},
-                                "audio_context_noise": {"type": "boolean"},
-                                "codec_support": {
-                                    "type": "object",
-                                    "properties": {
-                                        "h264": {"type": "boolean"},
-                                        "h265": {"type": "boolean"},
-                                        "vp8": {"type": "boolean"},
-                                        "vp9": {"type": "boolean"},
-                                        "av1": {"type": "boolean"},
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            ),
-            "browser_get_properties": MCPTool(
-                name="browser_get_properties",
-                description="Get current browser properties",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string", "description": "Optional instance ID"},
-                        "tab_id": {"type": "string", "description": "Optional tab ID"},
-                    },
-                },
-            ),
-            # Profile management tools
-            "browser_list_profiles": MCPTool(
-                name="browser_list_profiles",
-                description="List all available browser profiles",
-                parameters={"type": "object", "properties": {}},
-            ),
-            "browser_delete_profile": MCPTool(
-                name="browser_delete_profile",
-                description="Delete a browser profile and all its data",
-                parameters={
-                    "type": "object",
-                    "properties": {"profile_name": {"type": "string"}},
-                    "required": ["profile_name"],
-                },
-            ),
-            "browser_copy_profile": MCPTool(
-                name="browser_copy_profile",
-                description="Copy a browser profile to a new name",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "source_profile": {"type": "string"},
-                        "dest_profile": {"type": "string"},
-                    },
-                    "required": ["source_profile", "dest_profile"],
-                },
-            ),
-            # Session management tools
-            "browser_save_session": MCPTool(
-                name="browser_save_session",
-                description="Save current browser session for later restoration",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}},
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_restore_session": MCPTool(
-                name="browser_restore_session",
-                description="Restore a previously saved browser session",
-                parameters={
-                    "type": "object",
-                    "properties": {"session_id": {"type": "string"}},
-                    "required": ["session_id"],
-                },
-            ),
-            "browser_list_sessions": MCPTool(
-                name="browser_list_sessions",
-                description="List all saved browser sessions",
-                parameters={"type": "object", "properties": {}},
-            ),
-            # Cookie persistence tools
-            "browser_save_cookies": MCPTool(
-                name="browser_save_cookies",
-                description="Save cookies to browser profile for persistence",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}},
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_load_cookies": MCPTool(
-                name="browser_load_cookies",
-                description="Load saved cookies from browser profile",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "navigate_to_domain": {"type": "boolean", "default": True, "description": "Navigate to cookie domain before loading"},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            # Download management tools
-            "browser_list_downloads": MCPTool(
-                name="browser_list_downloads",
-                description="List all files in the download directory",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}},
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_wait_for_download": MCPTool(
-                name="browser_wait_for_download",
-                description="Wait for a download to complete",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "instance_id": {"type": "string"},
-                        "filename": {"type": "string", "description": "Optional specific filename to wait for"},
-                        "timeout": {"type": "number", "default": 30},
-                    },
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_clear_downloads": MCPTool(
-                name="browser_clear_downloads",
-                description="Clear all files from the download directory",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}},
-                    "required": ["instance_id"],
-                },
-            ),
-            "browser_get_download_dir": MCPTool(
-                name="browser_get_download_dir",
-                description="Get the download directory path for this instance",
-                parameters={
-                    "type": "object",
-                    "properties": {"instance_id": {"type": "string"}},
-                    "required": ["instance_id"],
-                },
-            ),
-            # Security configuration tool
-            "browser_set_security": MCPTool(
-                name="browser_set_security",
-                description="Set security configuration for next browser launch",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "level": {
-                            "type": "string",
-                            "enum": ["strict", "standard", "relaxed", "permissive"],
-                            "description": "Security level preset",
-                        },
-                        "ignore_certificate_errors": {"type": "boolean"},
-                        "allow_insecure_localhost": {"type": "boolean"},
-                        "safe_browsing_enabled": {"type": "boolean"},
-                        "download_protection_enabled": {"type": "boolean"},
-                    },
-                },
-            ),
-        }
+    def __init__(self, manager: ChromeManager, config: dict | None = None):
+        self.manager = manager
+        self.config = config or {}
+        self._websocket_server = None
+        self._connections: set[Any] = set()
+
+        # Initialize tool registry and executor
+        self.registry = ToolRegistry()
+        register_all_tools(self.registry)
+        self.executor = ToolExecutor(manager)
+
+        logger.info(f"Initialized MCP server with {len(self.registry.list_tools())} tools")
 
     async def start(self):
+        """Start the WebSocket server."""
         host = self.config.get("server_host", "localhost")
         port = self.config.get("server_port", 8765)
 
-        logger.info(f"Starting MCP server on {host}:{port}")
-
-        # Create a wrapper that works with the new websockets API
-        async def handler_wrapper(websocket):
-            logger.debug(f"Handler wrapper called for {websocket.remote_address}")
-            try:
-                await self.handle_client(websocket)
-            except Exception as e:
-                logger.error(f"Handler error: {e}")
-                raise
-
-        # Start the server
-        self.server = await websockets.serve(
-            handler_wrapper,
-            host,  # Use the configured host
+        self._websocket_server = await websockets.serve(
+            self._handle_connection,
+            host,
             port,
-            ping_interval=30,
-            ping_timeout=10,
+            max_size=10 * 1024 * 1024,  # 10MB max message size
         )
 
-        logger.info(f"MCP server started successfully on {host}:{port}")
+        logger.info(f"MCP server started on ws://{host}:{port}")
 
     async def stop(self):
-        if self.server:
-            logger.info("Stopping MCP server")
-            self.server.close()
-            await self.server.wait_closed()
+        """Stop the WebSocket server."""
+        if self._websocket_server:
+            self._websocket_server.close()
+            await self._websocket_server.wait_closed()
 
-            for client in self.clients.values():
-                await client.close()
+        # Close all connections
+        for ws in self._connections:
+            await ws.close()
+        self._connections.clear()
 
-            self.clients.clear()
-            logger.info("MCP server stopped")
+        logger.info("MCP server stopped")
 
-    async def handle_client(self, websocket: WebSocketServerProtocol):
-        client_id = str(uuid.uuid4())
-        self.clients[client_id] = websocket
-
-        logger.info(f"Client {client_id} connected from {websocket.remote_address}")
+    async def _handle_connection(self, websocket, path=None):  # noqa: ARG002
+        """Handle a WebSocket connection."""
+        self._connections.add(websocket)
+        client_addr = websocket.remote_address
+        logger.info(f"New connection from {client_addr}")
 
         try:
-            await self._send_capabilities(websocket)
-
             async for message in websocket:
                 try:
                     data = json.loads(message)
-                    logger.info(f"Received request: {data.get('type')} - {data.get('tool', '')} - request_id: {data.get('request_id', 'none')}")
                     response = await self._handle_request(data)
-                    logger.info(f"Got response to send: success={response.get('success')}, request_id={response.get('request_id', '')}, keys={response.keys()}")
-                    response_json = json.dumps(response)
-                    logger.info(f"Sending response JSON (first 200 chars): {response_json[:200]}")
-                    await websocket.send(response_json)
-                    logger.info(f"Response sent successfully for request_id: {response.get('request_id', '')}")
+                    if response:
+                        await websocket.send(json.dumps(response))
                 except json.JSONDecodeError as e:
-                    error_response = {"error": "Invalid JSON", "details": str(e)}
+                    error_response = {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32700, "message": f"Parse error: {e}"},
+                        "id": None,
+                    }
                     await websocket.send(json.dumps(error_response))
                 except Exception as e:
-                    logger.error(f"Error handling request: {e}", exc_info=True)
-                    error_response = {"error": "Internal server error", "details": str(e)}
+                    logger.error(f"Error handling message: {e}")
+                    error_response = {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32603, "message": "Internal error"},
+                        "id": data.get("id") if isinstance(data, dict) else None,
+                    }
                     await websocket.send(json.dumps(error_response))
 
-        except websockets.exceptions.ConnectionClosed:
-            logger.info(f"Client {client_id} disconnected")
-        except Exception as e:
-            logger.error(f"Error with client {client_id}: {e}")
+        except websockets.ConnectionClosed:
+            logger.info(f"Connection closed from {client_addr}")
         finally:
-            del self.clients[client_id]
+            self._connections.discard(websocket)
 
-    async def _send_capabilities(self, websocket: WebSocketServerProtocol):
-        capabilities = {
-            "type": "capabilities",
-            "tools": [{"name": tool.name, "description": tool.description, "parameters": tool.parameters} for tool in self.tools.values()],
-            "version": "1.0.0",
-        }
-        await websocket.send(json.dumps(capabilities))
+    async def _handle_request(self, request: dict) -> dict | None:  # noqa: RET505
+        """Handle JSON-RPC request."""
+        method = request.get("method")
+        params = request.get("params", {})
+        request_id = request.get("id")
 
-    async def _handle_request(self, data: dict[str, Any]) -> dict[str, Any]:
-        request_type = data.get("type")
-
-        if request_type == "tool":
-            return await self._handle_tool_request(data)
-        if request_type == "list_tools":
-            return {"type": "tools", "tools": list(self.tools.keys())}
-        if request_type == "ping":
-            return {"type": "pong"}
-        return {"error": "Unknown request type", "type": request_type}
-
-    async def _handle_tool_request(self, data: dict[str, Any]) -> dict[str, Any]:
-        tool_name = data.get("tool")
-        parameters = data.get("parameters", {})
-        request_id = data.get("request_id", str(uuid.uuid4()))
-
-        logger.info(f"_handle_tool_request: {tool_name} with request_id: {request_id}")
-
-        if tool_name not in self.tools:
-            return {"success": False, "error": f"Unknown tool: {tool_name}", "request_id": request_id}
-
-        start_time = asyncio.get_event_loop().time()
-
-        try:
-            logger.info(f"Executing tool: {tool_name} with parameters: {parameters}")
-            result = await self._execute_tool(tool_name, parameters)
-            execution_time = asyncio.get_event_loop().time() - start_time
-            logger.info(
-                f"Tool {tool_name} executed successfully in {execution_time:.2f}s, result keys: {result.keys() if isinstance(result, dict) else type(result)}"
-            )
-
-            response = {"success": True, "result": result, "request_id": request_id, "execution_time": execution_time}
-            logger.info(f"Returning response for {tool_name}: success=True, request_id={request_id}")
-            return response
-        except Exception as e:
-            logger.error(f"Tool execution failed for {tool_name}: {e}\n{traceback.format_exc()}")
-            execution_time = asyncio.get_event_loop().time() - start_time
-
-            return {"success": False, "error": str(e), "request_id": request_id, "execution_time": execution_time}
-
-    async def _get_instance_or_error(self, instance_id: str) -> BrowserInstance:
-        instance = await self.manager.get_instance(instance_id)
-        if not instance:
-            raise MCPError(f"Instance {instance_id} not found")
-        return instance
-
-    async def _execute_launch(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        # Don't use pool if profile is specified (profiles need dedicated instances)
-        use_pool = not bool(parameters.get("profile"))
-
-        instance = await self.manager.get_or_create_instance(
-            headless=parameters.get("headless", True),
-            profile=parameters.get("profile"),
-            extensions=parameters.get("extensions", []),
-            download_dir=parameters.get("download_dir"),
-            use_pool=use_pool,
-        )
-        return {"instance_id": instance.id}
-
-    async def _execute_navigate(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        logger.info(f"_execute_navigate called with URL: {parameters.get('url')}")
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        logger.info(f"Got instance {instance.id}")
-
-        # WebDriver operations must happen in the same thread/event loop where it was created
-        # Since we're already in the correct thread (MCP server thread), we can do direct sync operations
-        url = parameters["url"]
-        logger.info(f"Starting navigation to {url}")
-
-        try:
-            start_time = time.time()
-
-            # Direct synchronous navigation - no threading needed since we're in the right thread
-            logger.info("Executing driver.get")
-            instance.driver.get(url)
-            logger.info("driver.get completed")
-
-            # Wait for page to load
-            logger.info("Waiting for page load")
-            wait = WebDriverWait(instance.driver, 30)
-
-            # Wait for document ready state
-            wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
-            logger.info("Document ready")
-
-            # Get page info
-            title = instance.driver.title
-            current_url = instance.driver.current_url
-            content_length = instance.driver.execute_script("return document.documentElement.innerHTML.length")
-
-            load_time = time.time() - start_time
-            instance.update_activity()
-
-            logger.info(f"Navigation successful - Title: {title}, URL: {current_url}, Load time: {load_time:.2f}s")
-
-            result = PageResult(url=current_url, title=title, status_code=200, load_time=load_time, content_length=content_length)
-
-            return {"url": result.url, "title": result.title, "load_time": result.load_time}
-
-        except Exception as e:
-            logger.error(f"Navigation failed: {e}", exc_info=True)
-            raise
-
-    async def _execute_screenshot(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        screenshot_ctrl = ScreenshotController(instance)
-        screenshot_type = parameters.get("type", "viewport")
-
-        if screenshot_type == "full":
-            image_data = await screenshot_ctrl.capture_full_page()
-        elif screenshot_type == "element":
-            if not parameters.get("selector"):
-                raise MCPError("Selector required for element screenshot")
-            image_data = await screenshot_ctrl.capture_element(parameters["selector"])
-        else:
-            image_data = await screenshot_ctrl.capture_viewport()
-
-        # Save screenshot to disk instead of returning base64
-        # Create screenshots directory if it doesn't exist
-        screenshots_dir = Path("screenshots")
-        screenshots_dir.mkdir(exist_ok=True)
-
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"screenshot_{instance.id[:8]}_{timestamp}.png"
-        filepath = screenshots_dir / filename
-
-        # Save the image
-        with filepath.open("wb") as f:
-            f.write(image_data)
-
-        logger.info(f"Screenshot saved to {filepath}")
-
-        return {"path": str(filepath), "format": parameters.get("format", "png")}
-
-    async def _execute_input(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        input_ctrl = InputController(instance)
-
-        if tool_name == "browser_click":
-            options = ClickOptions(button=parameters.get("button", "left"))
-            await input_ctrl.click(parameters["selector"], options=options)
-        elif tool_name == "browser_type":
-            await input_ctrl.type_text(parameters["selector"], parameters["text"], clear=parameters.get("clear", True))
-
-        return {"success": True}
-
-    async def _execute_cookies(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-
-        if tool_name == "browser_get_cookies":
-            domain = parameters.get("domain")
-            cookies = [c for c in instance.driver.get_cookies() if c.get("domain") == domain] if domain else instance.driver.get_cookies()
-            return {"cookies": cookies}
-        # browser_set_cookies
-        for cookie in parameters["cookies"]:
-            instance.driver.add_cookie(cookie)
-        return {"success": True}
-
-    async def _execute_tabs(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        if tool_name == "browser_get_tabs":
-            tabs = await instance.get_tabs()
-            return {"tabs": [{"id": tab.id, "title": tab.title, "url": tab.url, "active": tab.active} for tab in tabs]}
-        # browser_switch_tab
-        instance.driver.switch_to.window(parameters["tab_id"])
-        return {"success": True}
-
-    async def _execute_navigation(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: C901, PLR0912
-        if tool_name == "browser_navigate":
-            return await self._execute_navigate(parameters)
-
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        nav = NavigationController(instance)
-
-        # Map tools to their execution logic
-        result: dict[str, Any]
-        if tool_name == "browser_scroll":
-            await nav.scroll_to(x=parameters.get("x"), y=parameters.get("y"), element=parameters.get("element"), smooth=parameters.get("smooth", True))
-            result = {"success": True}
-        elif tool_name == "browser_wait_for_element":
-            found = await nav.wait_for_element(parameters["selector"], timeout=parameters.get("timeout", 30))
-            result = {"found": found}
-        elif tool_name == "browser_extract_text":
-            text = await nav.extract_text(
-                preserve_structure=parameters.get("preserve_structure", True),
-                remove_scripts=parameters.get("remove_scripts", True),
-                remove_styles=parameters.get("remove_styles", True),
-            )
-            result = {"text": text}
-        elif tool_name == "browser_extract_links":
-            links = await nav.extract_links(absolute=parameters.get("absolute", True))
-            result = {"links": links}
-        elif tool_name == "browser_get_html":
-            selector = parameters.get("selector")
-            max_depth = parameters.get("max_depth")
-            collapse_depth = parameters.get("collapse_depth")
-
-            # Token limit is 25000 (roughly 4 chars per token)
-            max_tokens = 25000
-            max_chars = max_tokens * 4  # Rough approximation
-
-            # Try to get HTML with progressively more aggressive limits
-            html = None
-            tried_approaches = []
-
-            if selector:
-                # Specific element requested
-                html = await nav.get_element_html(selector)
-                token_count = len(html) // 4  # Rough token estimate
-                if token_count > max_tokens:
-                    # Even the specific element is too large
-                    html = (
-                        html[:max_chars]
-                        + f"\n<!-- Response limited to {max_tokens} tokens. Element too large - try a more specific selector or child elements. -->"
-                    )
-            else:
-                # Try different depth limits to fit within token limit
-                depths_to_try = []
-
-                if collapse_depth:
-                    depths_to_try.append((max_depth, collapse_depth, "user-specified collapse_depth"))
-                if max_depth:
-                    depths_to_try.append((max_depth, None, "user-specified max_depth"))
-
-                # Try raw HTML first, then auto-adjust depths if needed
-                depths_to_try.extend(
-                    [
-                        (None, None, "raw HTML"),  # Try raw HTML first
-                        (None, 3, "collapse_depth=3"),
-                        (None, 2, "collapse_depth=2"),
-                        (None, 1, "collapse_depth=1"),
-                        (3, None, "max_depth=3"),
-                        (2, None, "max_depth=2"),
-                        (1, None, "max_depth=1"),
-                    ]
-                )
-
-                for md, cd, description in depths_to_try:
-                    if md or cd:
-                        html = await nav.get_html_with_depth_limit(md, cd)
-                    else:
-                        html = await nav.get_page_content()
-
-                    token_count = len(html) // 4
-                    tried_approaches.append(f"{description}: ~{token_count} tokens")
-
-                    if token_count <= max_tokens:
-                        if len(tried_approaches) > 1:
-                            html = f"<!-- Auto-adjusted to {description} to fit within {max_tokens} token limit -->\n" + html
-                        break
-                else:
-                    # Nothing worked, return most collapsed version with message
-                    html = await nav.get_html_with_depth_limit(max_depth=1, collapse_depth=1)
-                    token_count = len(html) // 4
-                    if token_count > max_tokens:
-                        html = html[:max_chars]
-                    html = (
-                        f"<!-- WARNING: Response limited to {max_tokens} tokens. Page too large even at minimum depth. \n"
-                        f"Tried approaches: {', '.join(tried_approaches)}\n"
-                        f"Please use a specific selector to target the content you need. -->\n" + html
-                    )
-
-            result = {"html": html}
-        else:  # browser_execute_script
-            script_result = await nav.execute_script(parameters["script"], *parameters.get("args", []))
-            result = {"result": script_result}
-
-        return result
-
-    async def _execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
-        """Execute a tool using the handler registry or delegating to routing methods."""
-        # Check if we have a direct handler in the registry
-        if self.tool_handlers and (handler := self.tool_handlers.get(tool_name)):
-            return await handler(parameters)
-
-        # Handle special cases that need custom logic
-        if tool_name == "browser_close":
-            # Return to pool for reuse instead of terminating
-            return {"success": await self.manager.return_to_pool(parameters["instance_id"])}
-        if tool_name == "browser_list":
-            instances = await self.manager.list_instances()
-            return {
-                "instances": [
-                    {"id": inst.id, "status": inst.status.value, "created_at": inst.created_at.isoformat(), "active_tabs": inst.active_tabs}
-                    for inst in instances
-                ]
-            }
-
-        # Delegate to routing methods for grouped handlers
-        # Define routing map for delegated handlers
-        routing_map = {
-            "browser_navigate": self._execute_navigation,
-            "browser_scroll": self._execute_navigation,
-            "browser_wait_for_element": self._execute_navigation,
-            "browser_execute_script": self._execute_navigation,
-            "browser_extract_text": self._execute_navigation,
-            "browser_extract_links": self._execute_navigation,
-            "browser_get_html": self._execute_navigation,
-            "browser_click": self._execute_input,
-            "browser_type": self._execute_input,
-            "browser_get_cookies": self._execute_cookies,
-            "browser_set_cookies": self._execute_cookies,
-            "browser_get_tabs": self._execute_tabs,
-            "browser_switch_tab": self._execute_tabs,
-            "browser_get_console_logs": self._execute_logs,
-            "browser_get_network_logs": self._execute_logs,
-            "browser_get_local_storage": self._execute_storage,
-            "browser_set_local_storage": self._execute_storage,
-            "browser_remove_local_storage": self._execute_storage,
-            "browser_clear_local_storage": self._execute_storage,
-            "browser_get_session_storage": self._execute_storage,
-            "browser_set_session_storage": self._execute_storage,
-        }
-
-        if router := routing_map.get(tool_name):
-            return await router(tool_name, parameters)
-
-        raise MCPError(f"Tool {tool_name} not implemented")
-
-    async def _execute_logs(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-
-        if tool_name == "browser_get_console_logs":
-            logs = await instance.get_console_logs()
-            return {
-                "logs": [
-                    {
-                        "timestamp": log.timestamp.isoformat(),
-                        "level": log.level,
-                        "message": log.message,
-                        "source": log.source,
-                    }
-                    for log in logs
-                ]
-            }
-        # browser_get_network_logs
-        from ..facade.devtools import DevToolsController
-
-        devtools = DevToolsController(instance)
-        network_logs = await devtools.get_network_logs()
+        # Handle different MCP methods
+        if method == "initialize":
+            return await self._handle_initialize(request_id)
+        if method == "tools/list":
+            return await self._handle_list_tools(request_id)
+        if method == "tools/call":
+            return await self._handle_tool_call(params, request_id)
+        if method == "ping":
+            return {"jsonrpc": "2.0", "result": {"status": "pong"}, "id": request_id}
         return {
-            "logs": [
-                {
-                    "timestamp": log.timestamp.isoformat(),
-                    "method": log.method,
-                    "url": log.url,
-                    "status_code": log.status_code,
-                    "response_time": log.response_time,
-                    "size": log.size,
-                    "headers": log.headers,
-                }
-                for log in network_logs
-            ]
+            "jsonrpc": "2.0",
+            "error": {"code": -32601, "message": f"Method not found: {method}"},
+            "id": request_id,
         }
 
-    async def _execute_storage(self, tool_name: str, parameters: dict[str, Any]) -> dict[str, Any]:
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        nav = NavigationController(instance)
-
-        if tool_name == "browser_get_local_storage":
-            key = parameters.get("key")
-            data = await nav.get_local_storage(key)
-            return {"data": data}
-        if tool_name == "browser_set_local_storage":
-            await nav.set_local_storage(parameters["key"], parameters["value"])
-            return {"success": True}
-        if tool_name == "browser_remove_local_storage":
-            await nav.remove_local_storage(parameters["key"])
-            return {"success": True}
-        if tool_name == "browser_clear_local_storage":
-            await nav.clear_local_storage()
-            return {"success": True}
-        if tool_name == "browser_get_session_storage":
-            key = parameters.get("key")
-            data = await nav.get_session_storage(key)
-            return {"data": data}
-        # browser_set_session_storage
-        await nav.set_session_storage(parameters["key"], parameters["value"])
-        return {"success": True}
-
-    async def _execute_set_properties(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Execute browser_set_properties tool."""
-        instance_id = parameters.get("instance_id")
-        tab_id = parameters.get("tab_id")
-        preset = parameters.get("preset")
-        properties = parameters.get("properties")
-
-        success = await self.manager.set_browser_properties(instance_id=instance_id, tab_id=tab_id, properties=properties, preset=preset)
-
-        return {"success": success}
-
-    async def _execute_get_properties(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Execute browser_get_properties tool."""
-        instance_id = parameters.get("instance_id")
-        tab_id = parameters.get("tab_id")
-
-        properties = await self.manager.get_browser_properties(instance_id=instance_id, tab_id=tab_id)
-
-        return {"properties": properties}
-
-    # Profile management methods
-    async def _execute_list_profiles(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
-        """List all available browser profiles."""
-        if not self.manager.profile_manager:
-            return {"profiles": []}
-
-        profiles = self.manager.profile_manager.list_profiles()
-        return {"profiles": profiles}
-
-    async def _execute_delete_profile(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Delete a browser profile."""
-        if not self.manager.profile_manager:
-            raise MCPError("Profile manager not configured")
-
-        profile_name = parameters["profile_name"]
-        success = self.manager.profile_manager.delete_profile(profile_name)
-        return {"success": success}
-
-    async def _execute_copy_profile(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Copy a browser profile to a new name."""
-        if not self.manager.profile_manager:
-            raise MCPError("Profile manager not configured")
-
-        source = parameters["source_profile"]
-        dest = parameters["dest_profile"]
-        new_profile_path = self.manager.profile_manager.copy_profile(source, dest)
-        return {"success": True, "profile_path": str(new_profile_path)}
-
-    # Session management methods
-    async def _execute_save_session(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Save current browser session."""
-        instance_id = parameters["instance_id"]
-        session_id = await self.manager.save_session(instance_id)
-        return {"session_id": session_id}
-
-    async def _execute_restore_session(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Restore a previously saved session."""
-        session_id = parameters["session_id"]
-        instance = await self.manager.restore_session(session_id)
-        return {"instance_id": instance.id}
-
-    async def _execute_list_sessions(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
-        """List all saved browser sessions."""
-        sessions = await self.manager.session_manager.list_sessions()
-        # Map session_id to id for backward compatibility
-        formatted_sessions = []
-        for session in sessions:
-            formatted_session = session.copy()
-            formatted_session["id"] = session.get("session_id", session.get("id", ""))
-            formatted_sessions.append(formatted_session)
-        return {"sessions": formatted_sessions}
-
-    # Cookie persistence methods
-    async def _execute_save_cookies(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Save cookies to browser profile."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        cookies = instance.save_cookies()
-        return {"success": True, "cookie_count": len(cookies)}
-
-    async def _execute_load_cookies(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Load cookies from browser profile."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        navigate = parameters.get("navigate_to_domain", True)
-        count = instance.load_cookies(navigate_to_domain=navigate)
-        return {"success": True, "cookies_loaded": count}
-
-    # Download management methods
-    async def _execute_list_downloads(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """List all files in the download directory."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        downloads = instance.list_downloads()
-        return {"downloads": downloads}
-
-    async def _execute_wait_for_download(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Wait for a download to complete."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        filename = parameters.get("filename")
-        timeout = parameters.get("timeout", 30)
-
-        downloaded_file = instance.wait_for_download(filename=filename, timeout=timeout)
-        if downloaded_file:
-            return {"success": True, "path": str(downloaded_file)}
-        return {"success": False, "error": "Download timeout"}
-
-    async def _execute_clear_downloads(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Clear all files from download directory."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        cleared = instance.clear_downloads()
-        return {"success": True, "files_cleared": cleared}
-
-    async def _execute_get_download_dir(self, parameters: dict[str, Any]) -> dict[str, Any]:
-        """Get download directory path."""
-        instance = await self._get_instance_or_error(parameters["instance_id"])
-        download_dir = instance.get_download_directory()
-        return {"download_dir": str(download_dir) if download_dir else None}
-
-    # Security configuration method
-    async def _execute_set_security(self, parameters: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG002
-        """Set security configuration for next browser launch."""
-
-        # Note: ChromeManager removed _next_security_config to avoid race conditions
-        # Security config should be passed when creating browser instances instead
-        logger.warning("set_security_config is deprecated - pass security config when launching browser")
-        return {"success": True, "warning": "Security config should be set when launching browser"}
-
-    async def broadcast_event(self, event: MCPEvent):
-        event_data = {
-            "type": "event",
-            "event_type": event.event_type,
-            "instance_id": event.instance_id,
-            "data": event.data,
-            "timestamp": event.timestamp.isoformat(),
+    async def _handle_initialize(self, request_id: Any) -> dict:
+        """Handle initialize request."""
+        return {
+            "jsonrpc": "2.0",
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {},
+                    "resources": {},
+                },
+                "serverInfo": {
+                    "name": "chrome-manager-mcp",
+                    "version": "1.0.0",
+                },
+            },
+            "id": request_id,
         }
 
-        message = json.dumps(event_data)
-
-        if self.clients:
-            await asyncio.gather(*[client.send(message) for client in self.clients.values()], return_exceptions=True)
-
-    def _init_handlers(self):
-        """Initialize the tool handler registry after all methods are defined."""
-        self.tool_handlers = {
-            # Direct handlers
-            "browser_launch": self._execute_launch,
-            "browser_screenshot": self._execute_screenshot,
-            "browser_set_properties": self._execute_set_properties,
-            "browser_get_properties": self._execute_get_properties,
-            "browser_list_profiles": self._execute_list_profiles,
-            "browser_delete_profile": self._execute_delete_profile,
-            "browser_copy_profile": self._execute_copy_profile,
-            "browser_save_session": self._execute_save_session,
-            "browser_restore_session": self._execute_restore_session,
-            "browser_list_sessions": self._execute_list_sessions,
-            "browser_save_cookies": self._execute_save_cookies,
-            "browser_load_cookies": self._execute_load_cookies,
-            "browser_list_downloads": self._execute_list_downloads,
-            "browser_wait_for_download": self._execute_wait_for_download,
-            "browser_clear_downloads": self._execute_clear_downloads,
-            "browser_get_download_dir": self._execute_get_download_dir,
-            "browser_set_security": self._execute_set_security,
+    async def _handle_list_tools(self, request_id: Any) -> dict:
+        """Handle tools/list request."""
+        tools = self.registry.to_mcp_format()
+        return {
+            "jsonrpc": "2.0",
+            "result": {"tools": tools},
+            "id": request_id,
         }
+
+    async def _handle_tool_call(self, params: dict, request_id: Any) -> dict:
+        """Handle tools/call request."""
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+
+        if not tool_name:
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": -32602, "message": "Missing tool name"},
+                "id": request_id,
+            }
+
+        # Check if tool exists
+        tool = self.registry.get_tool(tool_name)
+        if not tool:
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": -32602, "message": f"Unknown tool: {tool_name}"},
+                "id": request_id,
+            }
+
+        try:
+            # Execute the tool
+            result = await self.executor.execute(tool_name, arguments)
+
+            # Format response
+            content = self._format_tool_response(tool_name, result)
+
+            return {
+                "jsonrpc": "2.0",
+                "result": {"content": content},
+                "id": request_id,
+            }
+
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_name}: {e}")
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": -32603, "message": f"Tool execution failed: {str(e)}"},
+                "id": request_id,
+            }
+
+    def _format_tool_response(self, tool_name: str, result: dict) -> list[dict]:  # noqa: ARG002
+        """Format tool response for MCP protocol."""
+        # Convert result to MCP content format
+        if "text" in result:
+            return [{"type": "text", "text": result["text"]}]
+        if "html" in result:
+            return [{"type": "text", "text": f"```html\n{result['html']}\n```"}]
+        if "screenshot" in result:
+            # Return as JSON text for compatibility with tests
+            # The actual base64 data is in the result
+            return [{"type": "text", "text": json.dumps(result, indent=2)}]
+        if "error" in result:
+            return [{"type": "text", "text": f"Error: {result['error']}"}]
+        # Default: return as JSON
+        return [{"type": "text", "text": json.dumps(result, indent=2)}]
+
+    async def broadcast_event(self, event_type: str, data: dict):
+        """Broadcast an event to all connected clients."""
+        message = {
+            "jsonrpc": "2.0",
+            "method": f"notifications/{event_type}",
+            "params": data,
+        }
+
+        # Send to all connected clients
+        disconnected = []
+        for ws in self._connections:
+            try:
+                await ws.send(json.dumps(message))
+            except websockets.ConnectionClosed:
+                disconnected.append(ws)
+
+        # Remove disconnected clients
+        for ws in disconnected:
+            self._connections.discard(ws)
