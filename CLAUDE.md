@@ -18,7 +18,7 @@
 **NEVER ASK WHERE CHROME IS - IT'S ALWAYS HERE:**
 - Chrome binary: `./chromium-win/chrome.exe` (relative to project root)
 - ChromeDriver: `./chromedriver.exe` (relative to project root)
-- These are automatically configured in `chrome_manager/utils/config.py`
+- These are automatically configured in `backend/utils/config.py`
 - The Config class automatically converts these to absolute paths
 - Tests will use these paths automatically
 - STOP LOOKING FOR CHROME - IT'S FUCKING CONFIGURED

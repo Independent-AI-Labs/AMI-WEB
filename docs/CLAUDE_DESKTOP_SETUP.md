@@ -17,7 +17,7 @@ If the server doesn't connect:
 
 1. **Test the script manually:**
    ```bash
-   ./start_mcp_server.sh --test
+   python scripts/start_mcp_server.py
    ```
 
 2. **Check Claude Desktop logs:**
@@ -28,11 +28,11 @@ If the server doesn't connect:
    - Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Replace `/Users/vladislavdonchev/Work/AMI-WEB` with your actual path
 
-4. **Ensure conda is installed:**
+4. **Ensure uv is installed:**
    ```bash
-   conda --version
+   pip install uv
    ```
-   If not installed, get it from: https://docs.conda.io/en/latest/miniconda.html
+   The start script will automatically create and manage the virtual environment.
 
 ## Manual Configuration
 
@@ -42,10 +42,11 @@ If you need to customize the path:
 {
   "mcpServers": {
     "ami-web-browser": {
-      "command": "bash",
+      "command": "python",
       "args": [
-        "/YOUR/PATH/TO/AMI-WEB/start_mcp_server.sh"
+        "scripts/start_mcp_server.py"
       ],
+      "cwd": "/YOUR/PATH/TO/AMI-WEB",
       "env": {
         "LOG_LEVEL": "INFO"
       }
@@ -64,9 +65,9 @@ If the script doesn't work, try direct execution:
 {
   "mcpServers": {
     "ami-web-browser": {
-      "command": "/opt/homebrew/Caskroom/miniconda/base/envs/web/bin/python",
+      "command": "/YOUR/PATH/TO/AMI-WEB/.venv/bin/python",
       "args": [
-        "chrome_manager/mcp/mcp_stdio_server.py"
+        "backend/mcp/browser/run_stdio.py"
       ],
       "cwd": "/YOUR/PATH/TO/AMI-WEB",
       "env": {

@@ -25,7 +25,7 @@ pytest --headed
 pytest tests/integration/test_antidetection.py -v
 
 # Run with coverage report
-pytest --cov=chrome_manager --cov-report=html
+pytest --cov=backend --cov-report=html
 ```
 
 ## 📁 Test Structure
@@ -124,7 +124,7 @@ Generate beautiful HTML coverage reports:
 
 ```bash
 # Generate coverage report
-pytest --cov=chrome_manager --cov-report=html
+pytest --cov=backend --cov-report=html
 
 # Open in browser
 open htmlcov/index.html  # macOS
@@ -205,7 +205,7 @@ Our tests include performance benchmarks:
 
 ```python
 import pytest
-from chrome_manager.core.manager import ChromeManager
+from backend.core.manager import ChromeManager
 
 @pytest.mark.asyncio
 async def test_my_awesome_feature():

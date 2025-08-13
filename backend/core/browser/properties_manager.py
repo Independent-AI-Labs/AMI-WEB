@@ -23,7 +23,7 @@ class PropertiesManager:
     def _load_default_properties(self) -> BrowserProperties:
         """Load default properties from config."""
         # Get preset name from config
-        preset_name = self.config.get("chrome_manager.browser_properties.preset", "stealth")
+        preset_name = self.config.get("backend.browser_properties.preset", "stealth")
 
         # Convert string to enum
         try:
@@ -34,7 +34,7 @@ class PropertiesManager:
             properties = get_preset_properties(BrowserPropertiesPreset.STEALTH)
 
         # Apply overrides from config
-        overrides = self.config.get("chrome_manager.browser_properties.overrides", {})
+        overrides = self.config.get("backend.browser_properties.overrides", {})
         if overrides:
             # Update properties with overrides
             for key, value in overrides.items():

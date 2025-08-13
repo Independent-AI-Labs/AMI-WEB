@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from chrome_manager.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
+from backend.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
 
 
 class TestBrowserProperties:

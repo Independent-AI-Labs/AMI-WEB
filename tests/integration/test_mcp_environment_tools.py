@@ -12,8 +12,8 @@ import pytest_asyncio
 import websockets
 from loguru import logger
 
-from chrome_manager.core.management.manager import ChromeManager
-from chrome_manager.mcp.browser.server import BrowserMCPServer
+from backend.core.management.manager import ChromeManager
+from backend.mcp.browser.server import BrowserMCPServer
 
 # Set headless mode for tests
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

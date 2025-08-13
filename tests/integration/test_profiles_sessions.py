@@ -7,13 +7,13 @@ from pathlib import Path
 import pytest
 from selenium.webdriver.common.by import By
 
-from chrome_manager.core.management.manager import ChromeManager
-from chrome_manager.core.management.profile_manager import ProfileManager
-from chrome_manager.models.security import SecurityConfig, SecurityLevel
+from backend.core.management.manager import ChromeManager
+from backend.core.management.profile_manager import ProfileManager
+from backend.models.security import SecurityConfig, SecurityLevel
 
 
 @pytest.fixture
-async def chrome_manager():
+async def backend():
     """Create a Chrome manager instance with test configuration."""
     import tempfile
     from pathlib import Path
@@ -23,7 +23,7 @@ async def chrome_manager():
     # Create a temporary config file with proper paths
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         config = {
-            "chrome_manager": {
+            "backend": {
                 "browser": {
                     "chrome_binary_path": "./build/chromium-win/chrome.exe",
                     "chromedriver_path": "./build/chromedriver.exe",
@@ -59,21 +59,21 @@ def temp_profiles_dir():
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_test_profiles(chrome_manager):
+async def cleanup_test_profiles(backend):
     """Clean up test profiles before and after each test."""
     # Clean up any leftover profiles before test
     profile_names = ["cookie_test", "download_test", "download1", "download2", "profile1", "profile2", "persistent_test", "login_test"]
 
     for name in profile_names:
         with suppress(Exception):
-            chrome_manager.profile_manager.delete_profile(name)
+            backend.profile_manager.delete_profile(name)
 
     yield
 
     # Clean up after test
     for name in profile_names:
         with suppress(Exception):
-            chrome_manager.profile_manager.delete_profile(name)
+            backend.profile_manager.delete_profile(name)
 
 
 class TestProfileManagement:
@@ -131,10 +131,10 @@ class TestProfileManagement:
         assert names == {"original", "copied"}
 
     @pytest.mark.slow
-    async def test_profile_with_cookies(self, chrome_manager):
+    async def test_profile_with_cookies(self, backend):
         """Test saving and loading cookies with profiles."""
         # Create instance with profile
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             profile="cookie_test",
             use_pool=False,
@@ -172,9 +172,9 @@ class TestDownloadManagement:
     """Test download management features."""
 
     @pytest.mark.slow
-    async def test_download_file(self, chrome_manager):
+    async def test_download_file(self, backend):
         """Test downloading a file with safe browsing."""
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             use_pool=False,
             anti_detect=False,  # Disable for tests
@@ -219,9 +219,9 @@ class TestDownloadManagement:
             await instance.terminate()
 
     @pytest.mark.slow
-    async def test_profile_specific_downloads(self, chrome_manager):
+    async def test_profile_specific_downloads(self, backend):
         """Test that downloads go to profile-specific directories."""
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             profile="download_test",
             use_pool=False,
@@ -270,9 +270,9 @@ class TestSecurityConfiguration:
         assert "--disable-web-security" in args
 
     @pytest.mark.slow
-    async def test_permissive_security_allows_insecure(self, chrome_manager):
+    async def test_permissive_security_allows_insecure(self, backend):
         """Test that permissive security allows connecting to insecure sites."""
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             security_config=SecurityConfig.from_level(SecurityLevel.PERMISSIVE),
             use_pool=False,
@@ -290,9 +290,9 @@ class TestSecurityConfiguration:
             await instance.terminate()
 
     @pytest.mark.slow
-    async def test_strict_security_safe_browsing(self, chrome_manager):
+    async def test_strict_security_safe_browsing(self, backend):
         """Test that strict security enables safe browsing."""
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             security_config=SecurityConfig.from_level(SecurityLevel.STRICT),
             use_pool=False,
@@ -314,17 +314,17 @@ class TestSessionIsolation:
     """Test session and instance isolation."""
 
     @pytest.mark.slow
-    async def test_profile_isolation(self, chrome_manager, test_html_server):
+    async def test_profile_isolation(self, backend, test_html_server):
         """Test that different profiles are isolated from each other."""
         # Create two instances with different profiles
-        instance1 = await chrome_manager.get_or_create_instance(
+        instance1 = await backend.get_or_create_instance(
             headless=True,
             profile="profile1",
             use_pool=False,
             anti_detect=False,  # Disable for tests
         )
 
-        instance2 = await chrome_manager.get_or_create_instance(
+        instance2 = await backend.get_or_create_instance(
             headless=True,
             profile="profile2",
             use_pool=False,
@@ -361,16 +361,16 @@ class TestSessionIsolation:
             await instance2.terminate()
 
     @pytest.mark.slow
-    async def test_download_isolation(self, chrome_manager):
+    async def test_download_isolation(self, backend):
         """Test that downloads are isolated between instances."""
-        instance1 = await chrome_manager.get_or_create_instance(
+        instance1 = await backend.get_or_create_instance(
             headless=True,
             profile="download1",
             use_pool=False,
             anti_detect=False,  # Disable for tests
         )
 
-        instance2 = await chrome_manager.get_or_create_instance(
+        instance2 = await backend.get_or_create_instance(
             headless=True,
             profile="download2",
             use_pool=False,
@@ -400,12 +400,12 @@ class TestPersistentSessions:
     """Test persistent browser sessions."""
 
     @pytest.mark.slow
-    async def test_session_persistence(self, chrome_manager, test_html_server):
+    async def test_session_persistence(self, backend, test_html_server):
         """Test that browser sessions persist across restarts."""
         profile_name = "persistent_test"
 
         # First session - set some data
-        instance1 = await chrome_manager.get_or_create_instance(
+        instance1 = await backend.get_or_create_instance(
             headless=True,
             profile=profile_name,
             use_pool=False,
@@ -432,7 +432,7 @@ class TestPersistentSessions:
             await instance1.terminate()
 
         # Second session - verify data persists
-        instance2 = await chrome_manager.get_or_create_instance(
+        instance2 = await backend.get_or_create_instance(
             headless=True,
             profile=profile_name,
             use_pool=False,
@@ -457,12 +457,12 @@ class TestPersistentSessions:
             await instance2.terminate()
 
     @pytest.mark.slow
-    async def test_login_persistence(self, chrome_manager):
+    async def test_login_persistence(self, backend):
         """Test that login sessions can be preserved."""
         profile_name = "login_test"
 
         # Create instance with profile
-        instance = await chrome_manager.get_or_create_instance(
+        instance = await backend.get_or_create_instance(
             headless=True,
             profile=profile_name,
             use_pool=False,

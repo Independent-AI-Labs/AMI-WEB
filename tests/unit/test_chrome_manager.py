@@ -6,9 +6,9 @@ Test script for Chrome Manager
 import asyncio
 import json
 
-from chrome_manager.core.management.manager import ChromeManager
-from chrome_manager.facade.media.screenshot import ScreenshotController
-from chrome_manager.facade.navigation.navigator import Navigator
+from backend.core.management.manager import ChromeManager
+from backend.facade.media.screenshot import ScreenshotController
+from backend.facade.navigation.navigator import Navigator
 
 
 async def test_basic_operations():
@@ -64,7 +64,7 @@ async def test_basic_operations():
 
 async def test_mcp_server():
     print("\nTesting MCP Server...")
-    print("Run the server with: python -m chrome_manager.mcp_server")
+    print("Run the server with: python -m backend.mcp_server")
     print("Then connect with WebSocket client to ws://localhost:8765")
 
     # Example MCP messages
