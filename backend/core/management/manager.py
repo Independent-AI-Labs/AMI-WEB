@@ -404,3 +404,32 @@ class ChromeManager:
             raise ValueError(f"Instance {instance_id} not found")
 
         return instance.driver.execute_script(script, *args)
+
+    async def set_browser_properties(self, instance_id: str, properties: dict[str, Any] | None = None, preset: str | None = None) -> bool:  # noqa: ARG002
+        """Set browser properties for an instance.
+
+        Args:
+            instance_id: Instance ID
+            properties: Properties dictionary to apply
+            preset: Preset name to use (if properties not provided)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        instance = await self.get_instance(instance_id)
+        if not instance:
+            logger.warning(f"Instance {instance_id} not found")
+            return False
+
+        # Apply properties through the instance's properties manager
+        if properties:
+            # Convert dict to BrowserProperties if needed
+            from ...models.browser_properties import BrowserProperties
+
+            browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
+
+            # Inject properties into the browser
+            self.properties_manager.inject_properties(instance.driver, browser_props)
+            return True
+
+        return False
