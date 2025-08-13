@@ -2,945 +2,763 @@
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Installation & Configuration](#installation--configuration)
+1. [System Architecture](#system-architecture)
+2. [Installation & Setup](#installation--setup)
 3. [Core Components](#core-components)
-4. [MCP Tools Reference](#mcp-tools-reference)
-5. [Security & Compliance](#security--compliance)
-6. [Anti-Detection Technology](#anti-detection-technology)
-7. [API Reference](#api-reference)
-8. [Testing & Quality](#testing--quality)
-9. [Performance Optimization](#performance-optimization)
-10. [Troubleshooting](#troubleshooting)
+4. [Facade Layer Reference](#facade-layer-reference)
+5. [MCP Tools Reference](#mcp-tools-reference)
+6. [Configuration](#configuration)
+7. [Anti-Detection System](#anti-detection-system)
+8. [Testing](#testing)
+9. [Troubleshooting](#troubleshooting)
+10. [API Examples](#api-examples)
 
-## Architecture Overview
+## System Architecture
 
-### System Architecture
+AMI-WEB follows a layered architecture with clear separation of concerns:
 
-AMI-WEB uses a layered architecture designed for scalability, security, and maintainability:
-
-```mermaid
-graph TB
-    subgraph "External Clients"
-        A1[AI Agents]
-        A2[Web Apps]
-        A3[CLI Tools]
-        A4[Testing Frameworks]
-    end
-    
-    subgraph "Communication Layer"
-        B1[MCP Protocol<br/>stdio]
-        B2[WebSocket API<br/>port 8765]
-        B3[REST API<br/>future]
-    end
-    
-    subgraph "Chrome Manager Core"
-        C1["Instance Pool Manager<br/>• Pre-warmed instances<br/>• Health monitoring<br/>• Resource optimization"]
-        C2[Browser Environment Manager]
-        C21[Profile<br/>Manager]
-        C22[Session<br/>Manager]
-        C23[Security<br/>Manager]
-    end
-    
-    subgraph "Browser Instance Layer"
-        D1["Instance 1<br/>(Profile A)"]
-        D2["Instance 2<br/>(Profile B)"]
-        D3["Instance N<br/>(Pool)"]
-        D4["Each instance includes:<br/>• Chrome browser (isolated)<br/>• WebDriver connection<br/>• CDP (DevTools Protocol)<br/>• Anti-detection scripts<br/>• Properties injection"]
-    end
-    
-    A1 --> B1
-    A2 --> B2
-    A3 --> B1
-    A3 --> B2
-    A4 --> B2
-    
-    B1 --> C1
-    B2 --> C1
-    B3 --> C1
-    
-    C1 --> C2
-    C2 --> C21
-    C2 --> C22
-    C2 --> C23
-    
-    C21 --> D1
-    C21 --> D2
-    C22 --> D1
-    C22 --> D2
-    C23 --> D1
-    C23 --> D2
-    C1 --> D3
+```
+External Layer (Clients)
+    ↓
+MCP Protocol Layer (stdio/WebSocket)
+    ↓
+Management Layer (ChromeManager)
+    ↓
+Core Layer (BrowserInstance)
+    ↓
+Facade Layer (Controllers)
+    ↓
+Browser (Chrome + CDP)
 ```
 
-### Component Interaction Flow
+### Component Organization
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant MCP Server
-    participant Chrome Manager
-    participant Instance Pool
-    participant Browser Instance
-    
-    Client->>MCP Server: Tool Request
-    MCP Server->>Chrome Manager: Execute Command
-    Chrome Manager->>Instance Pool: Get/Create Instance
-    Instance Pool->>Browser Instance: Launch/Reuse
-    Browser Instance-->>Instance Pool: Instance Ready
-    Instance Pool-->>Chrome Manager: Instance Handle
-    Chrome Manager-->>MCP Server: Result
-    MCP Server-->>Client: Response
+```
+backend/
+├── core/                    # Core browser functionality
+│   ├── browser/            # Browser instance management
+│   │   ├── instance.py     # Main BrowserInstance class
+│   │   ├── lifecycle.py    # Launch, terminate, restart logic
+│   │   ├── options.py      # Chrome options builder
+│   │   ├── properties_manager.py  # Browser fingerprint management
+│   │   └── tab_manager.py  # Tab lifecycle management
+│   ├── management/         # High-level orchestration
+│   │   ├── manager.py      # ChromeManager - main entry point
+│   │   ├── pool.py         # Browser pool for pre-warmed instances
+│   │   ├── profile_manager.py  # Chrome profile management
+│   │   └── session_manager.py  # Session save/restore
+│   ├── monitoring/         # Real-time monitoring
+│   │   └── monitor.py      # Console logs, performance metrics
+│   ├── security/           # Anti-detection features
+│   │   ├── antidetect.py   # ChromeDriver patching & scripts
+│   │   └── tab_injector.py # Tab-level script injection
+│   └── storage/            # Data persistence
+│       └── storage.py      # Downloads, cookies, local storage
+├── facade/                 # High-level controller interfaces
+│   ├── base.py            # BaseController abstract class
+│   ├── input/             # User input simulation
+│   │   ├── mouse.py       # Click, hover, drag operations
+│   │   ├── keyboard.py    # Type, press key operations
+│   │   ├── touch.py       # Touch gestures for mobile
+│   │   └── forms.py       # Form filling utilities
+│   ├── navigation/        # Page navigation & content
+│   │   ├── navigator.py   # URL navigation, history
+│   │   ├── extractor.py   # Content extraction (HTML, text, links)
+│   │   ├── waiter.py      # Wait for elements/conditions
+│   │   ├── scroller.py    # Scroll operations
+│   │   └── storage.py     # LocalStorage/SessionStorage
+│   ├── media/             # Media capture
+│   │   ├── screenshot.py  # Screenshot capture
+│   │   └── video.py       # Video recording (placeholder)
+│   ├── devtools/          # Chrome DevTools integration
+│   │   ├── network.py     # Network monitoring
+│   │   ├── performance.py # Performance metrics
+│   │   └── devtools.py    # Console logs access
+│   └── context/           # Browser context management
+│       ├── tabs.py        # Tab management
+│       └── frames.py      # iFrame handling
+├── mcp/                   # Model Context Protocol implementation
+│   ├── base/              # Generic MCP server framework
+│   │   ├── mcp_server.py  # Base MCP server class
+│   │   ├── protocol.py    # MCP protocol implementation
+│   │   ├── transport.py   # stdio/WebSocket transports
+│   │   ├── auth.py        # Authentication (placeholder)
+│   │   └── rate_limit.py  # Rate limiting (placeholder)
+│   └── browser/           # Browser-specific MCP
+│       ├── server.py      # BrowserMCPServer implementation
+│       ├── run_stdio.py   # stdio transport runner
+│       ├── run_websocket.py  # WebSocket transport runner
+│       └── tools/         # MCP tool definitions
+│           ├── definitions.py  # Tool schemas
+│           ├── executor.py     # Tool execution logic
+│           └── registry.py     # Tool registration
+├── models/                # Data models (Pydantic)
+│   ├── browser.py         # Browser-related models
+│   ├── browser_properties.py  # Fingerprint properties
+│   ├── security.py        # Security configurations
+│   ├── media.py           # Screenshot/video models
+│   └── mcp.py             # MCP protocol models
+├── services/              # Business services
+│   └── property_injection.py  # Property injection service
+└── utils/                 # Utilities
+    ├── config.py          # Configuration management
+    ├── exceptions.py      # Custom exceptions
+    ├── javascript.py      # JS script utilities
+    ├── paths.py           # Path utilities
+    ├── selectors.py       # CSS selector utilities
+    ├── timing.py          # Timing constants
+    └── threading.py       # Thread-safe operations
 ```
 
-## Installation & Configuration
+## Installation & Setup
 
-### System Requirements
+### Prerequisites
 
-- **Operating System**: Windows 10/11, macOS 11+, Ubuntu 20.04+
-- **Python**: 3.12 recommended (3.10+ supported)
-- **Memory**: Minimum 4GB RAM (8GB+ recommended)
-- **Storage**: 2GB free space
-- **Chrome**: Included in repository (chromium-win/chrome.exe)
+- Python 3.12 recommended (3.10+ supported)
+- Windows 10/11, macOS 11+, or Ubuntu 20.04+
+- 4GB RAM minimum (8GB recommended)
+- Chrome and ChromeDriver included in repository
 
-### Detailed Installation
+### Installation Steps
 
 ```bash
-# 1. Clone the repository
+# Clone repository
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
 
-# 2. Install uv for fast dependency management
+# Install uv for fast dependency management (REQUIRED)
 pip install uv
 
-# 3. Create virtual environment with uv
+# The start script will automatically:
+# 1. Create virtual environment at .venv/
+# 2. Install all dependencies from requirements.txt
+# 3. Start the appropriate server
+
+# Start MCP server (auto-setup included)
+python scripts/start_mcp_server.py              # stdio mode (Claude Desktop)
+python scripts/start_mcp_server.py websocket    # WebSocket mode
+python scripts/start_mcp_server.py websocket --host 0.0.0.0 --port 8080  # Custom
+
+# Manual setup (if needed)
 uv venv .venv
 .venv\Scripts\activate  # Windows
-# or
-source .venv/bin/activate  # macOS/Linux
-
-# 4. Install dependencies with uv (much faster than pip)
+source .venv/bin/activate  # Linux/macOS
 uv pip install -r requirements.txt
-uv pip install -r requirements-test.txt  # For development/testing
+uv pip install -r requirements-test.txt  # For development
 
-# 5. Configure settings
+# Configure (optional - has defaults)
 cp config.sample.yaml config.yaml
-# Edit config.yaml with your preferences
-
-# Note: Chrome and ChromeDriver are included in the repository
-# Located at: chromium-win/chrome.exe and chromedriver.exe
-
-# 6. Run MCP server (optional)
-python scripts/start_mcp_server.py              # Stdio mode for Claude Desktop
-python scripts/start_mcp_server.py websocket    # WebSocket mode
+# Edit config.yaml as needed
 ```
 
-### Configuration File Structure
+## Core Components
+
+### ChromeManager
+
+Central orchestrator managing all browser operations.
+
+```python
+from backend.core.management.manager import ChromeManager
+from backend.models.security import SecurityConfig, SecurityLevel
+
+# Initialize
+manager = ChromeManager(config_file="config.yaml")
+await manager.initialize()
+
+# Get or create instance with all options
+instance = await manager.get_or_create_instance(
+    headless=True,                    # Run in headless mode
+    profile="my_profile",             # Use named profile (auto-created)
+    anti_detect=True,                  # Enable anti-detection (default: True)
+    use_pool=True,                     # Use pre-warmed pool (default: True)
+    security_config=SecurityConfig.from_level(SecurityLevel.STANDARD),
+    download_dir="./downloads",       # Custom download directory
+    extensions=["path/to/extension"], # Chrome extensions to load
+)
+
+# Core instance management
+await manager.get_instance(instance_id)          # Get existing instance
+await manager.terminate_instance(instance_id)    # Fully terminate
+await manager.return_to_pool(instance_id)        # Return for reuse
+await manager.list_instances()                   # List all active
+
+# Session management
+session_id = await manager.save_session(instance_id, "shopping_session")
+restored = await manager.restore_session(session_id)
+
+# Browser properties (fingerprinting)
+from backend.models.browser_properties import BrowserPropertiesPreset
+
+await manager.set_browser_properties(
+    instance_id=instance.id,
+    preset="stealth"  # Or "minimal", "moderate", "aggressive"
+)
+props = await manager.get_browser_properties(instance_id)
+
+# Pool statistics
+stats = await manager.get_pool_stats()
+# {'total_instances': 5, 'available': 2, 'in_use': 3, ...}
+
+# Batch execution
+tasks = [
+    {"type": "navigate", "params": {"url": "https://example.com"}},
+    {"type": "screenshot", "params": {}},
+    {"type": "execute_script", "params": {"script": "return document.title"}}
+]
+results = await manager.execute_batch(tasks, max_concurrent=5)
+
+# Cleanup
+await manager.shutdown()
+```
+
+### ProfileManager
+
+Manages Chrome profiles with complete isolation.
+
+```python
+from backend.core.management.profile_manager import ProfileManager
+
+profile_manager = ProfileManager(base_dir="./data/browser_profiles")
+
+# Methods available:
+profile_dir = profile_manager.create_profile(name, description)
+profile_dir = profile_manager.get_profile_dir(name)
+success = profile_manager.delete_profile(name)
+profiles = profile_manager.list_profiles()
+new_dir = profile_manager.copy_profile(source, dest)
+```
+
+### SessionManager
+
+Saves and restores browser sessions.
+
+```python
+from backend.core.management.session_manager import SessionManager
+
+session_manager = SessionManager(session_dir="./data/sessions")
+await session_manager.initialize()
+
+# Methods available:
+session_id = await session_manager.save_session(instance, name)
+instance = await session_manager.restore_session(session_id)
+sessions = await session_manager.list_sessions()
+success = session_manager.delete_session(session_id)
+await session_manager.shutdown()
+```
+
+### BrowserPool
+
+Manages pre-warmed browser instances for instant availability.
+
+```python
+# Configured via ChromeManager
+pool_stats = await manager.get_pool_stats()
+# Returns: {
+#   "total_instances": 5,
+#   "available": 2,
+#   "in_use": 3,
+#   "warm_target": 2,
+#   "health_checks_run": 150
+# }
+```
+
+## Facade Layer Reference
+
+### Navigation Components
+
+#### Navigator
+```python
+from backend.facade.navigation.navigator import Navigator
+
+nav = Navigator(browser_instance)
+result = await nav.navigate(url, wait_for="domcontentloaded", timeout=30)
+await nav.back()
+await nav.forward()
+await nav.refresh()
+current_url = await nav.get_current_url()
+title = await nav.get_title()
+```
+
+#### ContentExtractor
+```python
+from backend.facade.navigation.extractor import ContentExtractor
+
+extractor = ContentExtractor(browser_instance)
+html = await extractor.get_page_content()
+element_html = await extractor.get_element_html(selector)
+element_text = await extractor.get_element_text(selector)
+result = await extractor.execute_script(script, *args)
+limited_html = await extractor.get_html_with_depth_limit(max_depth=3)
+text = await extractor.extract_text(preserve_structure=True)
+links = await extractor.extract_links(absolute=True)
+forms = await extractor.extract_forms()
+```
+
+#### Waiter
+```python
+from backend.facade.navigation.waiter import Waiter
+
+waiter = Waiter(browser_instance)
+found = await waiter.wait_for_element(selector, timeout=10)
+found = await waiter.wait_for_element_visible(selector, timeout=10)
+gone = await waiter.wait_for_element_hidden(selector, timeout=10)
+```
+
+#### Scroller
+```python
+from backend.facade.navigation.scroller import Scroller
+
+scroller = Scroller(browser_instance)
+await scroller.scroll_to_element(selector, smooth=True)
+await scroller.scroll_to_position(x=0, y=500, smooth=True)
+await scroller.scroll_by(x=0, y=200, smooth=False)
+await scroller.scroll_to_top(smooth=True)
+await scroller.scroll_to_bottom(smooth=True)
+position = await scroller.get_scroll_position()
+```
+
+#### StorageController
+```python
+from backend.facade.navigation.storage import StorageController
+
+storage = StorageController(browser_instance)
+value = await storage.get_local_storage(key)
+await storage.set_local_storage(key, value)
+await storage.clear_local_storage()
+value = await storage.get_session_storage(key)
+await storage.set_session_storage(key, value)
+await storage.clear_session_storage()
+```
+
+### Input Components
+
+#### MouseController
+```python
+from backend.facade.input.mouse import MouseController
+
+mouse = MouseController(browser_instance)
+await mouse.click(selector, button="left", click_count=1)
+await mouse.click_at_coordinates(x, y, button="left", click_count=1)
+await mouse.double_click(selector)
+await mouse.right_click(selector)
+await mouse.hover(selector)
+await mouse.drag_and_drop(source_selector, target_selector)
+await mouse.drag_from_to(start_x, start_y, end_x, end_y, duration=1.0)
+```
+
+#### KeyboardController
+```python
+from backend.facade.input.keyboard import KeyboardController
+
+keyboard = KeyboardController(browser_instance)
+await keyboard.type_text(selector, text, clear=True, delay=0.1)
+await keyboard.press_key(key)  # e.g., "Enter", "Tab", "Escape"
+await keyboard.send_keys(selector, keys)  # e.g., ["ctrl+a", "delete"]
+await keyboard.clear_field(selector)
+```
+
+#### TouchController
+```python
+from backend.facade.input.touch import TouchController
+
+touch = TouchController(browser_instance)
+await touch.tap(selector)
+await touch.double_tap(selector)
+await touch.long_press(selector, duration=1.0)
+await touch.swipe(start_x, start_y, end_x, end_y, duration=0.5)
+await touch.pinch_zoom(selector, scale=2.0)
+```
+
+#### FormsController
+```python
+from backend.facade.input.forms import FormsController
+
+forms = FormsController(browser_instance)
+await forms.fill_form(form_data)  # Dict of field_name: value
+await forms.submit_form(form_selector)
+await forms.select_option(select_selector, value)
+await forms.check_checkbox(checkbox_selector)
+await forms.uncheck_checkbox(checkbox_selector)
+await forms.select_radio(radio_selector)
+form_data = await forms.get_form_data(form_selector)
+```
+
+### Media Components
+
+#### ScreenshotController
+```python
+from backend.facade.media.screenshot import ScreenshotController
+
+screenshot = ScreenshotController(browser_instance)
+png_bytes = await screenshot.capture_viewport()
+png_bytes = await screenshot.capture_full_page()
+png_bytes = await screenshot.capture_element(selector)
+base64_str = await screenshot.capture_as_base64()
+file_path = await screenshot.save_screenshot(filename="screenshot.png")
+```
+
+### DevTools Components
+
+#### NetworkMonitor
+```python
+from backend.facade.devtools.network import NetworkMonitor
+
+network = NetworkMonitor(browser_instance)
+await network.start_monitoring()
+requests = await network.get_requests()
+responses = await network.get_responses()
+await network.clear_data()
+await network.stop_monitoring()
+```
+
+#### PerformanceMonitor
+```python
+from backend.facade.devtools.performance import PerformanceMonitor
+
+perf = PerformanceMonitor(browser_instance)
+metrics = await perf.get_metrics()
+# Returns: navigation_start, dom_content_loaded, load_complete, first_paint, etc.
+timing = await perf.get_timing()
+memory = await perf.get_memory_info()
+```
+
+### Context Components
+
+#### TabManager
+```python
+from backend.facade.context.tabs import TabManager
+
+tabs = TabManager(browser_instance)
+tab_list = await tabs.get_tabs()
+await tabs.switch_to_tab(tab_id)
+new_tab = await tabs.open_new_tab(url)
+await tabs.close_tab(tab_id)
+current = await tabs.get_current_tab()
+```
+
+## MCP Tools Reference
+
+AMI-WEB provides the following MCP tools:
+
+### Browser Lifecycle
+- `browser_launch` - Launch new browser instance
+- `browser_terminate` - Terminate browser instance
+- `browser_list` - List all active instances
+- `browser_get_active` - Get currently active instance
+
+### Navigation
+- `browser_navigate` - Navigate to URL
+- `browser_back` - Go back in history
+- `browser_forward` - Go forward in history
+- `browser_refresh` - Refresh current page
+- `browser_get_url` - Get current URL
+
+### Input
+- `browser_click` - Click on element
+- `browser_type` - Type text into field
+- `browser_select` - Select dropdown option
+- `browser_scroll` - Scroll the page
+- `browser_execute_script` - Execute JavaScript
+
+### Content
+- `browser_get_text` - Extract page text
+- `browser_get_html` - Get HTML content
+- `browser_extract_forms` - Extract all forms
+- `browser_extract_links` - Extract all links
+
+### Media
+- `browser_screenshot` - Take screenshot
+
+### Tabs
+- `browser_get_tabs` - List open tabs
+- `browser_switch_tab` - Switch to specific tab
+
+### Storage
+- `browser_get_cookies` - Get cookies
+- `browser_set_cookies` - Set cookies
+- `browser_clear_cookies` - Clear cookies
+
+### Monitoring
+- `browser_get_console_logs` - Get console logs
+- `browser_get_network_logs` - Get network logs
+
+### Profiles
+- `profile_create` - Create new profile
+- `profile_list` - List all profiles
+- `profile_delete` - Delete profile
+
+### Sessions
+- `session_save` - Save current session
+- `session_load` - Load saved session
+- `session_list` - List saved sessions
+
+## Configuration
+
+### config.yaml Structure
 
 ```yaml
-# config.yaml
 backend:
   browser:
     chrome_binary_path: "./chromium-win/chrome.exe"
     chromedriver_path: "./chromedriver.exe"
     default_headless: true
+    default_window_size: [1920, 1080]
     
   pool:
-    min_instances: 1          # Minimum pool size
-    max_instances: 10         # Maximum concurrent browsers
-    warm_instances: 2         # Pre-warmed ready instances
-    instance_ttl: 3600       # Instance lifetime (seconds)
-    health_check_interval: 30 # Health check frequency
-    
-  security:
-    level: "standard"        # strict/standard/relaxed/permissive
+    min_instances: 1
+    max_instances: 10
+    warm_instances: 2
+    instance_ttl: 3600
+    health_check_interval: 30
     
   storage:
-    profiles_dir: "./browser_profiles"
-    download_dir: "./downloads"
-    session_dir: "./sessions"
+    session_dir: "./data/sessions"
+    profiles_dir: "./data/browser_profiles"
+    download_dir: "./data/downloads"
+    
+  security:
+    level: "standard"  # strict/standard/relaxed/permissive
     
   browser_properties:
-    preset: "stealth"        # Fingerprint preset
-    user_agent: null         # Custom user agent
-    webgl_vendor: "Google Inc. (Intel)"
-    webgl_renderer: "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11)"
-    
-server:
-  host: "localhost"
-  port: 8765
-  max_connections: 100
+    preset: "stealth"  # Fingerprint preset
+    overrides:
+      user_agent: "Mozilla/5.0..."
+      webgl_vendor: "Google Inc. (Intel)"
+      webgl_renderer: "ANGLE..."
 ```
 
-### Environment Variables
+## Anti-Detection System
 
-```bash
-# Optional environment variables
-export TEST_HEADLESS=true           # Run tests in headless mode
-export LOG_LEVEL=INFO              # Logging verbosity
-export backend_CONFIG=/path/to/config.yaml
-```
+### CDP Script Injection
 
-## Core Components
-
-### Chrome Manager
-
-The central orchestrator that manages all browser instances and operations.
+AMI-WEB uses Chrome DevTools Protocol for automatic script injection:
 
 ```python
-from backend.core.management.manager import ChromeManager
-
-# Initialize manager
-manager = ChromeManager(config_file="config.yaml")
-await manager.initialize()
-
-# Create browser instance
-instance = await manager.get_or_create_instance(
-    headless=True,
-    profile="my_profile",
-    security_config=SecurityConfig.from_level(SecurityLevel.STRICT),
-    anti_detect=True
-)
-
-# Use the browser
-instance.driver.get("https://example.com")
-
-# Clean up
-await manager.shutdown()
+# Automatically injected on all new documents
+driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+    "source": antidetect_script,
+    "runImmediately": True
+})
 ```
 
-### Profile Manager
+### Fingerprint Management
 
-Manages persistent browser profiles with isolated storage.
+Control all browser parameters:
+- WebDriver property removal
+- Plugin array simulation
+- WebGL vendor/renderer spoofing
+- Canvas noise injection
+- Audio context modification
+- Chrome runtime simulation
+- Permissions API override
 
-```python
-from backend.core.management.profile_manager import ProfileManager
+### ChromeDriver Patching
 
-profile_manager = ProfileManager(base_dir="./browser_profiles")
+Binary-level modifications to remove automation indicators.
 
-# Create profile
-profile_dir = profile_manager.create_profile(
-    name="client_a",
-    description="Client A browsing profile"
-)
+## Testing
 
-# List profiles
-profiles = profile_manager.list_profiles()
+### Test Structure
 
-# Copy profile
-profile_manager.copy_profile("client_a", "client_a_backup")
-
-# Delete profile
-profile_manager.delete_profile("old_profile")
 ```
-
-### Session Manager
-
-Saves and restores complete browser states.
-
-```python
-from backend.core.management.session_manager import SessionManager
-
-session_manager = SessionManager(session_dir="./sessions")
-
-# Save current session
-session_id = await session_manager.save_session(browser_instance)
-
-# List saved sessions
-sessions = session_manager.list_sessions()
-
-# Restore session
-restored_instance = await session_manager.restore_session(session_id)
-```
-
-### Security Manager
-
-Configures browser security policies.
-
-```python
-from backend.models.security import SecurityConfig, SecurityLevel
-
-# Use preset levels
-strict_config = SecurityConfig.from_level(SecurityLevel.STRICT)
-relaxed_config = SecurityConfig.from_level(SecurityLevel.RELAXED)
-
-# Custom configuration
-custom_config = SecurityConfig(
-    ignore_certificate_errors=False,
-    safe_browsing_enabled=True,
-    download_protection_enabled=True,
-    min_tls_version=TLSVersion.TLS_1_2,
-    site_isolation_enabled=True
-)
-```
-
-### Properties Manager
-
-Manages browser fingerprinting and anti-detection properties.
-
-```python
-from backend.core.browser import PropertiesManager
-from backend.models.browser_properties import BrowserProperties
-
-properties_manager = PropertiesManager(config)
-
-# Set instance properties
-properties = BrowserProperties(
-    user_agent="Mozilla/5.0...",
-    platform="Win32",
-    webgl_vendor="NVIDIA Corporation",
-    webgl_renderer="NVIDIA GeForce GTX 1080"
-)
-
-properties_manager.set_instance_properties(instance_id, properties)
-```
-
-## MCP Tools Reference
-
-### Complete Tool List
-
-AMI-WEB provides 40+ MCP tools organized into categories:
-
-#### Browser Lifecycle (4 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_launch` | Start new browser instance | `headless`, `profile`, `extensions` |
-| `browser_close` | Close browser instance | `instance_id` |
-| `browser_list` | List active instances | - |
-| `browser_get_tabs` | Get all open tabs | `instance_id` |
-
-#### Navigation & Control (10 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_navigate` | Navigate to URL | `instance_id`, `url`, `wait_for` |
-| `browser_back` | Go back in history | `instance_id` |
-| `browser_forward` | Go forward in history | `instance_id` |
-| `browser_refresh` | Reload current page | `instance_id` |
-| `browser_wait_for_element` | Wait for element | `instance_id`, `selector`, `timeout` |
-| `browser_click` | Click element | `instance_id`, `selector`, `button` |
-| `browser_type` | Type text | `instance_id`, `selector`, `text`, `clear` |
-| `browser_scroll` | Scroll page | `instance_id`, `x`, `y`, `smooth` |
-| `browser_execute_script` | Run JavaScript | `instance_id`, `script`, `args` |
-| `browser_switch_tab` | Switch to tab | `instance_id`, `tab_id` |
-
-#### Content Extraction (6 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_get_html` | Get page HTML | `instance_id`, `selector`, `max_depth` |
-| `browser_extract_text` | Extract readable text | `instance_id`, `preserve_structure` |
-| `browser_extract_links` | Get all links | `instance_id`, `absolute` |
-| `browser_screenshot` | Capture screenshot | `instance_id`, `selector`, `format` |
-| `browser_get_cookies` | Get cookies | `instance_id`, `domain` |
-| `browser_get_console_logs` | Get console output | `instance_id` |
-
-#### Storage Management (8 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_get_local_storage` | Read localStorage | `instance_id`, `key` |
-| `browser_set_local_storage` | Write localStorage | `instance_id`, `key`, `value` |
-| `browser_clear_local_storage` | Clear localStorage | `instance_id` |
-| `browser_get_session_storage` | Read sessionStorage | `instance_id`, `key` |
-| `browser_set_session_storage` | Write sessionStorage | `instance_id`, `key`, `value` |
-| `browser_set_cookies` | Set cookies | `instance_id`, `cookies` |
-| `browser_save_cookies` | Save cookies to profile | `instance_id` |
-| `browser_load_cookies` | Load cookies from profile | `instance_id` |
-
-#### Profile Management (3 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_list_profiles` | List all profiles | - |
-| `browser_delete_profile` | Delete profile | `profile_name` |
-| `browser_copy_profile` | Copy profile | `source_profile`, `dest_profile` |
-
-#### Session Management (3 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_save_session` | Save browser session | `instance_id` |
-| `browser_restore_session` | Restore saved session | `session_id` |
-| `browser_list_sessions` | List saved sessions | - |
-
-#### Download Management (4 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_list_downloads` | List downloaded files | `instance_id` |
-| `browser_wait_for_download` | Wait for download | `instance_id`, `filename`, `timeout` |
-| `browser_clear_downloads` | Clear downloads | `instance_id` |
-| `browser_get_download_dir` | Get download path | `instance_id` |
-
-#### Security Configuration (1 tool)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_set_security` | Configure security | `level`, `ignore_certificate_errors`, etc. |
-
-#### Browser Properties (2 tools)
-
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `browser_set_properties` | Set browser properties | `instance_id`, `properties`, `preset` |
-| `browser_get_properties` | Get current properties | `instance_id`, `tab_id` |
-
-### Tool Usage Examples
-
-#### Example 1: Secure Session with Downloads
-
-```json
-// 1. Set security level
-{
-  "type": "tool",
-  "tool": "browser_set_security",
-  "parameters": {
-    "level": "strict"
-  }
-}
-
-// 2. Launch with profile
-{
-  "type": "tool",
-  "tool": "browser_launch",
-  "parameters": {
-    "profile": "secure_session",
-    "headless": false
-  }
-}
-
-// 3. Navigate and download
-{
-  "type": "tool",
-  "tool": "browser_navigate",
-  "parameters": {
-    "instance_id": "abc-123",
-    "url": "https://example.com/report.pdf"
-  }
-}
-
-// 4. Wait for download
-{
-  "type": "tool",
-  "tool": "browser_wait_for_download",
-  "parameters": {
-    "instance_id": "abc-123",
-    "filename": "report.pdf",
-    "timeout": 30
-  }
-}
-```
-
-#### Example 2: Multi-Profile Testing
-
-```python
-import asyncio
-import websockets
-import json
-
-async def test_profiles():
-    async with websockets.connect("ws://localhost:8765") as ws:
-        # Skip capabilities
-        await ws.recv()
-        
-        # Create test profiles
-        for profile in ["dev", "staging", "prod"]:
-            request = {
-                "type": "tool",
-                "tool": "browser_launch",
-                "parameters": {
-                    "profile": profile,
-                    "headless": True
-                }
-            }
-            await ws.send(json.dumps(request))
-            response = json.loads(await ws.recv())
-            instance_id = response["result"]["instance_id"]
-            
-            # Test each environment
-            await test_environment(ws, instance_id, profile)
-```
-
-## Security & Compliance
-
-### Security Levels Detailed
-
-#### STRICT Level
-- **Use Case**: Production environments, sensitive data handling
-- **Features**:
-  - Enhanced SafeBrowsing protection
-  - Strict certificate validation
-  - TLS 1.2 minimum
-  - Site isolation enforced
-  - No mixed content allowed
-  - Download protection enabled
-
-#### STANDARD Level
-- **Use Case**: General automation, testing
-- **Features**:
-  - Standard SafeBrowsing
-  - Certificate validation
-  - TLS 1.2 minimum
-  - Site isolation enabled
-  - Mixed content warnings
-
-#### RELAXED Level
-- **Use Case**: Development, internal testing
-- **Features**:
-  - Self-signed certificates allowed
-  - Localhost exceptions
-  - TLS 1.0 allowed
-  - Basic SafeBrowsing
-
-#### PERMISSIVE Level
-- **Use Case**: Security research, penetration testing
-- **Features**:
-  - All certificate errors ignored
-  - Web security disabled
-  - CSP bypassed
-  - Any TLS version
-  - SafeBrowsing disabled
-
-### Compliance Features
-
-#### Audit Logging
-
-All browser actions are logged with:
-- Timestamp
-- User/session identifier
-- Action performed
-- Target URL/element
-- Result/status
-- Error details (if any)
-
-```python
-# Enable comprehensive audit logging
-import logging
-from loguru import logger
-
-logger.add(
-    "audit_{time}.log",
-    rotation="1 day",
-    retention="30 days",
-    level="INFO",
-    format="{time} {level} {message}"
-)
-```
-
-#### Data Protection
-
-- **Cookie Encryption**: Sensitive cookies encrypted at rest
-- **Profile Isolation**: Complete separation between profiles
-- **Memory Clearing**: Automatic cleanup of sensitive data
-- **Download Scanning**: OS-level malware detection
-
-#### Regulatory Compliance
-
-Supports compliance with:
-- **GDPR**: Data isolation and audit trails
-- **HIPAA**: Secure data handling and logging
-- **PCI-DSS**: Secure credential management
-- **SOC 2**: Security controls and monitoring
-
-## Anti-Detection Technology
-
-### Detection Bypass Methods
-
-#### 1. WebDriver Detection
-```javascript
-// Removes navigator.webdriver flag
-delete navigator.__proto__.webdriver;
-
-// Overrides permissions
-navigator.permissions.query = () => Promise.resolve({state: 'granted'});
-```
-
-#### 2. Chrome Plugin Spoofing
-```javascript
-// Mimics real Chrome plugins
-navigator.plugins = [
-  {name: 'Chrome PDF Plugin'},
-  {name: 'Chrome PDF Viewer'},
-  {name: 'Native Client'}
-];
-```
-
-#### 3. WebGL Fingerprinting
-```python
-properties = BrowserProperties(
-    webgl_vendor="NVIDIA Corporation",
-    webgl_renderer="NVIDIA GeForce RTX 3080",
-    webgl_extensions=["WEBGL_debug_renderer_info", ...]
-)
-```
-
-#### 4. Canvas Fingerprinting
-- Dynamic noise injection
-- Consistent per-session fingerprints
-- Realistic variations
-
-#### 5. Audio Context Fingerprinting
-- Realistic audio processing values
-- Consistent oscillator frequencies
-- Dynamic compressor values
-
-### Bot Detection Test Results
-
-| Test Site | Detection Rate | Pass Rate |
-|-----------|---------------|-----------|
-| bot.sannysoft.com | WebDriver, Chrome, Permissions | 100% |
-| fingerprintjs.com | Canvas, WebGL, Audio | 98% |
-| pixelscan.net | Headless, Automation | 100% |
-| browserleaks.com | WebRTC, DNS, IP | 95% |
-
-## API Reference
-
-### Python API
-
-#### ChromeManager Class
-
-```python
-class ChromeManager:
-    async def initialize(self) -> None
-    async def get_or_create_instance(
-        headless: bool = True,
-        profile: str = None,
-        extensions: List[str] = None,
-        options: ChromeOptions = None,
-        use_pool: bool = True,
-        anti_detect: bool = True,
-        security_config: SecurityConfig = None,
-        download_dir: str = None
-    ) -> BrowserInstance
-    async def get_instance(instance_id: str) -> BrowserInstance
-    async def terminate_instance(instance_id: str) -> bool
-    async def shutdown(self) -> None
-```
-
-#### BrowserInstance Class
-
-```python
-class BrowserInstance:
-    driver: WebDriver  # Selenium WebDriver instance
-    
-    async def launch(...) -> WebDriver
-    async def terminate(force: bool = False) -> None
-    async def health_check() -> Dict[str, Any]
-    async def get_tabs() -> List[TabInfo]
-    async def get_performance_metrics() -> PerformanceMetrics
-    
-    # Cookie management
-    def save_cookies() -> List[Dict]
-    def load_cookies(cookies: List[Dict] = None) -> int
-    
-    # Download management
-    def list_downloads() -> List[Dict]
-    def wait_for_download(filename: str = None, timeout: int = 30) -> Path
-    def clear_downloads() -> int
-```
-
-### WebSocket API
-
-#### Connection
-
-```javascript
-const ws = new WebSocket('ws://localhost:8765');
-
-ws.on('open', () => {
-    console.log('Connected to AMI-WEB');
-});
-
-ws.on('message', (data) => {
-    const msg = JSON.parse(data);
-    if (msg.type === 'capabilities') {
-        // Initial capabilities message
-    } else if (msg.type === 'event') {
-        // Browser event
-    } else {
-        // Tool response
-    }
-});
-```
-
-#### Request Format
-
-```json
-{
-  "type": "tool",
-  "tool": "browser_navigate",
-  "parameters": {
-    "instance_id": "abc-123",
-    "url": "https://example.com"
-  },
-  "request_id": "unique-id"
-}
-```
-
-#### Response Format
-
-```json
-{
-  "success": true,
-  "result": {
-    "url": "https://example.com",
-    "title": "Example Domain",
-    "load_time": 1.234
-  },
-  "request_id": "unique-id",
-  "execution_time": 1.5
-}
-```
-
-## Testing & Quality
-
-### Test Suite Structure
-
-```mermaid
-graph LR
-    subgraph "tests/"
-        A[unit/]
-        B[integration/]
-        C[fixtures/]
-    end
-    
-    subgraph "Unit Tests"
-        A --> A1[test_models.py]
-        A --> A2[test_managers.py]
-        A --> A3[test_utils.py]
-    end
-    
-    subgraph "Integration Tests"
-        B --> B1[test_browser_operations.py]
-        B --> B2[test_mcp_server.py]
-        B --> B3[test_antidetection.py]
-        B --> B4[test_profiles_sessions.py]
-        B --> B5[test_mcp_environment_tools.py]
-    end
-    
-    subgraph "Test Fixtures"
-        C --> C1[bot_detection_test.html]
-        C --> C2[test_data.json]
-    end
+tests/
+├── unit/                  # Unit tests
+│   ├── test_chrome_manager.py
+│   ├── test_mcp_auth.py
+│   └── test_mcp_rate_limit.py
+├── integration/          # Integration tests
+│   ├── test_browser_integration.py
+│   ├── test_browser_properties.py
+│   ├── test_profiles_sessions.py
+│   ├── test_screen_space_interactions.py
+│   ├── test_mcp_server.py
+│   └── test_antidetection.py
+└── fixtures/            # Test data
+    └── html/           # Test HTML pages
 ```
 
 ### Running Tests
 
 ```bash
-# Method 1: Using the test runner script (Recommended)
-python scripts/run_tests.py                    # Run all tests
-python scripts/run_tests.py tests/unit/        # Run unit tests only
-python scripts/run_tests.py -k test_properties # Run tests matching pattern
+# Using test runner script (auto-handles virtual env)
+python scripts/run_tests.py                    # All tests
+python scripts/run_tests.py tests/unit/        # Unit tests only
+python scripts/run_tests.py -k test_browser    # Pattern matching
 python scripts/run_tests.py -x                 # Stop on first failure
-python scripts/run_tests.py --lf               # Run last failed tests
+python scripts/run_tests.py --cov=backend      # With coverage
 
-# Method 2: Direct pytest (ensure .venv is activated)
-.venv\Scripts\python.exe -m pytest             # Windows
-.venv/bin/python -m pytest                     # macOS/Linux
-
-# Run specific test file
+# Specific test files
 python scripts/run_tests.py tests/integration/test_antidetection.py -v
+python scripts/run_tests.py tests/integration/test_browser_properties.py
+python scripts/run_tests.py tests/integration/test_profiles_sessions.py
 
-# Run with coverage
-python scripts/run_tests.py --cov=backend --cov-report=html
-
-# Run specific test
-python scripts/run_tests.py tests/unit/test_chrome_manager.py::test_basic_operations -xvs
-```
-
-### Test Configuration
-
-```ini
-# pytest.ini
-[tool:pytest]
-testpaths = tests
-python_files = test_*.py
-python_classes = Test*
-python_functions = test_*
-asyncio_mode = auto
-timeout = 300
-timeout_method = thread
-timeout_func_only = False
-addopts = -v --tb=short --strict-markers
-markers =
-    slow: marks tests as slow
-    integration: integration tests
-    unit: unit tests
-    asyncio: marks async tests
-```
-
-### Continuous Integration
-
-```yaml
-# .github/workflows/test.yml
-name: Tests
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python: [3.10, 3.11, 3.12]
-    
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-      - run: pip install uv
-      - run: uv venv .venv
-      - run: uv pip install -r requirements.txt -r requirements-test.txt
-      - run: .venv/bin/python -m pytest --cov
-```
-
-## Performance Optimization
-
-### Browser Pool Configuration
-
-```yaml
-pool:
-  min_instances: 2      # Always keep 2 ready
-  warm_instances: 3     # Pre-warm 3 instances
-  max_instances: 20     # Maximum concurrent
-  instance_ttl: 1800    # 30-minute lifetime
-  health_check_interval: 60
-```
-
-### Memory Management
-
-```python
-# Automatic cleanup
-instance.driver.execute_script("window.gc && window.gc();")
-
-# Clear cache periodically
-instance.driver.delete_all_cookies()
-instance.driver.execute_script("window.localStorage.clear();")
-
-# Force garbage collection
-import gc
-gc.collect()
-```
-
-### Performance Metrics
-
-Monitor key metrics:
-- **Launch Time**: Target < 1s with pool
-- **Navigation Time**: Monitor via Performance API
-- **Memory Usage**: Track per instance
-- **CPU Usage**: Monitor process overhead
-
-```python
-metrics = await instance.get_performance_metrics()
-print(f"DOM Load: {metrics.dom_content_loaded}ms")
-print(f"Page Load: {metrics.load_complete}ms")
-print(f"First Paint: {metrics.first_paint}ms")
+# Direct pytest (must activate venv first)
+.venv\Scripts\activate  # Windows
+python -m pytest tests/ -v --tb=short
+python -m pytest tests/unit/test_chrome_manager.py::test_basic_operations -xvs
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Chrome/ChromeDriver Version Mismatch
-```bash
-# Error: Chrome version 120 requires ChromeDriver 120
-# Solution: Update ChromeDriver
-python setup_chrome.py --update-driver
-```
+#### Browser Won't Launch
+- Check Chrome/ChromeDriver paths in config.yaml
+- Verify Chrome and ChromeDriver versions match
+- Ensure sufficient memory available
 
-#### Port Already in Use
-```bash
-# Error: [Errno 48] Address already in use
-# Solution: Change port in config.yaml
-server:
-  port: 8766  # Use different port
-```
+#### MCP Connection Failed
+- Verify server is running: `python scripts/start_mcp_server.py`
+- Check port availability (default 8765)
+- Review logs in data/logs/
 
-#### Memory Leaks
-```python
-# Monitor and cleanup
-async def cleanup_old_instances():
-    for instance in manager.list_instances():
-        if instance.age > 3600:  # 1 hour
-            await manager.terminate_instance(instance.id)
-```
+#### Profile Not Found
+- Profiles are created automatically on first use
+- Check profiles_dir in config.yaml
+- Verify write permissions
 
-#### Detection Issues
-```python
-# Ensure anti-detect is enabled
-instance = await manager.get_or_create_instance(
-    anti_detect=True,  # Must be True
-    headless=False     # Some sites detect headless
-)
-```
+#### Session Restore Failed
+- Sessions require matching profile
+- Check session_dir in config.yaml
+- Ensure cookies haven't expired
 
 ### Debug Mode
 
 Enable detailed logging:
 
 ```python
-import logging
 from loguru import logger
-
-# Set debug level
 logger.add(sys.stderr, level="DEBUG")
-
-# Enable Selenium logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Enable Chrome logging
-options = ChromeOptions()
-options.add_argument("--enable-logging")
-options.add_argument("--v=1")
 ```
 
-### Health Checks
+### Health Monitoring
 
 ```python
-async def monitor_health():
-    while True:
-        stats = await manager.get_pool_stats()
-        print(f"Active: {stats['active']}")
-        print(f"Available: {stats['available']}")
-        print(f"Total: {stats['total']}")
-        
-        for instance_id in stats['instances']:
-            health = await manager.health_check(instance_id)
-            if not health['healthy']:
-                await manager.terminate_instance(instance_id)
-        
-        await asyncio.sleep(30)
+# Check instance health
+health = await instance.health_check()
+# Returns: memory_usage, cpu_usage, tab_count, status
+
+# Pool statistics
+stats = await manager.get_pool_stats()
 ```
 
-## Support & Resources
+## API Examples
 
-### Getting Help
+### Complete Automation Example
 
-1. **Documentation**: This guide and inline code documentation
-2. **GitHub Issues**: [Report bugs](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
-3. **Discussions**: [Community forum](https://github.com/Independent-AI-Labs/AMI-WEB/discussions)
-4. **Stack Overflow**: Tag questions with `ami-web`
+```python
+import asyncio
+from backend.core.management.manager import ChromeManager
+from backend.facade.navigation.navigator import Navigator
+from backend.facade.input.mouse import MouseController
+from backend.facade.input.keyboard import KeyboardController
+from backend.facade.media.screenshot import ScreenshotController
 
-### Contributing
+async def automate_form_submission():
+    # Initialize manager
+    manager = ChromeManager()
+    await manager.initialize()
+    
+    # Get browser instance with anti-detection
+    instance = await manager.get_or_create_instance(
+        headless=False,
+        anti_detect=True,
+        profile="automation_profile"
+    )
+    
+    # Initialize controllers
+    nav = Navigator(instance)
+    mouse = MouseController(instance)
+    keyboard = KeyboardController(instance)
+    screenshot = ScreenshotController(instance)
+    
+    # Navigate to page
+    await nav.navigate("https://example.com/form")
+    
+    # Fill form
+    await keyboard.type_text("#username", "john.doe", clear=True)
+    await keyboard.type_text("#email", "john@example.com", clear=True)
+    
+    # Click checkbox
+    await mouse.click("#agree-terms")
+    
+    # Take screenshot before submission
+    await screenshot.save_screenshot("before_submit.png")
+    
+    # Submit form
+    await mouse.click("#submit-button")
+    
+    # Wait for success
+    from backend.facade.navigation.waiter import Waiter
+    waiter = Waiter(instance)
+    await waiter.wait_for_element(".success-message", timeout=10)
+    
+    # Save session for later
+    session_id = await manager.save_session(instance.id, "form_completed")
+    print(f"Session saved: {session_id}")
+    
+    # Cleanup
+    await manager.terminate_instance(instance.id)
+    await manager.shutdown()
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Code style guidelines
-- Testing requirements
-- Pull request process
-- Development setup
+# Run the automation
+asyncio.run(automate_form_submission())
+```
 
-### License
+### MCP Server Usage
 
-MIT License - see [LICENSE](LICENSE) for full text.
+```python
+# For Claude Desktop integration
+# Add to claude_desktop_config.json:
+{
+  "mcpServers": {
+    "ami-web": {
+      "command": "python",
+      "args": ["C:/path/to/AMI-WEB/scripts/start_mcp_server.py", "stdio"]
+    }
+  }
+}
 
-### Acknowledgments
+# For programmatic WebSocket usage:
+import asyncio
+import websockets
+import json
 
-AMI-WEB is built on:
-- Selenium WebDriver for browser automation
-- Chrome DevTools Protocol for advanced control
-- Model Context Protocol for AI integration
-- Various open-source anti-detection techniques
+async def use_mcp_server():
+    uri = "ws://localhost:8765"
+    async with websockets.connect(uri) as websocket:
+        # Launch browser
+        await websocket.send(json.dumps({
+            "method": "tools/call",
+            "params": {
+                "name": "browser_launch",
+                "arguments": {
+                    "headless": False,
+                    "anti_detect": True
+                }
+            }
+        }))
+        response = await websocket.recv()
+        print(f"Browser launched: {response}")
+        
+        # Navigate to URL
+        await websocket.send(json.dumps({
+            "method": "tools/call",
+            "params": {
+                "name": "browser_navigate",
+                "arguments": {"url": "https://example.com"}
+            }
+        }))
+        response = await websocket.recv()
+        print(f"Navigation result: {response}")
+```
+
+## Support
+
+- [GitHub Issues](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
+- [Documentation](https://github.com/Independent-AI-Labs/AMI-WEB/docs)
+- [Contributing Guide](../CONTRIBUTING.md)
 
 ---
+
+*AMI-WEB - Enterprise Browser Automation with Complete Control*

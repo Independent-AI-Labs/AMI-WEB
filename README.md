@@ -2,6 +2,8 @@
 
 **Complete control over every browser parameter with undetectable automation for enterprise applications**
 
+![](res/notbot.png)
+
 AMI-WEB provides organizations with comprehensive browser automation that offers full control over WebGL, Canvas, Audio, WebRTC, and all browser fingerprinting parameters. Built for enterprises requiring compliant web automation, security testing, and AI-powered browser interactions.
 
 ## 🎯 Key Differentiators
@@ -118,22 +120,23 @@ browser = await manager.get_or_create_instance(
 }
 ```
 
-## 📦 Installation
+## 🚀 Running
 
+### Docker
+Coming soon
+
+### Local MCP Server
+Simply run:
 ```bash
-# Clone repository
-git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
-cd AMI-WEB
-
-# Setup with uv (recommended for speed)
-pip install uv
-uv venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
-
-# Configure
-cp config.sample.yaml config.yaml
+python scripts/start_mcp_server.py
 ```
+
+The script automatically handles:
+- Virtual environment creation
+- Dependency installation
+- Server startup
+
+For detailed setup instructions, see [Extended Documentation](docs/README_EXTENDED.md#installation--setup).
 
 ## 🔒 Security & Compliance
 
@@ -143,31 +146,12 @@ cp config.sample.yaml config.yaml
 - **Network Control** - Request/response modification capabilities
 - **Compliance Ready** - Built for regulated industries
 
-## 🤝 Enterprise Support
-
-### Community Edition
-- Full source code access
-- Community support via GitHub
-- Regular security updates
-- MIT License
-
-### Enterprise Edition
-- Priority support with SLA
-- Custom feature development
-- Training and onboarding
-- Compliance consulting
-- Dedicated success manager
-
 ## 📚 Documentation
 
 - [Technical Documentation](docs/README_EXTENDED.md) - Complete API reference
 - [Architecture Guide](docs/ARCHITECTURE.md) - System design and patterns
-- [MCP Integration](docs/MCP.md) - AI agent setup guide
+- [MCP Integration](docs/MCP.md) - (WIP) AI agent setup guide
 - [Contributing](CONTRIBUTING.md) - Development guidelines
-
-## 🏢 Trusted By
-
-Organizations worldwide rely on AMI-WEB for mission-critical browser automation in finance, healthcare, e-commerce, and government sectors.
 
 ## 📄 License
 
@@ -179,4 +163,4 @@ MIT License - see [LICENSE](LICENSE) for details
 
 Built for organizations that need reliable, compliant, and undetectable browser automation at scale.
 
-[Get Started](https://github.com/Independent-AI-Labs/AMI-WEB) | [Documentation](docs/README_EXTENDED.md) | [Support](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
+[Get Started](https://github.com/Independent-AI-Labs/AMI-WEB) | [Extended Readme](docs/README_EXTENDED.md) | [Support](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
