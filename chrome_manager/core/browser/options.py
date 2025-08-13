@@ -64,6 +64,39 @@ class BrowserOptionsBuilder:
             self._used_ports.discard(self._debug_port)
             self._debug_port = None
 
+    def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
+        """Set up temporary profile directory for Chrome instance."""
+        import shutil
+        import tempfile
+        import uuid
+
+        if profile and self._profile_manager:
+            profile_dir = self._profile_manager.get_profile_dir(profile)
+            if profile_dir:
+                # Create a temporary directory for this instance with profile name
+                temp_dir = Path(tempfile.gettempdir()) / f"chrome_profile_{profile}_{uuid.uuid4().hex[:8]}"
+
+                # Copy the profile directory if it exists and has content
+                if profile_dir.exists() and any(profile_dir.iterdir()):
+                    shutil.copytree(profile_dir, temp_dir, dirs_exist_ok=True)
+                else:
+                    temp_dir.mkdir(parents=True, exist_ok=True)
+
+                # Store both directories for proper sync
+                self._temp_profile_dir = temp_dir
+                self._original_profile_dir = profile_dir
+
+                logger.info(f"Using temporary profile directory: {temp_dir} with debug port: {self._debug_port}")
+                chrome_options.add_argument(f"--user-data-dir={temp_dir}")
+        else:
+            # Even without a profile, create a unique temp directory to avoid conflicts
+            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid.uuid4().hex[:8]}"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            self._temp_profile_dir = temp_dir
+            self._original_profile_dir = None
+            logger.info(f"Using temporary directory: {temp_dir} with debug port: {self._debug_port}")
+            chrome_options.add_argument(f"--user-data-dir={temp_dir}")
+
     def build(
         self,
         headless: bool = True,
@@ -85,37 +118,24 @@ class BrowserOptionsBuilder:
         self._debug_port = self._get_free_port()
         chrome_options.add_argument(f"--remote-debugging-port={self._debug_port}")
 
-        # Add profile if specified
-        if profile and self._profile_manager:
-            profile_dir = self._profile_manager.get_profile_dir(profile)
-            if profile_dir:
-                # Chrome doesn't allow multiple instances with the same user-data-dir
-                # We need to create a completely separate copy for each instance
-                import shutil
-                import tempfile
-                import uuid
-
-                # Create a temporary directory for this instance
-                temp_dir = Path(tempfile.gettempdir()) / f"chrome_profile_{profile}_{uuid.uuid4().hex[:8]}"
-
-                # Copy the profile directory if it exists and has content
-                if profile_dir.exists() and any(profile_dir.iterdir()):
-                    shutil.copytree(profile_dir, temp_dir, dirs_exist_ok=True)
-                else:
-                    temp_dir.mkdir(parents=True, exist_ok=True)
-
-                # Store both directories for proper sync
-                self._temp_profile_dir = temp_dir
-                self._original_profile_dir = profile_dir
-
-                logger.info(f"Using temporary profile directory: {temp_dir} with debug port: {self._debug_port}")
-                chrome_options.add_argument(f"--user-data-dir={temp_dir}")
+        # Set up profile directory
+        self._setup_profile_directory(chrome_options, profile)
 
         # Configure based on mode
         if anti_detect:
             self._configure_anti_detect_mode(chrome_options, headless)
         else:
             self._configure_standard_mode(chrome_options, headless)
+
+        # Exclude switches that enable verbose logging
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+
+        # Apply security configuration arguments
+        if security_config:
+            security_args = security_config.to_chrome_args()
+            for arg in security_args:
+                chrome_options.add_argument(arg)
+            logger.debug(f"Applied {len(security_args)} security arguments")
 
         # Apply custom options
         if options:
@@ -132,7 +152,7 @@ class BrowserOptionsBuilder:
         if prefs:
             chrome_options.add_experimental_option("prefs", prefs)
 
-        # Set logging preferences
+        # Set logging preferences - keep ALL for MCP server access
         chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"})
 
         return chrome_options
@@ -141,12 +161,15 @@ class BrowserOptionsBuilder:
         """Add basic Chrome options."""
         if headless:
             chrome_options.add_argument("--headless=new")
-            # Don't disable GPU in headless - we need it for WebGL!
             chrome_options.add_argument("--no-sandbox")
-            # Enable WebGL with hardware acceleration
+            # KEEP GPU ENABLED for WebGL support!
             chrome_options.add_argument("--enable-webgl")
-            chrome_options.add_argument("--use-gl=angle")  # Use ANGLE (hardware accelerated)
+            chrome_options.add_argument("--use-gl=angle")  # Use ANGLE for hardware acceleration
             chrome_options.add_argument("--use-angle=default")  # Let ANGLE choose best backend
+            # Suppress GPU error logging
+            chrome_options.add_argument("--log-level=3")  # Only show fatal errors
+            chrome_options.add_argument("--disable-logging")  # Disable Chrome logging
+            chrome_options.add_argument("--silent")  # Suppress all Chrome output
 
     def _add_conditional_options(self, chrome_options: Options) -> None:
         """Add conditional options based on configuration."""
@@ -200,6 +223,37 @@ class BrowserOptionsBuilder:
             "--disable-breakpad",
             "--disable-features=TranslateUI",
             "--disable-ipc-flooding-protection",
+            # Disable Google services that cause GCM registration errors
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-cloud-import",
+            "--disable-component-update",
+            "--disable-default-apps",
+            "--disable-features=ChromeWhatsNewUI",
+            "--disable-features=OptimizationHints",
+            "--disable-features=MediaRouter",
+            "--no-service-autorun",
+            "--disable-background-timer-throttling",
+            "--metrics-recording-only",  # Disable metrics reporting to Google
+            "--disable-field-trial-config",  # Disable field trials that might trigger GCM
+            # More aggressive disabling of phone home features
+            "--disable-client-side-phishing-detection",
+            "--disable-features=AutofillServerCommunication",
+            "--disable-features=CertificateTransparencyComponentUpdater",
+            "--disable-sync-preferences",
+            "--disable-sync-types",
+            "--disable-features=ImprovedCookieControls",
+            "--disable-domain-reliability",
+            "--disable-features=InterestFeedContentSuggestions",
+            "--disable-features=PrivacySandboxSettings3",
+            "--disable-features=PrivacySandboxSettings4",
+            "--disable-features=EnableGcmFieldTrial",
+            "--disable-features=WebRtcRemoteEventLog",
+            "--disable-features=SafeBrowsingEnhancedProtection",
+            "--disable-signin-promo",
+            "--disable-signin-scoped-device-id",
+            "--no-pings",
+            "--no-report-upload",
         ]
 
         for arg in common_args:
@@ -267,6 +321,29 @@ class BrowserOptionsBuilder:
                 "profile.password_manager_enabled": False,
                 "profile.default_content_setting_values.notifications": 2,
                 "profile.default_content_setting_values.media_stream": 2,
+                # Disable Google services to prevent GCM errors
+                "gcm.enabled": False,
+                "gcm.checkin_enabled": False,
+                "gcm_for_desktop.enabled": False,
+                "gcm_for_desktop.enabled_for_profiles": False,
+                "gcm_registration_enabled": False,
+                "push_messaging.enabled": False,
+                "signin.allowed": False,
+                "signin.allowed_on_next_startup": False,
+                "browser.enable_spellchecking": False,
+                "translate.enabled": False,
+                "search.suggest_enabled": False,
+                "autofill.enabled": False,
+                "payments.can_make_payment_enabled": False,
+                "fedcm.enabled": False,
+                "privacy_sandbox.apis.enabled": False,
+                "optimization_guide.fetching_enabled": False,
+                "browser.clear_data.browsing_history": False,
+                "browser.clear_data.cookies_basic": False,
+                "alternate_error_pages.enabled": False,
+                "extensions.ui.developer_mode": False,
+                "net.network_prediction_options": 2,  # Disable prediction
+                "safebrowsing.enhanced": False,  # Unless explicitly enabled
             }
         )
 

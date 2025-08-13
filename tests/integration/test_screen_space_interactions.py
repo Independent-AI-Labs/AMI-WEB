@@ -2,44 +2,29 @@
 
 import asyncio
 import os
-import random
 
 import pytest
-import pytest_asyncio
 
 # BrowserInstance import removed - using fixtures from conftest
 from chrome_manager.facade.input import InputController
 from chrome_manager.facade.navigation import NavigationController
-from tests.fixtures.threaded_server import ThreadedHTMLServer
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
 
-
-@pytest_asyncio.fixture
-def test_server():
-    """Start test HTTP server for the test."""
-    # Use random port to avoid conflicts
-    port = random.randint(9000, 9999)  # noqa: S311
-    server = ThreadedHTMLServer(port=port)
-    base_url = server.start()  # Synchronous start for threaded server
-    yield base_url
-    server.stop()  # Synchronous stop
-
-
-# Fixture removed - using shared fixtures from conftest.py instead
+# Using test_html_server fixture from conftest.py instead of creating duplicate
 
 
 class TestScreenSpaceClicks:
     """Test screen-space click functionality."""
 
     @pytest.mark.asyncio
-    async def test_click_at_coordinates(self, browser_instance, test_server):
+    async def test_click_at_coordinates(self, browser_instance, test_html_server):
         """Test clicking at specific coordinates."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/captcha_form.html")
+        await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Get button position using JavaScript
         button_pos = await nav.execute_script(
@@ -64,12 +49,12 @@ class TestScreenSpaceClicks:
         assert status == "Incorrect text. Please try again."  # Should show error because no text entered
 
     @pytest.mark.asyncio
-    async def test_double_click_at_coordinates(self, browser_instance, test_server):
+    async def test_double_click_at_coordinates(self, browser_instance, test_html_server):
         """Test double-clicking at coordinates."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/dynamic_content.html")
+        await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Add double-click handler
         await nav.execute_script(
@@ -101,12 +86,12 @@ class TestScreenSpaceClicks:
         assert count == 1
 
     @pytest.mark.asyncio
-    async def test_right_click_at_coordinates(self, browser_instance, test_server):
+    async def test_right_click_at_coordinates(self, browser_instance, test_html_server):
         """Test right-clicking at coordinates."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/login_form.html")
+        await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Add context menu handler
         await nav.execute_script(
@@ -141,12 +126,12 @@ class TestScreenSpaceDrag:
     """Test screen-space drag functionality."""
 
     @pytest.mark.asyncio
-    async def test_drag_from_to_coordinates(self, browser_instance, test_server):
+    async def test_drag_from_to_coordinates(self, browser_instance, test_html_server):
         """Test dragging from one coordinate to another."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/captcha_form.html")
+        await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Setup drag detection
         await nav.execute_script(
@@ -217,12 +202,12 @@ class TestScreenSpaceDrag:
         assert abs(final_pos["top"] - 275) < drag_margin
 
     @pytest.mark.asyncio
-    async def test_puzzle_captcha_drag(self, browser_instance, test_server):
+    async def test_puzzle_captcha_drag(self, browser_instance, test_html_server):
         """Test solving a puzzle CAPTCHA using drag."""
         nav = NavigationController(browser_instance)
         InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/captcha_form.html")
+        await nav.navigate(f"{test_html_server}/captcha_form.html")
 
         # Get puzzle piece current position and calculate target
         positions = await nav.execute_script(
@@ -318,12 +303,12 @@ class TestZoomInteractions:
     """Test zoom functionality."""
 
     @pytest.mark.asyncio
-    async def test_zoom_scale(self, browser_instance, test_server):
+    async def test_zoom_scale(self, browser_instance, test_html_server):
         """Test zooming the page."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/dynamic_content.html")
+        await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Zoom in to 150%
         zoom_in = 1.5
@@ -356,12 +341,12 @@ class TestZoomInteractions:
         await input_ctrl.zoom(1.0)
 
     @pytest.mark.asyncio
-    async def test_zoom_at_center(self, browser_instance, test_server):
+    async def test_zoom_at_center(self, browser_instance, test_html_server):
         """Test zooming at specific center point."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/login_form.html")
+        await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Zoom in at specific point (e.g., the submit button)
         button_pos = await nav.execute_script(
@@ -393,12 +378,12 @@ class TestSwipeGestures:
     """Test swipe gestures."""
 
     @pytest.mark.asyncio
-    async def test_swipe_horizontal(self, browser_instance, test_server):
+    async def test_swipe_horizontal(self, browser_instance, test_html_server):
         """Test horizontal swipe gesture."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/dynamic_content.html")
+        await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Setup swipe detection
         await nav.execute_script(
@@ -450,12 +435,12 @@ class TestSwipeGestures:
         assert swipe_direction == "left"
 
     @pytest.mark.asyncio
-    async def test_swipe_vertical(self, browser_instance, test_server):
+    async def test_swipe_vertical(self, browser_instance, test_html_server):
         """Test vertical swipe gesture."""
         nav = NavigationController(browser_instance)
         input_ctrl = InputController(browser_instance)
 
-        await nav.navigate(f"{test_server}/dynamic_content.html")
+        await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
         # Setup swipe detection (reuse from horizontal test)
         await nav.execute_script(
@@ -510,11 +495,11 @@ class TestTextExtraction:
     """Test text extraction functionality."""
 
     @pytest.mark.asyncio
-    async def test_extract_text_from_page(self, browser_instance, test_server):
+    async def test_extract_text_from_page(self, browser_instance, test_html_server):
         """Test extracting human-readable text from a page."""
         nav = NavigationController(browser_instance)
 
-        await nav.navigate(f"{test_server}/login_form.html")
+        await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Extract text with structure
         text = await nav.extract_text(preserve_structure=True)
@@ -531,11 +516,11 @@ class TestTextExtraction:
         assert "Login Form" in flat_text
 
     @pytest.mark.asyncio
-    async def test_extract_links(self, browser_instance, test_server):
+    async def test_extract_links(self, browser_instance, test_html_server):
         """Test extracting links from a page."""
         nav = NavigationController(browser_instance)
 
-        await nav.navigate(f"{test_server}/login_form.html")
+        await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Add some test links
         await nav.execute_script(
@@ -563,11 +548,11 @@ class TestTextExtraction:
             assert "title" in link
 
     @pytest.mark.asyncio
-    async def test_extract_forms(self, browser_instance, test_server):
+    async def test_extract_forms(self, browser_instance, test_html_server):
         """Test extracting form information."""
         nav = NavigationController(browser_instance)
 
-        await nav.navigate(f"{test_server}/login_form.html")
+        await nav.navigate(f"{test_html_server}/login_form.html")
 
         # Extract forms
         forms = await nav.extract_forms()
