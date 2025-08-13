@@ -467,9 +467,9 @@ class TestBrowserPool:
         min_instances = 2
         assert len(instances) >= min_instances
 
-        # Terminate instances
-        await session_manager.terminate_instance(instance1.id)
-        await session_manager.terminate_instance(instance2.id)
+        # Return instances to pool for reuse
+        await session_manager.return_to_pool(instance1.id)
+        await session_manager.return_to_pool(instance2.id)
 
     @pytest.mark.asyncio
     async def test_pool_warm_instances(self, session_manager):
@@ -542,18 +542,18 @@ class TestBrowserPool:
             assert time_diff < 5000  # Should execute within 5 seconds of each other  # noqa: PLR2004
 
         finally:
-            # Always cleanup instances
+            # Always return instances to pool for reuse
             if instance1:
                 try:
-                    await session_manager.terminate_instance(instance1.id)
+                    await session_manager.return_to_pool(instance1.id)
                 except Exception as e:
-                    logger.debug(f"Error terminating instance1: {e}")
+                    logger.debug(f"Error returning instance1 to pool: {e}")
 
             if instance2:
                 try:
-                    await session_manager.terminate_instance(instance2.id)
+                    await session_manager.return_to_pool(instance2.id)
                 except Exception as e:
-                    logger.debug(f"Error terminating instance2: {e}")
+                    logger.debug(f"Error returning instance2 to pool: {e}")
 
             # Log final pool state
             final_stats = await session_manager.get_pool_stats()
