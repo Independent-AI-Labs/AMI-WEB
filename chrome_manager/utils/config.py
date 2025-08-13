@@ -69,13 +69,13 @@ class Config:
 
         if system == "Windows":
             chrome_path = project_root / "chromium-win" / "chrome.exe"
-            driver_path = project_root / "chromedriver.exe"
+            driver_path = project_root / "build" / "chromedriver.exe"
         elif system == "Darwin":  # macOS
             chrome_path = project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-            driver_path = project_root / "chromedriver"
+            driver_path = project_root / "build" / "chromedriver"
         else:  # Linux
             chrome_path = project_root / "chromium-linux" / "chrome"
-            driver_path = project_root / "chromedriver"
+            driver_path = project_root / "build" / "chromedriver"
 
         # Return paths if they exist, otherwise None for auto-detection
         chrome = str(chrome_path) if chrome_path.exists() else None
@@ -109,10 +109,15 @@ class Config:
                     "script_timeout": 10,
                 },
                 "storage": {
-                    "session_dir": "./sessions",
-                    "screenshot_dir": "./screenshots",
-                    "video_dir": "./videos",
-                    "log_dir": "./logs",
+                    "session_dir": "./data/sessions",
+                    "screenshot_dir": "./data/screenshots",
+                    "video_dir": "./data/videos",
+                    "log_dir": "./data/logs",
+                    "profiles_dir": "./data/browser_profiles",
+                    "download_dir": "./data/downloads",
+                    # Test-specific paths
+                    "test_profiles_dir": "./data/test_profiles",
+                    "test_download_dir": "./data/test_downloads",
                 },
                 "mcp": {
                     "server_host": "127.0.0.1",  # Secure: Only bind to localhost

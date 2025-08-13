@@ -20,7 +20,7 @@ class ChromeManager:
     def __init__(self, config_file: str | None = None):
         self.config = Config.load(config_file) if config_file else Config()
         self.properties_manager = PropertiesManager(self.config)
-        self.profile_manager = ProfileManager(base_dir=self.config.get("chrome_manager.storage.profiles_dir", "./browser_profiles"))
+        self.profile_manager = ProfileManager(base_dir=self.config.get("chrome_manager.storage.profiles_dir", "./data/browser_profiles"))
         self.pool = BrowserPool(
             min_instances=self.config.get("chrome_manager.pool.min_instances", 1),
             max_instances=self.config.get("chrome_manager.pool.max_instances", 10),
@@ -31,7 +31,7 @@ class ChromeManager:
             properties_manager=self.properties_manager,
             profile_manager=self.profile_manager,
         )
-        self.session_manager = SessionManager(session_dir=self.config.get("chrome_manager.storage.session_dir", "./sessions"))
+        self.session_manager = SessionManager(session_dir=self.config.get("chrome_manager.storage.session_dir", "./data/sessions"))
         self._instances: dict[str, BrowserInstance] = {}
         self._initialized = False
         # Removed stateful _next_security_config to avoid race conditions

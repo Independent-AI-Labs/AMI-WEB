@@ -39,8 +39,9 @@ async def session_manager():
     """Create a single Chrome manager for the entire test session."""
     global _GLOBAL_MANAGER  # noqa: PLW0603
     if _GLOBAL_MANAGER is None:
-        # Pass config file path to ChromeManager
-        _GLOBAL_MANAGER = ChromeManager(config_file="config.yaml")
+        # Use test config for testing
+        test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
+        _GLOBAL_MANAGER = ChromeManager(config_file=test_config)
         # Configure pool for testing - smaller pool, faster cleanup
         _GLOBAL_MANAGER.pool.min_instances = 1
         _GLOBAL_MANAGER.pool.max_instances = 3  # Limit max instances for tests
