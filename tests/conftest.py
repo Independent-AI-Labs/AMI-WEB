@@ -13,8 +13,6 @@ from loguru import logger
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
-# Add root directory to path for base module imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.core.browser.instance import BrowserInstance  # noqa: E402
 from backend.core.management.manager import ChromeManager  # noqa: E402

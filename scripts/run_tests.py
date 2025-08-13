@@ -9,6 +9,34 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()  # Go up one level from scripts/
 VENV_PATH = PROJECT_ROOT / ".venv"
 VENV_PYTHON = VENV_PATH / "Scripts" / "python.exe" if sys.platform == "win32" else VENV_PATH / "bin" / "python"
+BASE_REPO_URL = "https://github.com/Independent-AI-Labs/AMI-BASE.git"
+
+
+def ensure_base_module():
+    """Ensure the base module is available either from parent or locally."""
+    # Check if we're in a submodule context (parent has base)
+    parent_base = PROJECT_ROOT.parent / "base"
+    local_base = PROJECT_ROOT / "base"
+    
+    if parent_base.exists() and (parent_base / "mcp").exists():
+        print(f"Using base module from parent directory: {parent_base}")
+        return str(parent_base.parent)  # Return parent directory to add to PYTHONPATH
+    elif local_base.exists() and (local_base / "mcp").exists():
+        print(f"Using existing local base module: {local_base}")
+        return str(PROJECT_ROOT)  # Return project root to add to PYTHONPATH
+    else:
+        # Clone the base module repository
+        print(f"Base module not found. Cloning from {BASE_REPO_URL}...")
+        try:
+            subprocess.run(["git", "clone", BASE_REPO_URL, str(local_base)], check=True, cwd=PROJECT_ROOT)
+            print(f"Successfully cloned base module to: {local_base}")
+            return str(PROJECT_ROOT)
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to clone base module: {e}")
+            sys.exit(1)
+        except FileNotFoundError:
+            print("ERROR: git is not installed!")
+            sys.exit(1)
 
 
 def check_uv():
@@ -60,6 +88,9 @@ def setup_environment():
 def run_tests(test_args):
     """Run tests with the virtual environment Python."""
     venv_python = setup_environment()
+    
+    # Ensure base module is available
+    base_path = ensure_base_module()
 
     # Build the test command
     cmd = [str(venv_python), "-m", "pytest"]
@@ -72,7 +103,11 @@ def run_tests(test_args):
 
     # Set environment variables
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(PROJECT_ROOT)
+    # Add both project root and base path to PYTHONPATH
+    python_paths = [str(PROJECT_ROOT)]
+    if base_path != str(PROJECT_ROOT):
+        python_paths.append(base_path)
+    env["PYTHONPATH"] = os.pathsep.join(python_paths)
 
     # Run the tests
     print(f"\nRunning: {' '.join(cmd)}")
@@ -116,8 +151,16 @@ def main():
     if test_args and test_args[0] == "--shell":
         print("Opening shell in test environment...")
         venv_python = setup_environment()
+        
+        # Ensure base module is available
+        base_path = ensure_base_module()
+        
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(PROJECT_ROOT)
+        # Add both project root and base path to PYTHONPATH
+        python_paths = [str(PROJECT_ROOT)]
+        if base_path != str(PROJECT_ROOT):
+            python_paths.append(base_path)
+        env["PYTHONPATH"] = os.pathsep.join(python_paths)
 
         if sys.platform == "win32":
             # On Windows, activate the venv and open cmd
