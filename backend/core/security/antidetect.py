@@ -20,10 +20,10 @@ class ChromeDriverPatcher:
         name_without_ext = self.original_path.stem
         patched_name = f"{name_without_ext}_patched{suffix}"
 
-        # Use provided drivers_dir or default to project/build/drivers
+        # Use provided drivers_dir or default to project root/build
         if drivers_dir is None:
             project_root = Path(__file__).parent.parent.parent.parent
-            drivers_dir = project_root / "build" / "drivers"
+            drivers_dir = project_root / "build"
 
         drivers_dir.mkdir(exist_ok=True, parents=True)
         self.chromedriver_path = drivers_dir / patched_name
@@ -256,8 +256,8 @@ def execute_anti_detection_scripts(driver) -> None:
     This should be called after the driver is initialized.
     """
     # Load complete anti-detect script
-    # Path: backend/core/security -> backend/scripts
-    scripts_dir = Path(__file__).parent.parent.parent / "scripts"
+    # Path: backend/core/security -> web/scripts
+    scripts_dir = Path(__file__).parent.parent.parent.parent / "web" / "scripts"
     script_path = scripts_dir / "complete-antidetect.js"
 
     if not script_path.exists():
