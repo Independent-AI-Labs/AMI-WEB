@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import sys
-import uuid
 from typing import Any
 
 # Get log level from environment or default to WARNING for production
@@ -147,8 +146,8 @@ class ChromeManagerMCPServer:
 
         try:
             tools = []
-            for tool_name, tool in self.mcp_server.tools.items():
-                tools.append({"name": tool_name, "description": tool.description, "inputSchema": tool.parameters})
+            for tool in self.mcp_server.registry.list_tools():
+                tools.append({"name": tool.name, "description": tool.description, "inputSchema": tool.parameters})
 
             await self.transport.send_result(request_id, {"tools": tools})
 
@@ -173,19 +172,17 @@ class ChromeManagerMCPServer:
                 tool_params["headless"] = False
                 logger.info("Setting headless=False for browser_launch")
 
-            # Execute the tool
-            response = await self.mcp_server._handle_tool_request(
-                {"type": "tool", "tool": tool_name, "parameters": tool_params, "request_id": str(uuid.uuid4())}
-            )
+            # Execute the tool using the new API
+            response = await self.mcp_server._handle_tool_call({"name": tool_name, "arguments": tool_params}, request_id)
 
-            if response.get("success"):
+            if "error" in response:
+                # Send error
+                error = response["error"]
+                await self.transport.send_error(request_id, error.get("code", -32000), error.get("message", "Tool execution failed"))
+            else:
                 # Send successful result
                 result = response.get("result", {})
-                await self.transport.send_result(request_id, {"content": [{"type": "text", "text": json.dumps(result)}]})
-            else:
-                # Send error
-                error_msg = response.get("error", "Tool execution failed")
-                await self.transport.send_error(request_id, -32000, error_msg)
+                await self.transport.send_result(request_id, result)
 
         except Exception as e:
             logger.error(f"Tool execution failed: {e}", exc_info=True)

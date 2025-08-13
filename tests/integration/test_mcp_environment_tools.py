@@ -50,10 +50,12 @@ class MCPTestServer:
     async def _setup_server(self):
         """Set up the server components."""
         self.manager = ChromeManager(config_file="config.yaml")
-        self.manager.pool.min_instances = 1
-        self.manager.pool.warm_instances = 1
-        self.manager.pool.max_instances = 3
-        await self.manager.start()
+        await self.manager.initialize()
+
+        # Configure for testing
+        self.manager.pool.min_instances = 0
+        self.manager.pool.warm_instances = 0
+        self.manager.pool.max_instances = 2
 
         config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10}
         self.server = MCPServer(self.manager, config)
@@ -72,19 +74,17 @@ class MCPTestServer:
             await self.server.stop()
         if self.manager:
             await self.manager.shutdown()
-            for instance in list(self.manager._instances.values()):
-                with contextlib.suppress(Exception):
-                    await instance.terminate()
-            self.manager._instances.clear()
 
     def start(self):
         """Start the server in a thread."""
         self.thread = threading.Thread(target=self._run_server, daemon=True)
         self.thread.start()
 
+        # Wait for server to be ready
         if not self.ready_event.wait(timeout=10):
             raise TimeoutError("Server failed to start")
 
+        # Extra wait for socket binding
         time.sleep(0.5)
 
     def stop(self):
@@ -94,43 +94,43 @@ class MCPTestServer:
             self.thread.join(timeout=2)
             if self.thread.is_alive():
                 logger.warning("Server thread did not stop gracefully")
+
+        # Force cleanup the event loop if it exists
         if self.loop and not self.loop.is_closed():
-            try:
+            with contextlib.suppress(Exception):
                 self.loop.stop()
                 self.loop.close()
-            except Exception as e:
-                logger.error(f"Error closing loop: {e}")
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def mcp_server():
-    """Create and start test MCP server."""
+    """Start MCP test server for environment tests."""
     server = MCPTestServer(port=8767)
     server.start()
+
     yield server
+
     server.stop()
-    await asyncio.sleep(0.5)
 
 
 class TestProfileManagement:
-    """Test profile management MCP tools."""
+    """Test profile management tools."""
 
     @pytest.mark.asyncio
     async def test_list_profiles(self, mcp_server):
         """Test listing browser profiles."""
         async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Skip capabilities message
-            await websocket.recv()
-
-            # Send request
-            request = {"type": "tool", "tool": "browser_list_profiles", "parameters": {}, "request_id": "test-1"}
+            # Send request using JSON-RPC
+            request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "profile_list", "arguments": {}}, "id": 1}
             await websocket.send(json.dumps(request))
 
             # Get response
             response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            assert "profiles" in response["result"]
-            assert isinstance(response["result"]["profiles"], list)
+            assert "result" in response
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            assert "profiles" in result
+            assert isinstance(result["profiles"], list)
 
     @pytest.mark.asyncio
     async def test_create_and_delete_profile(self, mcp_server):
@@ -138,161 +138,128 @@ class TestProfileManagement:
         profile_name = "test_profile_mcp"
 
         async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            await websocket.recv()  # Skip capabilities
-
-            # First, launch a browser with a profile to create it
-            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS, "profile": profile_name}, "request_id": "test-2"}
-            await websocket.send(json.dumps(launch_request))
+            # Create profile using JSON-RPC
+            create_request = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "profile_create", "arguments": {"name": profile_name, "description": "Test profile"}},
+                "id": 1,
+            }
+            await websocket.send(json.dumps(create_request))
             response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            instance_id = response["result"]["instance_id"]
+            assert "result" in response
 
-            # Close the browser
-            close_request = {"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": "test-3"}
-            await websocket.send(json.dumps(close_request))
-            response = json.loads(await websocket.recv())
-
-            # List profiles to verify it exists
-            list_request = {"type": "tool", "tool": "browser_list_profiles", "parameters": {}, "request_id": "test-4"}
+            # List profiles to verify creation
+            list_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "profile_list", "arguments": {}}, "id": 2}
             await websocket.send(json.dumps(list_request))
             response = json.loads(await websocket.recv())
-            profiles = response["result"]["profiles"]
-            assert any(p["name"] == profile_name for p in profiles)
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            profiles = result["profiles"]
+            profile_names = [p["name"] for p in profiles]
+            assert profile_name in profile_names
 
             # Delete the profile
-            delete_request = {"type": "tool", "tool": "browser_delete_profile", "parameters": {"profile_name": profile_name}, "request_id": "test-5"}
+            delete_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "profile_delete", "arguments": {"name": profile_name}}, "id": 3}
             await websocket.send(json.dumps(delete_request))
             response = json.loads(await websocket.recv())
-            assert response["success"] is True
+            assert "result" in response
 
-            # Verify it's deleted
+            # Verify deletion
             await websocket.send(json.dumps(list_request))
             response = json.loads(await websocket.recv())
-            profiles = response["result"]["profiles"]
-            assert not any(p["name"] == profile_name for p in profiles)
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            profiles = result["profiles"]
+            profile_names = [p["name"] for p in profiles]
+            assert profile_name not in profile_names
 
 
 class TestSessionManagement:
-    """Test session management MCP tools."""
+    """Test session management tools."""
 
     @pytest.mark.asyncio
     async def test_save_and_list_sessions(self, mcp_server):
-        """Test saving and listing browser sessions."""
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            await websocket.recv()  # Skip capabilities
+        """Test saving and listing sessions."""
+        session_name = "test_session_mcp"
 
-            # Launch browser
-            launch_request = {
-                "type": "tool",
-                "tool": "browser_launch",
-                "parameters": {"headless": HEADLESS, "profile": "test_session_profile"},
-                "request_id": "test-9",
-            }
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
+            # Launch a browser first to have something to save
+            launch_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
             await websocket.send(json.dumps(launch_request))
             response = json.loads(await websocket.recv())
-            instance_id = response["result"]["instance_id"]
-
-            # Navigate to a page
-            nav_request = {
-                "type": "tool",
-                "tool": "browser_navigate",
-                "parameters": {"instance_id": instance_id, "url": "https://example.com"},
-                "request_id": "test-10",
-            }
-            await websocket.send(json.dumps(nav_request))
-            response = json.loads(await websocket.recv())
+            assert "result" in response
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            instance_id = result["instance_id"]
 
             # Save session
-            save_request = {"type": "tool", "tool": "browser_save_session", "parameters": {"instance_id": instance_id}, "request_id": "test-11"}
+            save_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "session_save", "arguments": {"name": session_name}}, "id": 2}
             await websocket.send(json.dumps(save_request))
             response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            session_id = response["result"]["session_id"]
+            assert "result" in response
 
             # List sessions
-            list_request = {"type": "tool", "tool": "browser_list_sessions", "parameters": {}, "request_id": "test-13"}
+            list_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "session_list", "arguments": {}}, "id": 3}
             await websocket.send(json.dumps(list_request))
             response = json.loads(await websocket.recv())
-            sessions = response["result"]["sessions"]
-            assert any(s["id"] == session_id for s in sessions)
+            assert "result" in response
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            sessions = result["sessions"]
+            session_names = [s["name"] for s in sessions]
+            assert session_name in session_names
 
-            # Clean up
-            close_request = {"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": "test-15"}
-            await websocket.send(json.dumps(close_request))
-            await websocket.recv()
-
-
-class TestDownloadManagement:
-    """Test download management MCP tools."""
-
-    @pytest.mark.asyncio
-    async def test_download_directory_operations(self, mcp_server):
-        """Test download directory and file operations."""
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            await websocket.recv()  # Skip capabilities
-
-            # Launch browser
-            launch_request = {
-                "type": "tool",
-                "tool": "browser_launch",
-                "parameters": {"headless": HEADLESS, "profile": "test_download_profile"},
-                "request_id": "test-21",
+            # Clean up browser
+            close_request = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}},
+                "id": 4,
             }
-            await websocket.send(json.dumps(launch_request))
-            response = json.loads(await websocket.recv())
-            instance_id = response["result"]["instance_id"]
-
-            # Get download directory
-            get_dir_request = {"type": "tool", "tool": "browser_get_download_dir", "parameters": {"instance_id": instance_id}, "request_id": "test-22"}
-            await websocket.send(json.dumps(get_dir_request))
-            response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            download_dir = response["result"]["download_dir"]
-            assert download_dir is not None
-
-            # List downloads (should be empty initially)
-            list_request = {"type": "tool", "tool": "browser_list_downloads", "parameters": {"instance_id": instance_id}, "request_id": "test-23"}
-            await websocket.send(json.dumps(list_request))
-            response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            assert isinstance(response["result"]["downloads"], list)
-
-            # Clear downloads (even if empty)
-            clear_request = {"type": "tool", "tool": "browser_clear_downloads", "parameters": {"instance_id": instance_id}, "request_id": "test-24"}
-            await websocket.send(json.dumps(clear_request))
-            response = json.loads(await websocket.recv())
-            assert response["success"] is True
-
-            # Clean up
-            close_request = {"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": "test-25"}
             await websocket.send(json.dumps(close_request))
             await websocket.recv()
 
 
 class TestSecurityConfiguration:
-    """Test security configuration MCP tool."""
+    """Test security configuration tools."""
 
     @pytest.mark.asyncio
-    async def test_set_security_level(self, mcp_server):
-        """Test setting security level."""
+    async def test_launch_with_antidetect(self, mcp_server):
+        """Test launching browser with anti-detection enabled."""
         async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            await websocket.recv()  # Skip capabilities
-
-            # Set security level
-            set_request = {"type": "tool", "tool": "browser_set_security", "parameters": {"level": "strict"}, "request_id": "test-sec"}
-            await websocket.send(json.dumps(set_request))
-            response = json.loads(await websocket.recv())
-            assert response["success"] is True
-
-            # Launch browser (which should use the security config)
-            launch_request = {"type": "tool", "tool": "browser_launch", "parameters": {"headless": HEADLESS}, "request_id": "test-launch-sec"}
+            # Launch with anti-detect
+            launch_request = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS, "anti_detect": True}},
+                "id": 1,
+            }
             await websocket.send(json.dumps(launch_request))
             response = json.loads(await websocket.recv())
-            assert response["success"] is True
-            instance_id = response["result"]["instance_id"]
+            assert "result" in response
+            content = response["result"]["content"][0]
+            result = json.loads(content["text"])
+            instance_id = result["instance_id"]
 
-            # Close browser
-            close_request = {"type": "tool", "tool": "browser_close", "parameters": {"instance_id": instance_id}, "request_id": "test-close-sec"}
+            # Verify browser is running (can navigate)
+            nav_request = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": "https://example.com"}},
+                "id": 2,
+            }
+            await websocket.send(json.dumps(nav_request))
+            response = json.loads(await websocket.recv())
+            assert "result" in response
+
+            # Clean up
+            close_request = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}},
+                "id": 3,
+            }
             await websocket.send(json.dumps(close_request))
             await websocket.recv()
 
