@@ -4,21 +4,19 @@
 (function() {
     'use strict';
     
-    // ========== WEBDRIVER REMOVAL ==========
-    // Remove webdriver from window FIRST
-    if (window.navigator && window.navigator.webdriver) {
-        delete window.navigator.webdriver;
-    }
-    
-    // Get the Navigator prototype
-    var nav = window.Navigator ? window.Navigator.prototype : null;
-    if (nav && nav.webdriver) {
-        delete nav.webdriver;
-    }
-    
-    // Force undefined on navigator.webdriver
     try {
-        Object.defineProperty(window.navigator, 'webdriver', {
+    
+    // ========== WEBDRIVER REMOVAL ==========
+    // Use the most effective method: Object.defineProperty
+    // This handles Chrome 141+ which sets webdriver=false instead of true
+    try {
+        // First delete from prototype if it exists
+        if (Navigator.prototype.hasOwnProperty('webdriver')) {
+            delete Navigator.prototype.webdriver;
+        }
+        
+        // Then define property to always return undefined
+        Object.defineProperty(navigator, 'webdriver', {
             get: function() { 
                 return undefined; 
             },
@@ -26,41 +24,36 @@
             configurable: true,
             enumerable: false
         });
+        
+        // Also handle the 'in' operator check
+        (function() {
+            var origGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            Object.getOwnPropertyDescriptor = function(obj, prop) {
+                if (prop === 'webdriver' && (obj === navigator || obj === Navigator.prototype)) {
+                    return undefined;
+                }
+                return origGetOwnPropertyDescriptor.apply(this, arguments);
+            };
+        })();
     } catch(e) {}
     
-    // Intercept all property access
-    var origGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-    Object.getOwnPropertyDescriptor = function(obj, prop) {
-        if (prop === 'webdriver' && (obj === window.navigator || obj === Navigator.prototype)) {
-            return undefined;
-        }
-        return origGetOwnPropertyDescriptor.apply(this, arguments);
-    };
-    
-    // Override hasOwnProperty
-    var origHasOwnProperty = Object.prototype.hasOwnProperty;
-    Object.prototype.hasOwnProperty = function(prop) {
-        if (prop === 'webdriver' && this === window.navigator) {
-            return false;
-        }
-        return origHasOwnProperty.call(this, prop);
-    };
-    
     // ========== H264 CODEC FIX ==========
-    var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
-    HTMLMediaElement.prototype.canPlayType = function(type) {
-        if (!type) return '';
-        var lowerType = type.toLowerCase();
-        if (lowerType.indexOf('h264') !== -1 || 
-            lowerType.indexOf('avc1') !== -1 || 
-            lowerType.indexOf('mp4') !== -1) {
-            return 'probably';
-        }
-        if (originalCanPlayType) {
-            return originalCanPlayType.apply(this, arguments);
-        }
-        return '';
-    };
+    (function() {
+        var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
+        HTMLMediaElement.prototype.canPlayType = function(type) {
+            if (!type) return '';
+            var lowerType = type.toLowerCase();
+            if (lowerType.indexOf('h264') !== -1 || 
+                lowerType.indexOf('avc1') !== -1 || 
+                lowerType.indexOf('mp4') !== -1) {
+                return 'probably';
+            }
+            if (originalCanPlayType) {
+                return originalCanPlayType.apply(this, arguments);
+            }
+            return '';
+        };
+    })();
     
     // ========== PLUGIN CREATION ==========
     // Only create plugins if they're missing or empty
@@ -198,5 +191,9 @@
                 enumerable: true
             });
         } catch(e) {}
+    }
+    
+    } catch(e) {
+        // Silent fail to avoid exposing automation
     }
 })();
