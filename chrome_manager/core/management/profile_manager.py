@@ -14,13 +14,13 @@ from ...utils.exceptions import ProfileError
 class ProfileManager:
     """Manages browser profiles using Chrome's native user-data-dir structure."""
 
-    def __init__(self, base_dir: str = "./browser_profiles"):
-        self.base_dir = Path(base_dir).resolve()
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, base_dir: str = "./data/browser_profiles"):
+        self.base_dir = Path(base_dir)
+        # Don't create directory in __init__, create it when actually needed
 
         # Create a metadata file to track profiles
         self.metadata_file = self.base_dir / "profiles.json"
-        self.profiles: dict[str, dict[str, Any]] = self._load_metadata()
+        self.profiles: dict[str, dict[str, Any]] = {}
 
     def _load_metadata(self) -> dict[str, dict[str, Any]]:
         """Load profile metadata."""
@@ -31,10 +31,18 @@ class ProfileManager:
 
     def _save_metadata(self) -> None:
         """Save profile metadata."""
+        self.base_dir.mkdir(parents=True, exist_ok=True)
         with self.metadata_file.open("w") as f:
             json.dump(self.profiles, f, indent=2)
 
+    def _ensure_initialized(self) -> None:
+        """Ensure the profile manager is initialized."""
+        if not self.profiles and self.metadata_file.exists():
+            self.profiles = self._load_metadata()
+
     def create_profile(self, name: str, description: str = "") -> Path:
+        self._ensure_initialized()
+        self.base_dir.mkdir(parents=True, exist_ok=True)
         """Create a new browser profile directory."""
         if name in self.profiles:
             raise ProfileError(f"Profile {name} already exists")

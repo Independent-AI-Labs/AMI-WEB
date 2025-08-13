@@ -23,6 +23,7 @@ MANIFEST
 .env
 venv/
 ENV/
+.venv/
 
 # Chrome/Selenium
 *.log
