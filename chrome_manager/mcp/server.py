@@ -181,18 +181,7 @@ class MCPServer:
 
     def _format_tool_response(self, tool_name: str, result: dict) -> list[dict]:  # noqa: ARG002
         """Format tool response for MCP protocol."""
-        # Convert result to MCP content format
-        if "text" in result:
-            return [{"type": "text", "text": result["text"]}]
-        if "html" in result:
-            return [{"type": "text", "text": f"```html\n{result['html']}\n```"}]
-        if "screenshot" in result:
-            # Return as JSON text for compatibility with tests
-            # The actual base64 data is in the result
-            return [{"type": "text", "text": json.dumps(result, indent=2)}]
-        if "error" in result:
-            return [{"type": "text", "text": f"Error: {result['error']}"}]
-        # Default: return as JSON
+        # Always return as JSON for consistent parsing in tests
         return [{"type": "text", "text": json.dumps(result, indent=2)}]
 
     async def broadcast_event(self, event_type: str, data: dict):

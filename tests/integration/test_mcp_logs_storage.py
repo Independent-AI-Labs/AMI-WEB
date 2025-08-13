@@ -315,7 +315,7 @@ class TestMCPLogsAndStorage:
                 log = logs[0]
                 assert "url" in log
                 assert "method" in log
-                assert "status" in log
+                assert "status_code" in log
 
             # Cleanup
             await websocket.send(

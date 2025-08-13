@@ -162,12 +162,12 @@ class ChromeManager:
             instances.append(instance.get_info())
         return instances
 
-    async def save_session(self, instance_id: str) -> str:
+    async def save_session(self, instance_id: str, name: str | None = None) -> str:
         instance = self._instances.get(instance_id)
         if not instance:
             raise ValueError(f"Instance {instance_id} not found")
 
-        session_id = await self.session_manager.save_session(instance)
+        session_id = await self.session_manager.save_session(instance, name)
         logger.info(f"Saved session {session_id} for instance {instance_id}")
         return session_id
 
