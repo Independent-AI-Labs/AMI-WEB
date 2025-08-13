@@ -14,8 +14,8 @@ from chrome_manager.facade.navigation import NavigationController
 async def test_basic_operations():
     print("Testing Chrome Manager Basic Operations...")
 
-    # Initialize manager with config file
-    manager = ChromeManager(config_file="config.yaml")
+    # Initialize manager with test config file
+    manager = ChromeManager(config_file="config.test.yaml")
     await manager.initialize()
 
     try:

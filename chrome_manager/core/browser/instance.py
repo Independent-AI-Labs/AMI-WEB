@@ -45,7 +45,7 @@ class BrowserInstance:
         # Composed components
         self._lifecycle = BrowserLifecycle(self.id, self._config)
         self._monitor = BrowserMonitor(self.id)
-        self._storage = BrowserStorage(self.id)
+        self._storage = BrowserStorage(self.id, config=self._config)
         self._options_builder = BrowserOptionsBuilder(self._config, self._profile_manager)
 
         # State tracking

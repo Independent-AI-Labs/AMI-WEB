@@ -46,7 +46,17 @@ class Config:
             else:
                 return self._get_env_override(key, default)
 
-        return self._get_env_override(key, value if value is not None else default)
+        result = self._get_env_override(key, value if value is not None else default)
+
+        # Convert relative paths to absolute for key browser paths
+        if result and isinstance(result, str) and key in ["chrome_manager.browser.chrome_binary_path", "chrome_manager.browser.chromedriver_path"]:
+            path = Path(result)
+            if not path.is_absolute():
+                # Make relative paths relative to project root
+                project_root = Path(__file__).parent.parent.parent
+                result = str(project_root / path)
+
+        return result
 
     def _get_env_override(self, key: str, default: Any) -> Any:
         env_key = f"CHROME_MANAGER_{key.upper().replace('.', '_')}"
@@ -68,7 +78,7 @@ class Config:
         project_root = Path(__file__).parent.parent.parent
 
         if system == "Windows":
-            chrome_path = project_root / "chromium-win" / "chrome.exe"
+            chrome_path = project_root / "build" / "chromium-win" / "chrome.exe"
             driver_path = project_root / "build" / "chromedriver.exe"
         elif system == "Darwin":  # macOS
             chrome_path = project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"

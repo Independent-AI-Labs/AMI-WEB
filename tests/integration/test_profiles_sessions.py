@@ -24,13 +24,14 @@ async def chrome_manager():
         config = {
             "chrome_manager": {
                 "browser": {
-                    "chrome_binary_path": "./chromium-win/chrome.exe",
-                    "chromedriver_path": "./chromedriver.exe",
+                    "chrome_binary_path": "./build/chromium-win/chrome.exe",
+                    "chromedriver_path": "./build/chromedriver.exe",
                     "default_headless": True,
                 },
                 "storage": {
-                    "profiles_dir": "./test_profiles",
-                    "download_dir": "./test_downloads",
+                    "profiles_dir": "./data/test_profiles",
+                    "download_dir": "./data/test_downloads",
+                    "session_dir": "./data/test_sessions",
                 },
             }
         }
