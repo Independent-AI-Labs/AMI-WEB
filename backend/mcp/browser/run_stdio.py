@@ -9,8 +9,8 @@ from pathlib import Path
 
 from loguru import logger
 
-from chrome_manager.core.management.manager import ChromeManager
-from chrome_manager.mcp.browser.server import BrowserMCPServer
+from backend.core.management.manager import ChromeManager
+from backend.mcp.browser.server import BrowserMCPServer
 
 # Configure minimal logging to stderr only
 log_level = os.environ.get("MCP_LOG_LEVEL", "WARNING")

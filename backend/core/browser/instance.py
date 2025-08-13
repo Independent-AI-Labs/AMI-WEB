@@ -104,7 +104,7 @@ class BrowserInstance:
                 profile_dir = self._profile_manager.get_profile_dir(profile)
                 self._storage.set_download_directory(profile_dir / "Downloads")
             else:
-                default_dir = Path(self._config.get("chrome_manager.storage.download_dir", "./data/downloads"))
+                default_dir = Path(self._config.get("backend.storage.download_dir", "./data/downloads"))
                 self._storage.set_download_directory(default_dir)
 
             # Build Chrome options

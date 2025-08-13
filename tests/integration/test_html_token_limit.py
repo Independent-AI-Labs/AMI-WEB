@@ -2,8 +2,8 @@
 
 import pytest
 
-from chrome_manager.facade.navigation.extractor import ContentExtractor
-from chrome_manager.facade.navigation.navigator import Navigator
+from backend.facade.navigation.extractor import ContentExtractor
+from backend.facade.navigation.navigator import Navigator
 
 
 @pytest.mark.asyncio

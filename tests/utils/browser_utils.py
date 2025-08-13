@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from loguru import logger
 
-from chrome_manager.core.browser.instance import BrowserInstance
+from backend.core.browser.instance import BrowserInstance
 
 
 class TabManager:

@@ -31,12 +31,19 @@ The Model Context Protocol (MCP) is an open standard created by Anthropic that a
 git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
 cd AMI-WEB
 
-# Option A: Use the start script (auto-creates conda environment)
-./start_mcp_server.sh  # macOS/Linux
+# Option A: Using uv (Recommended - Fast)
+pip install uv  # If not already installed
+uv venv .venv
+.venv/Scripts/activate  # Windows
 # or
-start_mcp_server.bat   # Windows
+source .venv/bin/activate  # macOS/Linux
+uv pip install -r requirements.txt
 
-# Option B: Manual setup
+# Option B: Use the start script (auto-creates .venv with uv)
+python scripts/start_mcp_server.py              # Stdio mode (Claude Desktop) - default
+python scripts/start_mcp_server.py websocket    # WebSocket mode (port 8765)
+
+# Option C: Manual conda setup
 conda create -n web python=3.12
 conda activate web
 pip install -r requirements.txt
@@ -65,15 +72,15 @@ Add the following to your `claude_desktop_config.json`:
 
 #### Option 1: Using Start Script (Recommended)
 
-The start scripts automatically handle conda environment setup:
+The start script automatically handles virtual environment setup with uv:
 
-**macOS/Linux:**
 ```json
 {
   "mcpServers": {
     "ami-web-browser": {
-      "command": "/path/to/AMI-WEB/start_mcp_server.sh",
-      "args": [],
+      "command": "python",
+      "args": ["scripts/start_mcp_server.py"],
+      "cwd": "/path/to/AMI-WEB",
       "env": {
         "LOG_LEVEL": "INFO"
       }
@@ -82,20 +89,7 @@ The start scripts automatically handle conda environment setup:
 }
 ```
 
-**Windows:**
-```json
-{
-  "mcpServers": {
-    "ami-web-browser": {
-      "command": "C:\\path\\to\\AMI-WEB\\start_mcp_server.bat",
-      "args": [],
-      "env": {
-        "LOG_LEVEL": "INFO"
-      }
-    }
-  }
-}
-```
+**Windows users**: Replace `/path/to/AMI-WEB` with your actual path like `C:\\Users\\YourName\\AMI-WEB`
 
 #### Option 2: Direct Python Execution
 
@@ -106,7 +100,7 @@ If you manage your Python environment manually:
   "mcpServers": {
     "ami-web-browser": {
       "command": "python3",
-      "args": ["chrome_manager/mcp/mcp_stdio_server.py"],
+      "args": ["backend/mcp/browser/run_stdio.py"],
       "cwd": "/path/to/AMI-WEB",
       "env": {
         "PYTHONPATH": "/path/to/AMI-WEB"
@@ -118,12 +112,9 @@ If you manage your Python environment manually:
 
 **Note:** On Windows use `python` instead of `python3`.
 
-**Example configurations** are provided in the repository:
-- `claude_desktop_config.json.example` - Generic example with both options
-- `claude_desktop_config_macos.json.example` - macOS-specific paths
-- `claude_desktop_config_windows.json.example` - Windows-specific paths
-- `start_mcp_server.sh` - Bash script for macOS/Linux
-- `start_mcp_server.bat` - Batch script for Windows
+**Startup scripts** are provided in the `scripts/` directory:
+- `scripts/start_mcp_server.py` - Unified MCP server launcher (stdio or websocket)
+- `scripts/run_tests.py` - Test runner with proper environment setup
 
 ### Step 3: Restart Claude Desktop
 
@@ -155,7 +146,7 @@ Create or edit `~/.claude/settings.local.json`:
     "ami-web": {
       "type": "stdio",
       "command": "python",
-      "args": ["chrome_manager/mcp/mcp_stdio_server.py"],
+      "args": ["backend/mcp/browser/mcp_stdio_server.py"],
       "cwd": "/path/to/AMI-WEB",
       "env": {
         "PYTHONPATH": "/path/to/AMI-WEB"
@@ -174,7 +165,7 @@ For project-specific setup, create `.claude/settings.local.json` in your project
   "mcpServers": {
     "ami-web": {
       "command": "python",
-      "args": ["/absolute/path/to/AMI-WEB/chrome_manager/mcp/mcp_stdio_server.py"]
+      "args": ["/absolute/path/to/AMI-WEB/backend/mcp/browser/mcp_stdio_server.py"]
     }
   }
 }
@@ -188,7 +179,7 @@ claude mcp add ami-web
 
 # When prompted:
 # Command: python
-# Arguments: /path/to/AMI-WEB/chrome_manager/mcp/mcp_stdio_server.py
+# Arguments: /path/to/AMI-WEB/backend/mcp/browser/mcp_stdio_server.py
 ```
 
 ### Windows-Specific Configuration
@@ -200,7 +191,7 @@ On Windows (not WSL), you may need to use the cmd wrapper:
   "mcpServers": {
     "ami-web": {
       "command": "cmd",
-      "args": ["/c", "python", "C:\\path\\to\\AMI-WEB\\chrome_manager\\mcp\\mcp_stdio_server.py"]
+      "args": ["/c", "python", "C:\\path\\to\\AMI-WEB\\backend\\mcp\\mcp_stdio_server.py"]
     }
   }
 }
@@ -227,7 +218,7 @@ Edit `~/.gemini/settings.json`:
     "ami-web": {
       "type": "stdio",
       "command": "python",
-      "args": ["/path/to/AMI-WEB/chrome_manager/mcp/mcp_stdio_server.py"],
+      "args": ["/path/to/AMI-WEB/backend/mcp/browser/mcp_stdio_server.py"],
       "trust": false,
       "env": {
         "PYTHONPATH": "/path/to/AMI-WEB"
@@ -333,7 +324,7 @@ gemini "Extract product prices from this e-commerce site that blocks bots"
 
 #### 1. Server Not Connecting
 
-- **Check path**: Ensure the path to `chrome_manager/mcp/mcp_stdio_server.py` is absolute
+- **Check path**: Ensure the path to `backend/mcp/browser/run_stdio.py` is absolute
 - **Python path**: Verify Python is in your system PATH
 - **Permissions**: Ensure the script has execute permissions
 - **Logs**: Check Claude/Gemini logs for error messages
@@ -342,7 +333,7 @@ gemini "Extract product prices from this e-commerce site that blocks bots"
 
 - **Restart required**: Always restart the AI client after config changes
 - **Config syntax**: Validate JSON syntax in configuration files
-- **Server running**: Test the server standalone: `python chrome_manager/mcp/mcp_stdio_server.py --test`
+- **Server running**: Test the server standalone: `python scripts/start_mcp_server.py`
 
 #### 3. Windows-Specific Issues
 
@@ -359,7 +350,7 @@ Enable verbose logging by setting environment variable:
   "mcpServers": {
     "ami-web": {
       "command": "python",
-      "args": ["chrome_manager/mcp/mcp_stdio_server.py"],
+      "args": ["backend/mcp/browser/mcp_stdio_server.py"],
       "env": {
         "DEBUG": "true",
         "LOG_LEVEL": "DEBUG",
@@ -398,11 +389,14 @@ AMI-WEB's MCP server can:
 For distributed setups or custom integrations, use the WebSocket server:
 
 ```bash
-# Start WebSocket server
-python -m chrome_manager.mcp.server
+# Start WebSocket server with proper environment
+python scripts/start_mcp_server.py websocket
+
+# Or specify custom host/port
+python scripts/start_mcp_server.py websocket --host 0.0.0.0 --port 8080
 
 # Connect from AI tools using WebSocket URL
-ws://localhost:8765
+ws://localhost:8765  # Default
 ```
 
 ### Environment Variables
@@ -431,7 +425,7 @@ FROM python:3.12
 WORKDIR /app
 COPY . .
 RUN pip install -r requirements.txt
-CMD ["python", "mcp_stdio_server.py"]
+CMD ["python", "backend/mcp/browser/run_stdio.py"]
 ```
 
 ## Support and Resources

@@ -10,12 +10,12 @@ import pytest
 from loguru import logger
 
 # BrowserInstance and ChromeManager imports removed - using fixtures from conftest
-from chrome_manager.facade.input.keyboard import KeyboardController
-from chrome_manager.facade.input.mouse import MouseController
-from chrome_manager.facade.media.screenshot import ScreenshotController
-from chrome_manager.facade.navigation.extractor import ContentExtractor
-from chrome_manager.facade.navigation.navigator import Navigator
-from chrome_manager.facade.navigation.waiter import Waiter
+from backend.facade.input.keyboard import KeyboardController
+from backend.facade.input.mouse import MouseController
+from backend.facade.media.screenshot import ScreenshotController
+from backend.facade.navigation.extractor import ContentExtractor
+from backend.facade.navigation.navigator import Navigator
+from backend.facade.navigation.waiter import Waiter
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless

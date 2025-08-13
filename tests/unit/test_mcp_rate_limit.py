@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from chrome_manager.mcp.base.rate_limit import (
+from backend.mcp.base.rate_limit import (
     LeakyBucketRateLimiter,
     MethodRateLimiter,
     RateLimiter,

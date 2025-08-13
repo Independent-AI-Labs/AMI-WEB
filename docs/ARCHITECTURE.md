@@ -84,33 +84,58 @@ graph TB
 
 ## Core Components
 
-### Module Organization (Refactored)
+### Module Organization (Latest Refactoring - August 2025)
 
-The core module has been refactored from a monolithic structure into well-organized submodules:
+The project has undergone major refactoring to eliminate code duplication and improve separation of concerns:
 
 ```
-chrome_manager/core/
-├── browser/          # Core browser functionality
-│   ├── instance.py   # Main browser instance (composition pattern)
-│   ├── lifecycle.py  # Browser launch, terminate, restart
-│   ├── options.py    # Chrome options configuration
-│   ├── properties_manager.py # Browser property injection
-│   └── tab_manager.py # Tab management with auto-cleanup
-├── management/       # Instance management
-│   ├── manager.py    # High-level Chrome manager
-│   ├── pool.py       # Browser pool with smart health checks
-│   ├── profile_manager.py # Chrome profile management
-│   └── session_manager.py # Session persistence
-├── monitoring/       # Browser monitoring
-│   └── monitor.py    # Console, network, performance monitoring
-├── security/         # Anti-detection & security
-│   ├── antidetect.py # ChromeDriver patching & anti-detection
-│   └── tab_injector.py # CDP-based script injection (NO POLLING!)
-└── storage/         # Storage management
-    └── storage.py   # Cookies, downloads, localStorage
+backend/
+├── core/                     # Core browser functionality
+│   ├── browser/             # Browser-specific logic
+│   │   ├── instance.py      # Browser instance (composition pattern)
+│   │   ├── lifecycle.py     # Launch, terminate, restart logic
+│   │   ├── options.py       # Chrome options configuration
+│   │   ├── properties_manager.py # Browser property injection
+│   │   └── tab_manager.py   # Tab management with auto-cleanup
+│   ├── management/          # Instance & resource management
+│   │   ├── manager.py       # High-level Chrome manager
+│   │   ├── pool.py          # Instance pool with health checks
+│   │   ├── profile_manager.py # Chrome profile management
+│   │   └── session_manager.py # Session persistence
+│   ├── monitoring/          # Monitoring capabilities
+│   │   └── monitor.py       # Console, network, performance
+│   ├── security/            # Security & anti-detection
+│   │   ├── antidetect.py    # ChromeDriver patching
+│   │   └── tab_injector.py  # CDP script injection (EVENT-DRIVEN)
+│   └── storage/             # Storage management
+│       └── storage.py       # Cookies, downloads, localStorage
+├── facade/                  # Simplified interfaces (Facade pattern)
+│   ├── input/              # Input simulation
+│   │   ├── keyboard.py     # Keyboard interactions
+│   │   └── mouse.py        # Mouse interactions
+│   ├── media/              # Media capture
+│   │   └── screenshot.py   # Screenshot functionality
+│   └── navigation/         # Navigation & content
+│       ├── extractor.py    # Content extraction
+│       ├── navigator.py    # Page navigation
+│       └── waiter.py       # Element waiting strategies
+├── mcp/                    # Model Context Protocol
+│   ├── base/              # Generic MCP components
+│   │   ├── mcp_server.py  # Base server class
+│   │   ├── protocol.py    # JSON-RPC protocol handler
+│   │   ├── transport.py   # WebSocket & stdio transports
+│   │   ├── auth.py        # Authentication middleware
+│   │   └── rate_limit.py  # Rate limiting middleware
+│   └── browser/           # Browser-specific MCP
+│       ├── server.py      # Browser MCP implementation
+│       └── registry.py    # Tool registry (40+ tools)
+├── utils/                 # Utilities
+│   └── config.py         # Configuration management
+└── scripts/              # JavaScript injection scripts
+    └── complete-antidetect.js # Anti-detection script
 ```
 
-### 1. Chrome Manager (`chrome_manager/core/management/manager.py`)
+### 1. Chrome Manager (`backend/core/management/manager.py`)
 
 The central orchestrator that manages the lifecycle of browser instances.
 
@@ -130,7 +155,7 @@ async def terminate_instance(instance_id: str) -> None
 async def shutdown() -> None
 ```
 
-### 2. Browser Instance (`chrome_manager/core/browser/instance.py`)
+### 2. Browser Instance (`backend/core/browser/instance.py`)
 
 Individual browser instance using **composition pattern** (refactored from 738-line god class).
 
@@ -150,7 +175,7 @@ class BrowserStatus(Enum):
     ERROR = "error"
 ```
 
-### 3. Browser Pool (`chrome_manager/core/management/pool.py`)
+### 3. Browser Pool (`backend/core/management/pool.py`)
 
 Efficient resource pooling for browser instances.
 
@@ -191,35 +216,49 @@ flowchart TD
     style RejectRequest fill:#ffcdd2
 ```
 
-### 4. Facade Controllers
+### 4. Facade Controllers (Refactored)
 
-#### NavigationController (`chrome_manager/facade/navigation.py`)
+The facade layer has been completely reorganized into focused modules:
+
+#### Navigator (`backend/facade/navigation/navigator.py`)
 - Page navigation with smart waiting
-- Scroll control (smooth/instant)
-- Element waiting strategies
+- Navigation history (back/forward/refresh)
+- URL and title extraction
+- Page status monitoring
+
+#### ContentExtractor (`backend/facade/navigation/extractor.py`)
+- HTML extraction with token limiting for LLMs
+- Text extraction with structure preservation
+- Link extraction with absolute URL conversion
+- Form field detection and extraction
+- JavaScript execution
 - Storage operations (localStorage/sessionStorage)
-- HTML extraction with depth limiting
 
-#### InputController (`chrome_manager/facade/input.py`)
-- Click simulation with retry logic
+#### Waiter (`backend/facade/navigation/waiter.py`)
+- Element waiting strategies
+- Visibility checks
+- Presence detection
+- Custom wait conditions
+
+#### KeyboardController (`backend/facade/input/keyboard.py`)
 - Text input with human-like delays
-- Keyboard shortcuts
-- Drag and drop operations
-- Form interactions
+- Keyboard shortcuts and key combinations
+- Form field clearing
+- Special key simulation
 
-#### ScreenshotController (`chrome_manager/facade/media.py`)
-- Full page capture
+#### MouseController (`backend/facade/input/mouse.py`)
+- Click simulation with retry logic
+- Double-click and right-click support
+- Drag and drop operations
+- Screen-space coordinate clicks
+- Swipe gestures
+
+#### ScreenshotController (`backend/facade/media/screenshot.py`)
+- Full page capture with scrolling
 - Viewport screenshots
 - Element-specific capture
 - Base64 encoding
-- Image optimization
-
-#### DevToolsController (`chrome_manager/facade/devtools.py`)
-- Console log capture
-- Network monitoring
-- Performance metrics
-- Cookie management
-- Cache control
+- Automatic format detection
 
 ## Anti-Detection System
 
@@ -229,7 +268,7 @@ The anti-detection system is the crown jewel of AMI-WEB, making browser automati
 
 ### Implementation Layers
 
-#### 1. Chrome Launch Arguments (`chrome_manager/core/security/antidetect.py`)
+#### 1. Chrome Launch Arguments (`backend/core/security/antidetect.py`)
 ```python
 --disable-blink-features=AutomationControlled
 --exclude-switches=enable-automation
@@ -238,7 +277,7 @@ The anti-detection system is the crown jewel of AMI-WEB, making browser automati
 --disable-features=IsolateOrigins,site-per-process
 ```
 
-#### 2. JavaScript Injection (`chrome_manager/scripts/complete-antidetect.js`)
+#### 2. JavaScript Injection (`backend/scripts/complete-antidetect.js`)
 
 **Pre-Page Load Injection:**
 - Executed via CDP `Page.addScriptToEvaluateOnNewDocument`
@@ -295,7 +334,7 @@ const pluginData = [
 ];
 ```
 
-#### 4. Tab Injection System (`chrome_manager/core/security/tab_injector.py`)
+#### 4. Tab Injection System (`backend/core/security/tab_injector.py`)
 
 **EVENT-DRIVEN - NO POLLING!** Uses CDP events to inject anti-detection:
 

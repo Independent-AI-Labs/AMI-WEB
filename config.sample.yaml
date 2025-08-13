@@ -1,7 +1,7 @@
 # Chrome Manager Configuration
 # Copy this file to config.yaml and adjust settings as needed
 
-chrome_manager:
+backend:
   browser:
     # Path to Chrome/Chromium executable
     chrome_binary_path: "./build/chromium-win/chrome.exe"

@@ -6,9 +6,9 @@ import os
 import pytest
 
 # BrowserInstance import removed - using fixtures from conftest
-from chrome_manager.facade.input.mouse import MouseController
-from chrome_manager.facade.navigation.extractor import ContentExtractor
-from chrome_manager.facade.navigation.navigator import Navigator
+from backend.facade.input.mouse import MouseController
+from backend.facade.navigation.extractor import ContentExtractor
+from backend.facade.navigation.navigator import Navigator
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless

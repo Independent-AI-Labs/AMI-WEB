@@ -110,10 +110,7 @@ class BrowserStorage:
         import json
 
         # Use configured profiles directory or default
-        if self._config:
-            profiles_base = Path(self._config.get("chrome_manager.storage.profiles_dir", "./data/browser_profiles"))
-        else:
-            profiles_base = Path("./data/browser_profiles")
+        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
         profile_dir = profiles_base / self._profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
         cookies_file = profile_dir / "cookies.json"
@@ -132,10 +129,7 @@ class BrowserStorage:
         import json
 
         # Use configured profiles directory or default
-        if self._config:
-            profiles_base = Path(self._config.get("chrome_manager.storage.profiles_dir", "./data/browser_profiles"))
-        else:
-            profiles_base = Path("./data/browser_profiles")
+        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
         cookies_file = profiles_base / self._profile_name / "cookies.json"
 
         if not cookies_file.exists():

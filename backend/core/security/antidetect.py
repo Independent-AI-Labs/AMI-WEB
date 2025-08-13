@@ -256,7 +256,7 @@ def execute_anti_detection_scripts(driver) -> None:
     This should be called after the driver is initialized.
     """
     # Load complete anti-detect script
-    # Path: chrome_manager/core/security -> chrome_manager/scripts
+    # Path: backend/core/security -> backend/scripts
     scripts_dir = Path(__file__).parent.parent.parent / "scripts"
     script_path = scripts_dir / "complete-antidetect.js"
 

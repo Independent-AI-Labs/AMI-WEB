@@ -49,7 +49,7 @@ class Config:
         result = self._get_env_override(key, value if value is not None else default)
 
         # Convert relative paths to absolute for key browser paths
-        if result and isinstance(result, str) and key in ["chrome_manager.browser.chrome_binary_path", "chrome_manager.browser.chromedriver_path"]:
+        if result and isinstance(result, str) and key in ["backend.browser.chrome_binary_path", "backend.browser.chromedriver_path"]:
             path = Path(result)
             if not path.is_absolute():
                 # Make relative paths relative to project root
@@ -59,7 +59,7 @@ class Config:
         return result
 
     def _get_env_override(self, key: str, default: Any) -> Any:
-        env_key = f"CHROME_MANAGER_{key.upper().replace('.', '_')}"
+        env_key = f"backend_{key.upper().replace('.', '_')}"
         env_value = os.getenv(env_key)
 
         if env_value is not None:
@@ -97,7 +97,7 @@ class Config:
         chrome_path, driver_path = self._get_platform_paths()
 
         return {
-            "chrome_manager": {
+            "backend": {
                 "browser": {
                     "chrome_binary_path": chrome_path,  # Platform-specific or None
                     "chromedriver_path": driver_path,  # Platform-specific or None
