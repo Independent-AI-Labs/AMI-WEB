@@ -1,42 +1,68 @@
-import asyncio
+"""Chrome Manager using the base worker pool system."""
+
+import sys
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
-from ...facade.media.screenshot import ScreenshotController
-from ...facade.navigation.navigator import Navigator
-from ...models.browser import ChromeOptions, InstanceInfo
-from ...models.browser_properties import BrowserProperties
-from ...models.security import SecurityConfig
-from ...utils.config import Config
-from ..browser.instance import BrowserInstance
-from ..browser.properties_manager import PropertiesManager
-from .pool import BrowserPool
-from .profile_manager import ProfileManager
-from .session_manager import SessionManager
+# Add base to path for imports
+base_path = Path(__file__).parent.parent.parent.parent.parent / "base"
+if str(base_path) not in sys.path:
+    sys.path.insert(0, str(base_path))
+
+from workers.types import PoolConfig, PoolType  # noqa: E402
+
+from ...facade.media.screenshot import ScreenshotController  # noqa: E402
+from ...facade.navigation.navigator import Navigator  # noqa: E402
+from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo  # noqa: E402
+from ...models.security import SecurityConfig  # noqa: E402
+from ...utils.config import Config  # noqa: E402
+from ..browser.instance import BrowserInstance  # noqa: E402
+from ..browser.properties_manager import PropertiesManager  # noqa: E402
+from .browser_worker_pool import BrowserWorkerPool  # noqa: E402
+from .profile_manager import ProfileManager  # noqa: E402
+from .session_manager import SessionManager  # noqa: E402
 
 
 class ChromeManager:
+    """Chrome Manager using the base worker pool system."""
+
     def __init__(self, config_file: str | None = None):
         self.config = Config.load(config_file) if config_file else Config()
         self.properties_manager = PropertiesManager(self.config)
         self.profile_manager = ProfileManager(base_dir=self.config.get("backend.storage.profiles_dir", "./data/browser_profiles"))
-        self.pool = BrowserPool(
-            min_instances=self.config.get("backend.pool.min_instances", 1),
-            max_instances=self.config.get("backend.pool.max_instances", 10),
-            warm_instances=self.config.get("backend.pool.warm_instances", 2),
-            instance_ttl=self.config.get("backend.pool.instance_ttl", 3600),
+
+        # Create pool configuration
+        pool_config = PoolConfig(
+            name="browser_pool",
+            pool_type=PoolType.THREAD,  # Browsers run in threads
+            min_workers=self.config.get("backend.pool.min_instances", 1),
+            max_workers=self.config.get("backend.pool.max_instances", 10),
+            warm_workers=self.config.get("backend.pool.warm_instances", 2),
+            worker_ttl=self.config.get("backend.pool.instance_ttl", 3600),
             health_check_interval=self.config.get("backend.pool.health_check_interval", 30),
-            config=self.config,
+            enable_hibernation=True,
+            hibernation_delay=60,  # Hibernate after 60 seconds of inactivity
+        )
+
+        # Create the browser worker pool
+        self.pool = BrowserWorkerPool(
+            config=pool_config,
+            browser_config=self.config,
             properties_manager=self.properties_manager,
             profile_manager=self.profile_manager,
         )
+
         self.session_manager = SessionManager(session_dir=self.config.get("backend.storage.session_dir", "./data/sessions"))
-        self._instances: dict[str, BrowserInstance] = {}
+
+        # Track instances created outside the pool
+        self._standalone_instances: dict[str, BrowserInstance] = {}
         self._initialized = False
-        # Removed stateful _next_security_config to avoid race conditions
 
     async def initialize(self):
+        """Initialize the Chrome Manager."""
         if self._initialized:
             return
 
@@ -51,14 +77,20 @@ class ChromeManager:
         await self.initialize()
 
     async def shutdown(self):
+        """Shutdown the Chrome Manager."""
         logger.info("Shutting down Chrome Manager")
+
+        # Shutdown the pool
         await self.pool.shutdown()
+
+        # Shutdown session manager
         await self.session_manager.shutdown()
 
-        for instance in self._instances.values():
+        # Terminate standalone instances
+        for instance in self._standalone_instances.values():
             await instance.terminate()
 
-        self._instances.clear()
+        self._standalone_instances.clear()
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
 
@@ -73,58 +105,101 @@ class ChromeManager:
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
         use_pool: bool = True,
-        anti_detect: bool = True,  # Enable anti-detect by default for MCP
+        anti_detect: bool = True,
         security_config: "SecurityConfig | None" = None,
         download_dir: str | None = None,
     ) -> BrowserInstance:
+        """Get or create a browser instance.
+
+        Args:
+            headless: Run in headless mode
+            profile: Browser profile to use
+            extensions: List of extension paths
+            options: Chrome options
+            use_pool: Whether to use the pool (default True)
+            anti_detect: Enable anti-detection features
+            security_config: Security configuration
+            download_dir: Download directory
+
+        Returns:
+            A browser instance
+        """
         if not self._initialized:
             await self.initialize()
 
-        # Security config should be passed directly, not stored statefully
-
         if use_pool:
+            # Get instance from pool
             opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
-            instance = await self.pool.acquire(opts)
-        else:
-            instance = BrowserInstance(
-                config=self.config,
-                properties_manager=self.properties_manager,
-                profile_manager=self.profile_manager,
-            )
-            await instance.launch(
-                headless=headless,
-                profile=profile,
-                extensions=extensions,
-                options=options,
-                anti_detect=anti_detect,
-                security_config=security_config,
-                download_dir=download_dir,
-            )
+            # Pass anti_detect through kwargs instead of modifying the options object
 
-        self._instances[instance.id] = instance
-        logger.info(f"Got or created browser instance {instance.id}")
+            # Acquire a browser from the pool
+            instance = await self.pool.acquire_browser(opts)
+            logger.info(f"Got browser instance {instance.id} from pool")
+            return instance
+        # Create standalone instance
+        instance = BrowserInstance(
+            config=self.config,
+            properties_manager=self.properties_manager,
+            profile_manager=self.profile_manager,
+        )
+        await instance.launch(
+            headless=headless,
+            profile=profile,
+            extensions=extensions,
+            options=options,
+            anti_detect=anti_detect,
+            security_config=security_config,
+            download_dir=download_dir,
+        )
+
+        self._standalone_instances[instance.id] = instance
+        logger.info(f"Created standalone browser instance {instance.id}")
         return instance
 
     async def get_instance(self, instance_id: str) -> BrowserInstance | None:
-        return self._instances.get(instance_id)
+        """Get an instance by ID.
+
+        Args:
+            instance_id: The instance ID
+
+        Returns:
+            The browser instance or None if not found
+        """
+        # Check pool first
+        for worker in self.pool._workers.values():
+            if worker.instance.id == instance_id:
+                return worker.instance
+
+        # Check standalone instances
+        return self._standalone_instances.get(instance_id)
 
     async def return_to_pool(self, instance_id: str) -> bool:
-        """Return an instance to the pool for reuse."""
-        instance = self._instances.get(instance_id)
-        if not instance:
-            logger.warning(f"Instance {instance_id} not found")
-            return False
+        """Return an instance to the pool for reuse.
 
-        # Don't remove from _instances, just release to pool for reuse
-        if instance.id in self.pool.all_instances:
-            await self.pool.release(instance_id)
-            logger.info(f"Returned instance {instance_id} to pool for reuse")
+        Args:
+            instance_id: The instance ID
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Check if it's a pool instance
+        for worker in self.pool._workers.values():
+            if worker.instance.id == instance_id:
+                await self.pool.release_browser(instance_id)
+                logger.info(f"Returned instance {instance_id} to pool for reuse")
+                return True
+
+        # Check standalone instances
+        instance = self._standalone_instances.get(instance_id)
+        if instance:
+            # Can't return standalone to pool, just terminate
+            await instance.terminate()
+            self._standalone_instances.pop(instance_id, None)
+            logger.info(f"Terminated standalone instance {instance_id}")
             return True
-        # Not a pool instance, just terminate it
-        await instance.terminate()
-        self._instances.pop(instance_id, None)
-        logger.info(f"Terminated non-pool instance {instance_id}")
-        return True
+
+        logger.warning(f"Instance {instance_id} not found")
+        return False
 
     async def terminate_instance(self, instance_id: str, return_to_pool: bool = False) -> bool:
         """Terminate a browser instance.
@@ -132,176 +207,200 @@ class ChromeManager:
         Args:
             instance_id: ID of instance to terminate
             return_to_pool: If True, return to pool for reuse. If False, fully terminate.
-                           Default is False to ensure proper cleanup.
+                          Default is False to ensure proper cleanup.
+
+        Returns:
+            True if successful, False otherwise
         """
-        instance = self._instances.pop(instance_id, None)
-        if not instance:
-            logger.warning(f"Instance {instance_id} not found")
-            return False
+        if return_to_pool:
+            return await self.return_to_pool(instance_id)
 
-        if return_to_pool and instance.id in self.pool.all_instances:
-            # Return to pool for reuse (keeps browser running)
-            await self.pool.release(instance_id)
-            logger.info(f"Returned instance {instance_id} to pool")
-        else:
-            # Actually terminate the browser
+        # Check pool instances
+        workers_dict = getattr(self.pool, "workers", {})
+        for worker in workers_dict.values():
+            if worker.instance.id == instance_id:
+                # Remove from pool and terminate
+                await worker.cleanup()
+                # Remove worker from pool
+                if worker.id in self.pool._workers:
+                    del self.pool._workers[worker.id]
+                logger.info(f"Terminated pool instance {instance_id}")
+                return True
+
+        # Check standalone instances
+        instance = self._standalone_instances.pop(instance_id, None)
+        if instance:
             await instance.terminate()
-            # Remove from pool if it was there
-            if instance.id in self.pool.all_instances:
-                self.pool.all_instances.pop(instance.id, None)
-                if instance in self.pool.available:
-                    self.pool.available.remove(instance)
-                self.pool.in_use.pop(instance.id, None)
-            logger.info(f"Terminated instance {instance_id}")
+            logger.info(f"Terminated standalone instance {instance_id}")
+            return True
 
-        return True
+        logger.warning(f"Instance {instance_id} not found")
+        return False
 
     async def list_instances(self) -> list[InstanceInfo]:
+        """List all browser instances.
+
+        Returns:
+            List of instance information
+        """
         instances = []
-        for instance in self._instances.values():
-            instances.append(instance.get_info())
+
+        # Get pool instances
+        for worker in self.pool._workers.values():
+            instance = worker.instance
+            instances.append(
+                InstanceInfo(
+                    id=instance.id,
+                    status=BrowserStatus.READY if worker.state.value == "idle" else BrowserStatus.BUSY,
+                    created_at=instance.created_at,
+                    last_activity=worker.last_used,
+                    memory_usage=0,  # Not tracked currently
+                    cpu_usage=0.0,  # Not tracked currently
+                    active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
+                    profile=None,
+                    headless=True,
+                )
+            )
+
+        # Get standalone instances
+        for instance in self._standalone_instances.values():
+            instances.append(
+                InstanceInfo(
+                    id=instance.id,
+                    status=BrowserStatus.READY,
+                    created_at=instance.created_at,
+                    last_activity=datetime.now(),
+                    memory_usage=0,  # Not tracked currently
+                    cpu_usage=0.0,  # Not tracked currently
+                    active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
+                    profile=None,
+                    headless=True,
+                )
+            )
+
         return instances
 
+    async def get_pool_stats(self) -> dict[str, Any]:
+        """Get pool statistics.
+
+        Returns:
+            Pool statistics dictionary
+        """
+        stats = self.pool.get_stats()
+        return {
+            "name": stats.name,
+            "pool_type": stats.pool_type.value,
+            "total_instances": stats.total_workers,
+            "available": stats.idle_workers,
+            "in_use": stats.busy_workers,
+            "hibernating": stats.hibernating_workers,
+            "pending_tasks": stats.pending_tasks,
+            "completed_tasks": stats.completed_tasks,
+            "failed_tasks": stats.failed_tasks,
+            "average_task_time": stats.average_task_time,
+            "uptime_seconds": stats.uptime_seconds,
+            "standalone_instances": len(self._standalone_instances),
+        }
+
     async def save_session(self, instance_id: str, name: str | None = None) -> str:
-        instance = self._instances.get(instance_id)
+        """Save browser session.
+
+        Args:
+            instance_id: Instance ID
+            name: Optional session name
+
+        Returns:
+            Session ID
+        """
+        instance = await self.get_instance(instance_id)
         if not instance:
             raise ValueError(f"Instance {instance_id} not found")
 
-        session_id = await self.session_manager.save_session(instance, name)
+        session_id = await self.session_manager.save_session(
+            instance=instance,
+            name=name,
+        )
+
         logger.info(f"Saved session {session_id} for instance {instance_id}")
         return session_id
 
-    async def restore_session(self, session_id: str) -> BrowserInstance:
-        # Get session metadata
-        sessions = await self.session_manager.list_sessions()
-        session_data = next((s for s in sessions if s["id"] == session_id), None)
+    async def restore_session(self, session_id: str, instance_id: str | None = None) -> BrowserInstance:  # noqa: ARG002
+        """Restore browser session.
 
-        if not session_data:
-            raise ValueError(f"Session {session_id} not found")
+        Args:
+            session_id: Session ID to restore
+            instance_id: Optional instance ID to restore into (ignored, for compatibility)
 
-        # Create new instance with the saved profile
-        instance = await self.get_or_create_instance(
-            headless=False,  # Sessions typically restored in visible mode
-            profile=session_data.get("profile"),
-            use_pool=False,  # Don't use pool for restored sessions
-            anti_detect=True,
-        )
+        Returns:
+            Browser instance with restored session
+        """
+        # SessionManager's restore_session creates a new instance
+        instance = await self.session_manager.restore_session(session_id)
 
-        # Navigate to saved URL
-        if session_data.get("url"):
-            instance.driver.get(session_data["url"])
+        # Track as standalone instance
+        self._standalone_instances[instance.id] = instance
 
-        # Load saved cookies if profile has them
-        instance.load_cookies()
-
-        logger.info(f"Restored session {session_id} as instance {instance.id}")
+        logger.info(f"Restored session {session_id} to instance {instance.id}")
         return instance
 
-    async def get_pool_stats(self) -> dict:
-        return self.pool.get_stats()
+    async def navigate(self, instance_id: str, url: str) -> dict[str, Any]:
+        """Navigate to URL.
 
-    # Browser Properties Management
-    async def set_browser_properties(  # noqa: C901, PLR0912
-        self, instance_id: str | None = None, tab_id: str | None = None, properties: BrowserProperties | dict[str, Any] | None = None, preset: str | None = None
-    ) -> bool:
-        """Set browser properties for an instance or tab."""
-        # Create properties from preset if specified
-        if preset:
-            from ..models.browser_properties import BrowserPropertiesPreset, get_preset_properties
+        Args:
+            instance_id: Instance ID
+            url: URL to navigate to
 
-            try:
-                preset_enum = BrowserPropertiesPreset(preset.lower())
-                properties = get_preset_properties(preset_enum)
-            except ValueError:
-                logger.error(f"Invalid preset: {preset}")
-                return False
-
-        if not properties:
-            logger.error("No properties or preset specified")
-            return False
-
-        # Set default properties if no instance specified
-        if not instance_id:
-            self.properties_manager.set_default_properties(properties)
-            return True
-
-        # Set instance or tab properties
+        Returns:
+            Navigation result as dict
+        """
         instance = await self.get_instance(instance_id)
         if not instance:
-            logger.error(f"Instance {instance_id} not found")
-            return False
+            raise ValueError(f"Instance {instance_id} not found")
 
-        if tab_id:
-            # Set tab-specific properties
-            self.properties_manager.set_tab_properties(instance_id, tab_id, properties)
-            # Inject into the specific tab if it exists
-            if instance.driver:
-                current_handle = instance.driver.current_window_handle
-                try:
-                    # Switch to target tab
-                    for handle in instance.driver.window_handles:
-                        instance.driver.switch_to.window(handle)
-                        # Check if this is the target tab (would need tab ID mapping)
-                        # For now, inject into current tab
-                        if handle == tab_id or not tab_id:
-                            props = self.properties_manager.get_tab_properties(instance_id, handle)
-                            self.properties_manager.inject_properties(instance.driver, props, handle)
-                            break
-                finally:
-                    # Switch back
-                    instance.driver.switch_to.window(current_handle)
-        else:
-            # Set instance-wide properties
-            self.properties_manager.set_instance_properties(instance_id, properties)
-            # Inject into all tabs
-            if instance.driver:
-                props = self.properties_manager.get_instance_properties(instance_id)
-                self.properties_manager.inject_properties(instance.driver, props)
+        nav = Navigator(instance)
+        result = await nav.navigate(url)
+        # Convert PageResult to dict for API compatibility
+        return {
+            "url": result.url,
+            "title": result.title,
+            "status_code": result.status_code,
+            "load_time": result.load_time,
+            "content_length": result.content_length,
+            "html": result.html,
+        }
 
-        return True
+    async def screenshot(self, instance_id: str, full_page: bool = False) -> bytes:
+        """Take screenshot.
 
-    async def get_browser_properties(self, instance_id: str | None = None, tab_id: str | None = None) -> dict[str, Any]:
-        """Get current browser properties."""
-        if not instance_id:
-            return self.properties_manager.export_properties()
+        Args:
+            instance_id: Instance ID
+            full_page: Whether to capture full page
 
-        props = self.properties_manager.get_tab_properties(instance_id, tab_id) if tab_id else self.properties_manager.get_instance_properties(instance_id)
+        Returns:
+            Screenshot bytes
+        """
+        instance = await self.get_instance(instance_id)
+        if not instance:
+            raise ValueError(f"Instance {instance_id} not found")
 
-        return self.properties_manager.export_properties(props)
+        screenshot_ctrl = ScreenshotController(instance)
+        if full_page:
+            return await screenshot_ctrl.capture_full_page()
+        return await screenshot_ctrl.capture_viewport()
 
-    async def execute_batch(self, tasks: list[dict[str, Any]], max_concurrent: int = 5) -> list[Any]:
-        semaphore = asyncio.Semaphore(max_concurrent)
+    async def execute_script(self, instance_id: str, script: str, *args) -> Any:
+        """Execute JavaScript.
 
-        async def execute_task(task: dict[str, Any]):
-            async with semaphore:
-                instance = await self.get_or_create_instance()
-                try:
-                    return await self._execute_task_on_instance(instance, task)
-                finally:
-                    await self.terminate_instance(instance.id)
+        Args:
+            instance_id: Instance ID
+            script: JavaScript to execute
+            args: Script arguments
 
-        tasks_list = [execute_task(task) for task in tasks]
-        return await asyncio.gather(*tasks_list, return_exceptions=True)
+        Returns:
+            Script result
+        """
+        instance = await self.get_instance(instance_id)
+        if not instance:
+            raise ValueError(f"Instance {instance_id} not found")
 
-    async def _execute_task_on_instance(self, instance: BrowserInstance, task: dict[str, Any]) -> Any:
-        task_type = task.get("type")
-        params = task.get("params", {})
-
-        if task_type == "navigate":
-            nav = Navigator(instance)
-            return await nav.navigate(params.get("url"))
-
-        if task_type == "screenshot":
-            screenshot = ScreenshotController(instance)
-            return await screenshot.capture_full_page()
-
-        if task_type == "execute_script":
-            return instance.driver.execute_script(params.get("script"))
-
-        raise ValueError(f"Unknown task type: {task_type}")
-
-    @classmethod
-    async def create_with_config(cls, config_path: str) -> "ChromeManager":
-        manager = cls(config_file=config_path)
-        await manager.initialize()
-        return manager
+        return instance.driver.execute_script(script, *args)

@@ -1,26 +1,24 @@
 """Browser-specific worker pool implementation using base worker system."""
 
-import asyncio
+# Import from base module
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
-
-# Import from base module
-import sys
-from pathlib import Path
 
 # Add base to path for imports
 base_path = Path(__file__).parent.parent.parent.parent.parent / "base"
 if str(base_path) not in sys.path:
     sys.path.insert(0, str(base_path))
 
-from workers import WorkerPool, WorkerState
-from workers.types import PoolConfig, PoolType, WorkerInfo
+from workers import WorkerPool, WorkerState  # noqa: E402
+from workers.types import PoolConfig, WorkerInfo  # noqa: E402
 
-from ...models.browser import ChromeOptions
-from ...utils.config import Config
-from ..browser.instance import BrowserInstance
+from ...models.browser import ChromeOptions  # noqa: E402
+from ...utils.config import Config  # noqa: E402
+from ..browser.instance import BrowserInstance  # noqa: E402
 
 if TYPE_CHECKING:
     from ..browser.properties_manager import PropertiesManager
@@ -48,7 +46,7 @@ class BrowserWorker:
         """Execute a function on the browser instance."""
         self.last_used = datetime.now()
         self.task_count += 1
-        
+
         try:
             # If func is a string, try to get the method from the instance
             if isinstance(func, str):
@@ -57,10 +55,9 @@ class BrowserWorker:
                     result = await method(*args, **kwargs)
                 else:
                     raise AttributeError(f"BrowserInstance has no method '{func}'")
-            else:
-                # Direct function call with instance as context
-                result = await func(self.instance, *args, **kwargs)
-            return result
+                return result
+            # Direct function call with instance as context
+            return await func(self.instance, *args, **kwargs)
         except Exception as e:
             self.error_count += 1
             raise e
@@ -93,7 +90,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         profile_manager: "ProfileManager | None" = None,
     ):
         """Initialize the browser worker pool.
-        
+
         Args:
             config: Pool configuration
             browser_config: Browser-specific configuration
@@ -113,14 +110,14 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         options = kwargs.get("options", self._default_options)
         if not isinstance(options, ChromeOptions):
             options = self._default_options
-            
+
         # Create browser instance
         instance = BrowserInstance(
             config=self._browser_config,
             properties_manager=self._properties_manager,
             profile_manager=self._profile_manager,
         )
-        
+
         # Launch the browser
         anti_detect = self._browser_config.get("backend.pool.anti_detect_default", True)
         await instance.launch(
@@ -129,11 +126,11 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             options=options,
             anti_detect=getattr(options, "anti_detect", anti_detect),
         )
-        
+
         # Create worker wrapper
         worker_id = instance.id
         worker = BrowserWorker(worker_id, instance)
-        
+
         logger.info(f"Created browser worker {worker_id}")
         return worker
 
@@ -151,7 +148,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             # Navigate to blank page and clear state
             worker.instance.driver.get("about:blank")
             worker.instance.driver.delete_all_cookies()
-            
+
             # Close extra tabs
             handles = worker.instance.driver.window_handles
             if len(handles) > 1:
@@ -159,7 +156,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
                     worker.instance.driver.switch_to.window(handle)
                     worker.instance.driver.close()
                 worker.instance.driver.switch_to.window(handles[0])
-            
+
             worker.state = WorkerState.HIBERNATING
             logger.debug(f"Hibernated browser worker {worker.id}")
         except Exception as e:
@@ -178,9 +175,8 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         # Task should contain the function/method and arguments
         if hasattr(task, "func"):
             return await worker.execute(task.func, *task.args, **task.kwargs)
-        else:
-            # Direct execution
-            return await worker.execute(task)
+        # Direct execution
+        return await worker.execute(task)
 
     def _get_worker_info(self, worker: BrowserWorker) -> WorkerInfo:
         """Get information about a browser worker."""
@@ -203,41 +199,41 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         """Remove a worker instance from storage."""
         if worker_id in self._workers:
             del self._workers[worker_id]
-    
+
     def _store_worker_instance(self, worker_id: str, worker: BrowserWorker) -> None:
         """Store a worker instance."""
         self._workers[worker_id] = worker
-    
+
     async def _reset_worker(self, worker: BrowserWorker) -> None:
         """Reset a worker to clean state."""
         await self._hibernate_worker(worker)
         await self._wake_worker(worker)
-    
+
     async def _destroy_worker(self, worker: BrowserWorker) -> None:
         """Destroy a worker."""
         await self._cleanup_worker(worker)
 
-    async def acquire_browser(self, options: ChromeOptions | None = None) -> BrowserInstance:
+    async def acquire_browser(self, options: ChromeOptions | None = None) -> BrowserInstance:  # noqa: ARG002
         """Acquire a browser instance from the pool (convenience method).
-        
+
         Args:
             options: Chrome options for the browser
-            
+
         Returns:
             A browser instance from the pool
         """
         # Get a worker from the pool
         worker_id = await self.acquire_worker(timeout=30)
         worker = await self._get_worker_instance(worker_id)
-        
+
         if not worker:
             raise RuntimeError(f"Failed to get worker {worker_id}")
-            
+
         return worker.instance
 
     async def release_browser(self, instance_id: str) -> None:
         """Release a browser instance back to the pool (convenience method).
-        
+
         Args:
             instance_id: The browser instance ID
         """
@@ -247,7 +243,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             if w.instance.id == instance_id:
                 worker = w
                 break
-                
+
         if worker:
             await self.release_worker(worker.id)
         else:
