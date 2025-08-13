@@ -105,19 +105,40 @@ class BrowserStorage:
         if not self._profile_name:
             return
 
-        # This would integrate with ProfileManager
-        # For now, just log
-        logger.debug(f"Would save {len(cookies)} cookies to profile {self._profile_name}")
+        # Save cookies to a JSON file in the profile directory
+        import json
+
+        profile_dir = Path("test_profiles") / self._profile_name
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        cookies_file = profile_dir / "cookies.json"
+
+        with cookies_file.open("w") as f:
+            json.dump(cookies, f, indent=2)
+
+        logger.debug(f"Saved {len(cookies)} cookies to profile {self._profile_name}")
 
     def _load_cookies_from_profile(self) -> list[dict] | None:
         """Load cookies from profile directory."""
         if not self._profile_name:
             return None
 
-        # This would integrate with ProfileManager
-        # For now, return None
-        logger.debug(f"Would load cookies from profile {self._profile_name}")
-        return None
+        # Load cookies from JSON file in the profile directory
+        import json
+
+        cookies_file = Path("test_profiles") / self._profile_name / "cookies.json"
+
+        if not cookies_file.exists():
+            logger.debug(f"No cookies file found for profile {self._profile_name}")
+            return None
+
+        try:
+            with cookies_file.open() as f:
+                cookies = json.load(f)
+            logger.debug(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
+            return cookies
+        except Exception as e:
+            logger.warning(f"Failed to load cookies from profile: {e}")
+            return None
 
     def load_cookies(self, driver: WebDriver, cookies: list[dict] | None = None, navigate_to_domain: bool = True) -> int:
         """Load cookies into the browser."""

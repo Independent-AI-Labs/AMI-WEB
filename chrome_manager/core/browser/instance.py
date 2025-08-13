@@ -91,6 +91,9 @@ class BrowserInstance:
             self._profile_name = profile
             self._anti_detect = anti_detect
 
+            # Update storage with profile name for cookie persistence
+            self._storage._profile_name = profile
+
             # Set security config
             self._lifecycle.set_security_config(security_config)
 
