@@ -6,13 +6,17 @@
 (function() {
     'use strict';
     
-    // Inject ONLY the webdriver removal script
-    var script = document.createElement('script');
-    script.src = chrome.runtime.getURL('inject.js');
-    script.onload = function() {
-        this.remove();
-    };
-    
-    // Inject as early as possible
-    (document.head || document.documentElement).appendChild(script);
+    try {
+        // Inject ONLY the webdriver removal script
+        var script = document.createElement('script');
+        script.src = chrome.runtime.getURL('inject.js');
+        script.onload = function() {
+            this.remove();
+        };
+        
+        // Inject as early as possible
+        (document.head || document.documentElement).appendChild(script);
+    } catch(e) {
+        // Silent fail to avoid exposing automation
+    }
 })();

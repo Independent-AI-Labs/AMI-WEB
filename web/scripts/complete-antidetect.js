@@ -2,6 +2,8 @@
 (function antiDetect() {
     'use strict';
     
+    try {
+    
     // Mark as applied
     window.__completeAntiDetectApplied = true;
     
@@ -10,97 +12,43 @@
     
     // ========== WEBDRIVER REMOVAL ==========
     // Chrome 141+ sets navigator.webdriver = false instead of true
-    // We need to completely remove the property, not just set it to undefined
+    // Use the most effective method: Object.defineProperty with prototype cleanup
     
-    // Method 1: Delete from Navigator.prototype first
-    try {
-        delete Navigator.prototype.webdriver;
-    } catch(e) {}
-    
-    // Method 2: Try to delete the property from navigator
-    try {
-        delete navigator.webdriver;
-    } catch(e) {}
-    
-    // Method 3: If property still exists, override it to be undefined
-    // AND make it non-enumerable and report as non-existent
-    try {
-        // Check if property exists using 'in' operator
-        if ('webdriver' in navigator) {
-            // First try to delete it
-            delete navigator.webdriver;
-            
-            // If still there, override with getter that returns undefined
-            if ('webdriver' in navigator) {
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: function() { return undefined; },
-                    set: function() {},
-                    enumerable: false,
-                    configurable: true
-                });
+    const removeWebdriver = function() {
+        try {
+            // First clean up the prototype if needed
+            if (Navigator.prototype.hasOwnProperty('webdriver')) {
+                delete Navigator.prototype.webdriver;
             }
-        }
-    } catch(e) {}
-    
-    // Method 4: Override Navigator.prototype if the property is there
-    try {
-        if (Navigator.prototype.hasOwnProperty('webdriver')) {
-            Object.defineProperty(Navigator.prototype, 'webdriver', {
+            
+            // Define property to always return undefined
+            Object.defineProperty(navigator, 'webdriver', {
                 get: function() { return undefined; },
                 set: function() {},
                 enumerable: false,
                 configurable: true
             });
-        }
-    } catch(e) {}
-    
-    // Method 4: Proxy the entire navigator object
-    try {
-        // Create a proxy for navigator that intercepts webdriver
-        const navProxy = new Proxy(navigator, {
-            has: function(target, key) {
-                return key === 'webdriver' ? false : key in target;
-            },
-            get: function(target, key) {
-                return key === 'webdriver' ? undefined : target[key];
-            }
-        });
-        
-        // Try to replace global navigator
-        if (Object.defineProperty) {
-            Object.defineProperty(window, 'navigator', {
-                value: navProxy,
-                writable: false,
-                configurable: false
-            });
-        }
-    } catch(e) {}
-    
-    // Method 6: Monitor and continuously remove
-    const checkWebDriver = function() {
-        // Check if webdriver property exists at all (even if false)
-        if ('webdriver' in navigator) {
-            try {
-                // Try to delete it
-                delete navigator.webdriver;
-            } catch(e) {}
             
-            // If still exists after delete attempt, override it
-            if ('webdriver' in navigator) {
-                try {
-                    Object.defineProperty(navigator, 'webdriver', {
-                        get: function() { return undefined; },
-                        set: function() {},
-                        enumerable: false,
-                        configurable: true
-                    });
-                } catch(e) {}
-            }
+            // Also handle Object.getOwnPropertyDescriptor checks
+            const origGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+            Object.getOwnPropertyDescriptor = function(obj, prop) {
+                if (prop === 'webdriver' && (obj === navigator || obj === Navigator.prototype)) {
+                    return undefined;
+                }
+                return origGetOwnPropertyDescriptor.apply(this, arguments);
+            };
+        } catch(e) {}
+    };
+    
+    // Function to check and remove if re-added
+    const checkWebDriver = function() {
+        if ('webdriver' in navigator && navigator.webdriver !== undefined) {
+            removeWebdriver();
         }
     };
     
     // Run immediately
-    checkWebDriver();
+    removeWebdriver();
     
     // Run on page events
     if (typeof document !== 'undefined') {
@@ -114,33 +62,58 @@
         // Run on readystatechange
         document.addEventListener('readystatechange', checkWebDriver);
         
-        // Run periodically for first 2 seconds
-        let counter = 0;
-        const interval = setInterval(function() {
-            checkWebDriver();
-            counter++;
-            if (counter > 40) clearInterval(interval); // 40 * 50ms = 2 seconds
-        }, 50);
+        // Use MutationObserver instead of polling
+        const observer = new MutationObserver(function(mutations) {
+            // Check if webdriver property has been added back
+            if ('webdriver' in navigator && navigator.webdriver !== undefined) {
+                checkWebDriver();
+            }
+        });
+        
+        // Observe changes to navigator object and document
+        if (document.documentElement) {
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+        }
+        
+        // Clean up observer after page is fully loaded
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                observer.disconnect();
+            }, 1000); // Give it 1 second after load then stop observing
+        });
     }
     
     // ========== H264 CODEC FIX ==========
-    var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
-    HTMLMediaElement.prototype.canPlayType = function(type) {
-        if (!type) return '';
-        var lowerType = type.toLowerCase();
-        if (lowerType.indexOf('h264') !== -1 || 
-            lowerType.indexOf('avc1') !== -1 || 
-            lowerType.indexOf('mp4') !== -1) {
-            return 'probably';
-        }
-        return originalCanPlayType ? originalCanPlayType.apply(this, arguments) : '';
-    };
+    try {
+        var originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
+        HTMLMediaElement.prototype.canPlayType = function(type) {
+            if (!type) return '';
+            var lowerType = type.toLowerCase();
+            
+            // Support H264/AVC1/MP4 codecs
+            if (lowerType.indexOf('h264') !== -1 || 
+                lowerType.indexOf('avc1') !== -1 || 
+                lowerType.indexOf('mp4') !== -1) {
+                return 'probably';
+            }
+            
+            // Call original for other types
+            if (originalCanPlayType) {
+                return originalCanPlayType.apply(this, arguments);
+            }
+            return '';
+        };
+    } catch(e) {}
     
     // ========== PLUGIN CREATION ==========
     // Skip if already have plugins
     if (navigator.plugins && navigator.plugins.length > 0) {
-        return; // Already have plugins, don't override
-    }
+        // Already have plugins, skip plugin creation only
+    } else {
     
     // Create simple fake plugins that pass type checks
     var PluginArray = window.PluginArray || function() {};
@@ -272,6 +245,8 @@
         // Can't override, that's ok
     }
     
+    } // End of else block for plugin creation
+    
     // ========== WEBGL SPOOFING ==========
     // Store original getContext first
     var originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -363,4 +338,9 @@
     // ========== WINDOW.OPEN INTERCEPTOR ==========
     // Don't try to intercept window.open - it doesn't work reliably
     // Instead, rely on the SimpleTabInjector to handle new tabs
+    
+    } catch(e) {
+        // Silent fail to avoid exposing automation
+        // Errors in anti-detection scripts should not be visible
+    }
 })();
