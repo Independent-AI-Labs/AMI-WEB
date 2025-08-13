@@ -44,11 +44,12 @@ class SessionManager:
         self._save_metadata()
         logger.info("Session manager shutdown complete")
 
-    async def save_session(self, instance: "BrowserInstance") -> str:
+    async def save_session(self, instance: "BrowserInstance", name: str | None = None) -> str:
         """Save a browser session.
 
         Args:
             instance: The browser instance to save
+            name: Optional name for the session
 
         Returns:
             The session ID
@@ -60,6 +61,7 @@ class SessionManager:
         # Save session data
         session_data = {
             "id": session_id,
+            "name": name or f"session_{session_id[:8]}",
             "created_at": datetime.now().isoformat(),
             "profile": instance._profile_name,
             "url": instance.driver.current_url if instance.driver else None,
@@ -75,6 +77,7 @@ class SessionManager:
 
         # Update metadata
         self.sessions[session_id] = {
+            "name": session_data["name"],
             "created_at": session_data["created_at"],
             "profile": session_data["profile"],
             "url": session_data["url"],
@@ -134,6 +137,7 @@ class SessionManager:
             result.append(
                 {
                     "id": session_id,
+                    "name": metadata.get("name", f"session_{session_id[:8]}"),
                     "created_at": metadata.get("created_at"),
                     "profile": metadata.get("profile"),
                     "url": metadata.get("url"),
