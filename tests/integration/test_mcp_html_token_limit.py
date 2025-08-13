@@ -6,10 +6,10 @@ import pytest
 from loguru import logger
 
 
-async def get_html_with_selector(nav, selector, max_tokens):
+async def get_html_with_selector(extractor, selector, max_tokens):
     """Get HTML for a specific selector with token limit."""
     max_chars = max_tokens * 4
-    html = await nav.get_element_html(selector)
+    html = await extractor.get_element_html(selector)
     token_count = len(html) // 4
     if token_count > max_tokens:
         html = html[:max_chars] + f"\n<!-- Response limited to {max_tokens} tokens. Element too large - try a more specific selector or child elements. -->"
@@ -33,9 +33,9 @@ async def test_mcp_html_limit(session_manager):
         # Testing MCP browser_get_html with token limits
 
         # Simulate the MCP tool execution directly
-        from chrome_manager.facade.navigation import NavigationController
+        from chrome_manager.facade.navigation.extractor import ContentExtractor
 
-        nav = NavigationController(instance)
+        extractor = ContentExtractor(instance)
 
         # Test without selector - should auto-adjust depth
 
@@ -46,7 +46,7 @@ async def test_mcp_html_limit(session_manager):
         html = None
         for depth in [3, 2, 1]:
             try:
-                html = await nav.get_html_with_depth_limit(max_depth=depth, collapse_depth=depth - 1 if depth > 1 else None)
+                html = await extractor.get_html_with_depth_limit(max_depth=depth, collapse_depth=depth - 1 if depth > 1 else None)
                 token_count = len(html) // 4
                 if token_count <= max_tokens:
                     break  # Found good depth
@@ -55,7 +55,7 @@ async def test_mcp_html_limit(session_manager):
 
         if not html or len(html) // 4 > max_tokens:
             if not html:
-                html = await nav.get_html_with_depth_limit(max_depth=1)
+                html = await extractor.get_html_with_depth_limit(max_depth=1)
             if len(html) > max_chars:
                 html = html[:max_chars]
 
@@ -65,7 +65,7 @@ async def test_mcp_html_limit(session_manager):
 
         # Test with specific selector
 
-        html = await get_html_with_selector(nav, "#firstHeading", max_tokens)
+        html = await get_html_with_selector(extractor, "#firstHeading", max_tokens)
         assert len(html) > 0, "Element HTML should not be empty"
         assert "Python" in html, "Should contain expected content"
 

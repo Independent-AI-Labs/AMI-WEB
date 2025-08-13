@@ -58,7 +58,7 @@ class DevToolsController(BaseController):
             List of network entries
         """
         try:
-            logs = self.driver.get_log("performance")
+            logs = self.driver.get_log("performance")  # type: ignore[attr-defined]
             entries = []
 
             for log in logs:
