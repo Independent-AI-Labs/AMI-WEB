@@ -43,13 +43,10 @@ async def session_manager():
         # Use test config for testing
         test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
         _GLOBAL_MANAGER = ChromeManager(config_file=test_config)
-        # Configure pool for testing - smaller pool, faster cleanup
-        _GLOBAL_MANAGER.pool.min_instances = 1
-        _GLOBAL_MANAGER.pool.max_instances = 3  # Limit max instances for tests
-        _GLOBAL_MANAGER.pool.warm_instances = 1
-        _GLOBAL_MANAGER.pool.health_check_interval = 60  # Less frequent health checks during tests
+        # Pool is configured through the manager's constructor using config file
+        # No need to modify pool settings directly - they're set via PoolConfig
         await _GLOBAL_MANAGER.start()
-        logger.info("Created global ChromeManager for test session with optimized pool settings")
+        logger.info("Created global ChromeManager for test session")
 
     yield _GLOBAL_MANAGER
 
@@ -279,7 +276,5 @@ def cleanup_at_exit():
     yield
     cleanup_processes()
     # Remove logger handlers to prevent writing to closed streams
-    try:
+    with contextlib.suppress(Exception):
         logger.remove()
-    except Exception:  # noqa: S110
-        pass
