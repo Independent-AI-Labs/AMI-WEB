@@ -15,8 +15,9 @@ DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
 class BrowserStorage:
     """Manages browser storage - cookies, downloads, localStorage."""
 
-    def __init__(self, instance_id: str, download_dir: Path | None = None, profile_name: str | None = None):
+    def __init__(self, instance_id: str, config=None, download_dir: Path | None = None, profile_name: str | None = None):
         self.instance_id = instance_id
+        self._config = config
         self._download_dir = download_dir
         self._profile_name = profile_name
 
@@ -108,7 +109,12 @@ class BrowserStorage:
         # Save cookies to a JSON file in the profile directory
         import json
 
-        profile_dir = Path("test_profiles") / self._profile_name
+        # Use configured profiles directory or default
+        if self._config:
+            profiles_base = Path(self._config.get("chrome_manager.storage.profiles_dir", "./data/browser_profiles"))
+        else:
+            profiles_base = Path("./data/browser_profiles")
+        profile_dir = profiles_base / self._profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
         cookies_file = profile_dir / "cookies.json"
 
@@ -125,7 +131,12 @@ class BrowserStorage:
         # Load cookies from JSON file in the profile directory
         import json
 
-        cookies_file = Path("test_profiles") / self._profile_name / "cookies.json"
+        # Use configured profiles directory or default
+        if self._config:
+            profiles_base = Path(self._config.get("chrome_manager.storage.profiles_dir", "./data/browser_profiles"))
+        else:
+            profiles_base = Path("./data/browser_profiles")
+        cookies_file = profiles_base / self._profile_name / "cookies.json"
 
         if not cookies_file.exists():
             logger.debug(f"No cookies file found for profile {self._profile_name}")

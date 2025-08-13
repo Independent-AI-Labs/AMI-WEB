@@ -49,7 +49,7 @@ class MCPTestServer:
 
     async def _setup_server(self):
         """Set up the server components."""
-        self.manager = ChromeManager(config_file="config.yaml")
+        self.manager = ChromeManager(config_file="config.test.yaml")
         await self.manager.initialize()
 
         # Configure for testing

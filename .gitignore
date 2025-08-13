@@ -64,6 +64,7 @@ Thumbs.db
 *.pid
 config.yaml
 config.local.yaml
+config.test.yaml
 .coverage
 htmlcov/
 .pytest_cache/
