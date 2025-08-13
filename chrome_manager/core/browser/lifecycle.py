@@ -84,8 +84,8 @@ class BrowserLifecycle:
         loop = asyncio.get_event_loop()
 
         # Get Chrome and ChromeDriver paths
-        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path", "./chromium-win/chrome.exe")
-        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path", "./chromedriver.exe")
+        chrome_binary_path = self._config.get("chrome_manager.browser.chrome_binary_path")
+        chromedriver_path = self._config.get("chrome_manager.browser.chromedriver_path")
 
         # Set Chrome binary location
         if chrome_binary_path and Path(chrome_binary_path).exists():

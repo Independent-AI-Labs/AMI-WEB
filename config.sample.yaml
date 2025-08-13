@@ -4,10 +4,10 @@
 chrome_manager:
   browser:
     # Path to Chrome/Chromium executable
-    chrome_binary_path: "./chromium-win/chrome.exe"
+    chrome_binary_path: "./build/chromium-win/chrome.exe"
     
     # Path to ChromeDriver executable
-    chromedriver_path: "./chromedriver.exe"
+    chromedriver_path: "./build/chromedriver.exe"
     
     # Default headless mode
     default_headless: true
@@ -49,22 +49,22 @@ chrome_manager:
 
   storage:
     # Directory for session data
-    session_dir: "./sessions"
+    session_dir: "./data/sessions"
     
     # Directory for browser profiles
-    profiles_dir: "./browser_profiles"
+    profiles_dir: "./data/browser_profiles"
     
     # Directory for downloads
-    download_dir: "./downloads"
+    download_dir: "./data/downloads"
     
     # Directory for screenshots
-    screenshot_dir: "./screenshots"
+    screenshot_dir: "./data/screenshots"
     
     # Directory for video recordings
-    video_dir: "./videos"
+    video_dir: "./data/videos"
     
     # Directory for logs
-    log_dir: "./logs"
+    log_dir: "./data/logs"
   
   security:
     # Security level: strict, standard, relaxed, permissive

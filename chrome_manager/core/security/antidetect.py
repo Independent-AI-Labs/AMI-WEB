@@ -20,10 +20,10 @@ class ChromeDriverPatcher:
         name_without_ext = self.original_path.stem
         patched_name = f"{name_without_ext}_patched{suffix}"
 
-        # Use provided drivers_dir or default to project/drivers
+        # Use provided drivers_dir or default to project/build/drivers
         if drivers_dir is None:
-            project_root = Path(__file__).parent.parent.parent
-            drivers_dir = project_root / "drivers"
+            project_root = Path(__file__).parent.parent.parent.parent
+            drivers_dir = project_root / "build" / "drivers"
 
         drivers_dir.mkdir(exist_ok=True, parents=True)
         self.chromedriver_path = drivers_dir / patched_name

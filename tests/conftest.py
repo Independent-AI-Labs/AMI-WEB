@@ -100,8 +100,9 @@ async def browser_instance(session_manager):
 async def antidetect_browser():
     """Get an anti-detect browser instance from the pool."""
     # Create a new instance with anti-detect enabled
-    # Load config from config.yaml if it exists, otherwise use defaults
-    config = Config.load("config.yaml")
+    # Use test config for testing
+    test_config_file = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
+    config = Config.load(test_config_file)
     instance = BrowserInstance(config=config)
     await instance.launch(headless=HEADLESS, anti_detect=True)
     logger.info(f"Created anti-detect browser instance {instance.id}")
@@ -182,7 +183,9 @@ async def browser():
 async def chrome_manager():
     """DEPRECATED: Create a Chrome manager for testing - one per test class."""
     logger.warning("Using deprecated 'chrome_manager' fixture - use 'session_manager' instead")
-    manager = ChromeManager()
+    # Use test config for all tests
+    test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
+    manager = ChromeManager(config_file=test_config)
     await manager.start()
 
     yield manager
