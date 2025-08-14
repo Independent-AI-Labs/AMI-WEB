@@ -13,13 +13,17 @@ PROJECT_ROOT = SCRIPT_PATH.parent.parent  # Go up from scripts/ to browser/
 os.chdir(PROJECT_ROOT)
 print(f"Working directory set to: {PROJECT_ROOT}")
 
+# IMPORTANT: Add browser directory FIRST to avoid namespace collision with root backend
+sys.path.insert(0, str(PROJECT_ROOT))
+print(f"Added browser to path: {PROJECT_ROOT}")
+
 # First, ensure the parent base module is in path for setup.py
 PARENT_DIR = PROJECT_ROOT.parent
 PARENT_BASE = PARENT_DIR / "base"
 
-# Add parent directory to path so setup.py can find base module
+# Add parent directory to path so setup.py can find base module (but AFTER browser)
 if PARENT_BASE.exists():
-    sys.path.insert(0, str(PARENT_DIR))
+    sys.path.insert(1, str(PARENT_DIR))  # Insert at position 1, not 0
     print(f"Added parent to path for base module: {PARENT_DIR}")
 
 # Now add base/scripts to path for the generic launcher
