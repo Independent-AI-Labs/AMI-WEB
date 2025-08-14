@@ -235,6 +235,7 @@ class TestAntiDetection:
     async def test_mcp_manager_antidetection(self, session_manager):
         """Test that ChromeManager (used by MCP) has anti-detection by default."""
         manager = session_manager
+        instance = None
 
         try:
             # Get instance without explicitly passing anti_detect
@@ -270,7 +271,10 @@ class TestAntiDetection:
             assert results.get("plugins", False), f"No plugins with ChromeManager: {results.get('plugin_count', 'unknown')}"
 
         finally:
-            await manager.return_to_pool(instance.id)
+            # Ensure cleanup even if instance wasn't fully created
+            if instance:
+                # For standalone instances, terminate them properly
+                await manager.terminate_instance(instance.id, return_to_pool=False)
 
 
 class TestH264Codec:
