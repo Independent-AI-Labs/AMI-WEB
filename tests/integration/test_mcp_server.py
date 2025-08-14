@@ -1,8 +1,13 @@
 """Integration tests for MCP server functionality."""
-# ruff: noqa: ARG002
+# ruff: noqa: ARG002, E402
+
+import sys
+from pathlib import Path
+
+# Add browser directory to path before any imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import asyncio
-import contextlib
 import json
 import os
 import threading
@@ -80,11 +85,6 @@ class MCPTestServer:
         if self.manager:
             # Force shutdown of all browser instances and pool
             await self.manager.shutdown()
-            # Extra cleanup - ensure all instances are terminated
-            for instance in list(self.manager._instances.values()):
-                with contextlib.suppress(Exception):
-                    await instance.terminate()
-            self.manager._instances.clear()
 
     def start(self):
         """Start the server in a thread."""
