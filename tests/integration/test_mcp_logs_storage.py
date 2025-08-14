@@ -1,5 +1,11 @@
 """Integration tests for MCP console logs, network logs, and storage functionality."""
-# ruff: noqa: ARG002
+# ruff: noqa: ARG002, E402
+
+import sys
+from pathlib import Path
+
+# Add browser directory to path before any imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import json
 import os

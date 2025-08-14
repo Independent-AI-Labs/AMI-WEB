@@ -1,14 +1,22 @@
 """Browser MCP Server - Only defines browser automation tools."""
 
+import sys
+from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
-from backend.core.management.manager import ChromeManager
-from base.mcp.mcp_server import BaseMCPServer
-from backend.mcp.browser.tools.definitions import register_all_tools
-from backend.mcp.browser.tools.executor import ToolExecutor
-from backend.mcp.browser.tools.registry import ToolRegistry
+# Add parent directory to path for base module imports if needed
+_parent_dir = Path(__file__).parent.parent.parent.parent.parent
+if _parent_dir.exists() and str(_parent_dir) not in sys.path:
+    sys.path.insert(0, str(_parent_dir))
+
+from base.mcp.mcp_server import BaseMCPServer  # noqa: E402
+
+from backend.core.management.manager import ChromeManager  # noqa: E402
+from backend.mcp.browser.tools.definitions import register_all_tools  # noqa: E402
+from backend.mcp.browser.tools.executor import ToolExecutor  # noqa: E402
+from backend.mcp.browser.tools.registry import ToolRegistry  # noqa: E402
 
 
 class BrowserMCPServer(BaseMCPServer):
