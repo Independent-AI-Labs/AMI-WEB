@@ -6,8 +6,7 @@ import hmac
 import time
 
 import pytest
-
-from base.mcp.auth import (
+from base.backend.mcp.auth import (
     AuthenticationMiddleware,
     HMACAuthProvider,
     TokenAuthProvider,
