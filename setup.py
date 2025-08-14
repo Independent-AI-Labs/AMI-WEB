@@ -7,9 +7,12 @@ from pathlib import Path
 # Get project root
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
-# Add parent directory to path to find base module
+# IMPORTANT: Add browser directory FIRST to avoid namespace collision with root backend
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Add parent directory to path to find base module (but AFTER browser)
 PARENT_DIR = PROJECT_ROOT.parent
-sys.path.insert(0, str(PARENT_DIR))
+sys.path.insert(1, str(PARENT_DIR))
 
 # Try to import the generic setup from base
 try:
