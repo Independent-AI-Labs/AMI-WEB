@@ -28,6 +28,12 @@ from setup import ensure_base_module  # noqa: E402
 
 ensure_base_module()
 
+# IMPORTANT: Re-add browser directory to front of path to avoid namespace collision
+# ensure_base_module() adds parent directory at position 0, which contains a different 'backend' module
+if str(project_root) in sys.path:
+    sys.path.remove(str(project_root))
+sys.path.insert(0, str(project_root))
+
 from loguru import logger  # noqa: E402
 
 from backend.core.management.manager import ChromeManager  # noqa: E402
