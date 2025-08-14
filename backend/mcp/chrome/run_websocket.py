@@ -37,7 +37,7 @@ sys.path.insert(0, str(project_root))
 from loguru import logger  # noqa: E402
 
 from backend.core.management.manager import ChromeManager  # noqa: E402
-from backend.mcp.browser.server import BrowserMCPServer  # noqa: E402
+from backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
 
 
 async def main(host: str = "localhost", port: int = 8765):

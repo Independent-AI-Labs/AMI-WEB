@@ -14,9 +14,9 @@ if _parent_dir.exists() and str(_parent_dir) not in sys.path:
 from base.mcp.mcp_server import BaseMCPServer  # noqa: E402
 
 from backend.core.management.manager import ChromeManager  # noqa: E402
-from backend.mcp.browser.tools.definitions import register_all_tools  # noqa: E402
-from backend.mcp.browser.tools.executor import ToolExecutor  # noqa: E402
-from backend.mcp.browser.tools.registry import ToolRegistry  # noqa: E402
+from backend.mcp.chrome.tools.definitions import register_all_tools  # noqa: E402
+from backend.mcp.chrome.tools.executor import ToolExecutor  # noqa: E402
+from backend.mcp.chrome.tools.registry import ToolRegistry  # noqa: E402
 
 
 class BrowserMCPServer(BaseMCPServer):
@@ -45,7 +45,10 @@ class BrowserMCPServer(BaseMCPServer):
         """Register all Chrome Manager tools."""
         # Convert tool registry to MCP format
         for tool in self.registry.list_tools():
-            self.tools[tool.name] = {"description": tool.description, "inputSchema": tool.parameters}
+            self.tools[tool.name] = {
+                "description": tool.description,
+                "inputSchema": {"type": "object", "properties": tool.parameters.get("properties", {}), "required": tool.parameters.get("required", [])},
+            }
 
     async def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute a browser automation tool.
