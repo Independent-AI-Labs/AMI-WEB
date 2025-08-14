@@ -6,63 +6,41 @@ import contextlib
 import sys
 from pathlib import Path
 
-# Ensure environment is set up
-project_root = Path(__file__).parent.parent.parent.parent.resolve()
-venv_path = project_root / ".venv"
+# Add parent paths to find base module
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-# Add project root to path
-sys.path.insert(0, str(project_root))
-
-# Check if virtual environment exists, if not run setup
-if not venv_path.exists():
-    print("Setting up environment...", file=sys.stderr)
-    from setup import run_environment_setup
-
-    result = run_environment_setup()
-    if result != 0:
-        print("Failed to set up environment", file=sys.stderr)
-        sys.exit(1)
-
-# Ensure base module is available
-from setup import ensure_base_module  # noqa: E402
-
-ensure_base_module()
-
-# IMPORTANT: Re-add browser directory to front of path to avoid namespace collision
-# ensure_base_module() adds parent directory at position 0, which contains a different 'backend' module
-if str(project_root) in sys.path:
-    sys.path.remove(str(project_root))
-sys.path.insert(0, str(project_root))
-
+from base.backend.mcp.generic.run_websocket import main as run_websocket_main  # noqa: E402
+from base.backend.mcp.generic.runner import init_environment  # noqa: E402
 from loguru import logger  # noqa: E402
+
+# Initialize environment
+module_root, config_file = init_environment(Path(__file__))
 
 from backend.core.management.manager import ChromeManager  # noqa: E402
 from backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
 
 
-async def main(host: str = "localhost", port: int = 8765):
-    """Run Browser MCP server with WebSocket transport.
-
-    Args:
-        host: Host to bind to
-        port: Port to bind to
-    """
-    # Initialize Chrome Manager
+async def create_manager_and_server():
+    """Create and initialize Chrome Manager and MCP Server."""
     logger.info("Initializing Chrome Manager...")
-    manager = ChromeManager()
+    if config_file:
+        logger.info(f"Using config file: {config_file}")
+        manager = ChromeManager(config_file=str(config_file))
+    else:
+        logger.info("Using default Chrome Manager configuration")
+        manager = ChromeManager()
+
     await manager.initialize()
 
-    # Create and run MCP server
-    server = BrowserMCPServer(manager)
+    # Create server with manager
+    server_args = {"manager": manager}
 
-    try:
-        logger.info(f"Starting Browser MCP Server on ws://{host}:{port}")
-        await server.run_websocket(host, port)
-    except KeyboardInterrupt:
-        logger.info("Server stopped by user")
-    finally:
+    # Define cleanup callback
+    async def cleanup():
         await manager.shutdown()
         logger.info("Chrome Manager shutdown complete")
+
+    return BrowserMCPServer, server_args, cleanup
 
 
 if __name__ == "__main__":
@@ -72,5 +50,9 @@ if __name__ == "__main__":
     host = sys.argv[1] if len(sys.argv) > 1 else "localhost"
     port = int(sys.argv[2]) if len(sys.argv) > MIN_ARGS else DEFAULT_PORT
 
+    # Run the async setup and then use base websocket runner
+    server_class, server_args, cleanup = asyncio.run(create_manager_and_server())
+
+    # Use the base run_websocket implementation
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(main(host, port))
+        run_websocket_main(server_class=server_class, server_args=server_args, config_file=config_file, host=host, port=port, cleanup_callback=cleanup)
