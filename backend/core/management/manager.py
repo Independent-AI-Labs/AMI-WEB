@@ -130,7 +130,7 @@ class ChromeManager:
         if use_pool:
             # Get instance from pool
             opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
-            # Pass anti_detect through kwargs instead of modifying the options object
+            # Note: anti_detect is configured at pool creation time via backend.pool.anti_detect_default
 
             # Acquire a browser from the pool
             instance = await self.pool.acquire_browser(opts)

@@ -263,8 +263,13 @@ class TestBrowserProperties:
 
         test_url = f"file:///{test_page.absolute().as_posix()}"
 
-        # Test 1: Default configuration
-        instance = await session_manager.get_or_create_instance(headless=True)
+        # Test 1: Default configuration with anti-detect
+        instance = await session_manager.get_or_create_instance(headless=True, anti_detect=True)
+
+        # Apply stealth properties before navigation
+        stealth_props = get_preset_properties(BrowserPropertiesPreset.STEALTH)
+        await session_manager.set_browser_properties(instance_id=instance.id, properties=stealth_props.model_dump())
+
         instance.driver.get(test_url)
         await asyncio.sleep(2)  # Wait for tests to run
 
