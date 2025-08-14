@@ -1,18 +1,10 @@
 """Chrome Manager using the base worker pool system."""
 
-import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
+from base.backend.workers.types import PoolConfig, PoolType
 from loguru import logger
-
-# Add base to path for imports
-base_path = Path(__file__).parent.parent.parent.parent.parent / "base"
-if str(base_path) not in sys.path:
-    sys.path.insert(0, str(base_path))
-
-from workers.types import PoolConfig, PoolType  # noqa: E402
 
 from ...facade.media.screenshot import ScreenshotController  # noqa: E402
 from ...facade.navigation.navigator import Navigator  # noqa: E402
