@@ -12,7 +12,9 @@ import pytest_asyncio
 from loguru import logger
 
 # Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))  # browser directory
+# Add grandparent directory to path for base module
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # AMI-ORCHESTRATOR directory
 
 from backend.core.browser.instance import BrowserInstance  # noqa: E402
 from backend.core.management.manager import ChromeManager  # noqa: E402
