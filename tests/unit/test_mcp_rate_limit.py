@@ -3,8 +3,7 @@
 import time
 
 import pytest
-
-from base.mcp.rate_limit import (
+from base.backend.mcp.rate_limit import (
     LeakyBucketRateLimiter,
     MethodRateLimiter,
     RateLimiter,

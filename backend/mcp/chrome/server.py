@@ -11,7 +11,7 @@ _parent_dir = Path(__file__).parent.parent.parent.parent.parent
 if _parent_dir.exists() and str(_parent_dir) not in sys.path:
     sys.path.insert(0, str(_parent_dir))
 
-from base.mcp.mcp_server import BaseMCPServer  # noqa: E402
+from base.backend.mcp.mcp_server import BaseMCPServer  # noqa: E402
 
 from backend.core.management.manager import ChromeManager  # noqa: E402
 from backend.mcp.chrome.tools.definitions import register_all_tools  # noqa: E402

@@ -1,20 +1,12 @@
 """Browser-specific worker pool implementation using base worker system."""
 
 # Import from base module
-import sys
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from base.backend.workers import WorkerPool, WorkerState
+from base.backend.workers.types import PoolConfig, WorkerInfo
 from loguru import logger
-
-# Add base to path for imports
-base_path = Path(__file__).parent.parent.parent.parent.parent / "base"
-if str(base_path) not in sys.path:
-    sys.path.insert(0, str(base_path))
-
-from workers import WorkerPool, WorkerState  # noqa: E402
-from workers.types import PoolConfig, WorkerInfo  # noqa: E402
 
 from ...models.browser import ChromeOptions  # noqa: E402
 from ...utils.config import Config  # noqa: E402
