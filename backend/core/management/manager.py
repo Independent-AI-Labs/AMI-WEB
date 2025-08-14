@@ -405,58 +405,110 @@ class ChromeManager:
 
         return instance.driver.execute_script(script, *args)
 
-    async def set_browser_properties(self, instance_id: str, properties: dict[str, Any] | None = None, preset: str | None = None) -> bool:  # noqa: ARG002
-        """Set browser properties for an instance.
+    def _inject_properties_script(self, properties_json: str) -> str:
+        """Generate the JavaScript to inject browser properties."""
+        return f"""
+            window.__browserProperties = {properties_json};
+
+            // Handle specific properties
+            if (window.__browserProperties.webgl_vendor) {{
+                window.webgl_vendor = window.__browserProperties.webgl_vendor;
+            }}
+            if (window.__browserProperties.codec_support) {{
+                window.codec_support = window.__browserProperties.codec_support;
+            }}
+        """
+
+    def _apply_properties_to_tab(self, instance: Any, tab_id: str, browser_props: Any, properties_json: str) -> None:
+        """Apply properties to a specific tab."""
+        current_handle = instance.driver.current_window_handle
+        if tab_id != current_handle:
+            instance.driver.switch_to.window(tab_id)
+
+        # Inject properties
+        self.properties_manager.inject_properties(instance.driver, browser_props, tab_id)
+        instance.driver.execute_script(self._inject_properties_script(properties_json))
+
+        # Switch back if needed
+        if tab_id != current_handle:
+            instance.driver.switch_to.window(current_handle)
+
+    def _apply_properties_to_all_tabs(self, instance: Any, browser_props: Any, properties_json: str) -> None:
+        """Apply properties to all tabs."""
+        handles = instance.driver.window_handles
+        current_handle = instance.driver.current_window_handle
+
+        for handle in handles:
+            instance.driver.switch_to.window(handle)
+            self.properties_manager.inject_properties(instance.driver, browser_props)
+            instance.driver.execute_script(self._inject_properties_script(properties_json))
+
+        instance.driver.switch_to.window(current_handle)
+
+    async def set_browser_properties(
+        self,
+        instance_id: str,
+        properties: dict[str, Any] | None = None,
+        preset: str | None = None,
+        tab_id: str | None = None,
+    ) -> bool:
+        """Set browser properties for an instance or specific tab.
 
         Args:
             instance_id: Instance ID
             properties: Properties dictionary to apply
             preset: Preset name to use (if properties not provided)
+            tab_id: Optional tab ID for tab-specific properties
 
         Returns:
             True if successful, False otherwise
         """
+        if not properties:
+            return False
+
         instance = await self.get_instance(instance_id)
         if not instance:
             logger.warning(f"Instance {instance_id} not found")
             return False
 
-        # Apply properties through the instance's properties manager
-        if properties:
-            # Convert dict to BrowserProperties if needed
-            from ...models.browser_properties import BrowserProperties
+        # Convert to BrowserProperties
+        from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
 
+        if preset:
+            try:
+                preset_enum = BrowserPropertiesPreset(preset)
+                browser_props = get_preset_properties(preset_enum)
+                # Apply overrides
+                for key, value in (properties or {}).items():
+                    if hasattr(browser_props, key):
+                        setattr(browser_props, key, value)
+            except ValueError:
+                logger.warning(f"Invalid preset '{preset}', using properties only")
+                browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
+        else:
             browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
 
-            # Inject properties into the browser
-            self.properties_manager.inject_properties(instance.driver, browser_props)
+        # Prepare JSON for injection
+        import json
 
-            # Also store raw properties for retrieval
-            import json
+        props_json = json.dumps(properties)
 
-            props_json = json.dumps(properties)
-            instance.driver.execute_script(
-                f"""
-                window.__browserProperties = {props_json};
+        # Apply to specific tab or all tabs
+        if tab_id:
+            self.properties_manager.set_tab_properties(instance_id, tab_id, browser_props)
+            self._apply_properties_to_tab(instance, tab_id, browser_props, props_json)
+        else:
+            self.properties_manager.set_instance_properties(instance_id, browser_props)
+            self._apply_properties_to_all_tabs(instance, browser_props, props_json)
 
-                // Handle specific properties
-                if (window.__browserProperties.webgl_vendor) {{
-                    window.webgl_vendor = window.__browserProperties.webgl_vendor;
-                }}
-                if (window.__browserProperties.codec_support) {{
-                    window.codec_support = window.__browserProperties.codec_support;
-                }}
-            """
-            )
-            return True
+        return True
 
-        return False
-
-    async def get_browser_properties(self, instance_id: str | None = None) -> dict[str, Any]:
+    async def get_browser_properties(self, instance_id: str | None = None, tab_id: str | None = None) -> dict[str, Any]:
         """Get current browser properties.
 
         Args:
             instance_id: Instance ID (optional, returns default if not provided)
+            tab_id: Optional tab ID for tab-specific properties
 
         Returns:
             Dictionary of browser properties
@@ -470,6 +522,12 @@ class ChromeManager:
         if not instance:
             logger.warning(f"Instance {instance_id} not found")
             return {}
+
+        # If tab_id is provided, get properties from the properties manager
+        if tab_id:
+            # Get stored properties for this tab
+            tab_props = self.properties_manager.get_tab_properties(instance_id, tab_id)
+            return self.properties_manager.export_properties(tab_props)
 
         # Get current properties from the page
         try:
