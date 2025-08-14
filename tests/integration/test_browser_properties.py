@@ -253,9 +253,15 @@ class TestBrowserProperties:
         """Comprehensive test using bot detection HTML page."""
         from pathlib import Path
 
-        # Get path to bot detection test page
-        test_page = Path("tests/fixtures/bot_detection_test.html").absolute()
-        test_url = f"file:///{test_page.as_posix()}"
+        # Get path to bot detection test page relative to this test file
+        test_file_dir = Path(__file__).parent.parent  # Go up to tests/ directory
+        test_page = test_file_dir / "fixtures" / "bot_detection_test.html"
+
+        # Ensure the file exists
+        if not test_page.exists():
+            pytest.skip(f"Bot detection test file not found at {test_page}")
+
+        test_url = f"file:///{test_page.absolute().as_posix()}"
 
         # Test 1: Default configuration
         instance = await session_manager.get_or_create_instance(headless=True)
