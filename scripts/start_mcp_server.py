@@ -41,8 +41,8 @@ from start_mcp_server import main as start_mcp_main  # noqa: E402
 
 def main():
     """Run MCP server for the browser module."""
-    # The MCP scripts are in backend/mcp/browser/
-    mcp_base_path = PROJECT_ROOT / "backend" / "mcp" / "browser"
+    # The MCP scripts are in backend/mcp/chrome/
+    mcp_base_path = PROJECT_ROOT / "backend" / "mcp" / "chrome"
 
     return start_mcp_main(project_root=PROJECT_ROOT, mcp_base_path=mcp_base_path, project_name="AMI-WEB MCP Server")
 

@@ -20,7 +20,7 @@ import websockets
 from loguru import logger
 
 from backend.core.management.manager import ChromeManager
-from backend.mcp.browser.server import BrowserMCPServer
+from backend.mcp.chrome.server import BrowserMCPServer
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
