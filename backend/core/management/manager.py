@@ -430,6 +430,90 @@ class ChromeManager:
 
             # Inject properties into the browser
             self.properties_manager.inject_properties(instance.driver, browser_props)
+
+            # Also store raw properties for retrieval
+            import json
+
+            props_json = json.dumps(properties)
+            instance.driver.execute_script(
+                f"""
+                window.__browserProperties = {props_json};
+
+                // Handle specific properties
+                if (window.__browserProperties.webgl_vendor) {{
+                    window.webgl_vendor = window.__browserProperties.webgl_vendor;
+                }}
+                if (window.__browserProperties.codec_support) {{
+                    window.codec_support = window.__browserProperties.codec_support;
+                }}
+            """
+            )
             return True
 
         return False
+
+    async def get_browser_properties(self, instance_id: str | None = None) -> dict[str, Any]:
+        """Get current browser properties.
+
+        Args:
+            instance_id: Instance ID (optional, returns default if not provided)
+
+        Returns:
+            Dictionary of browser properties
+        """
+        if not instance_id:
+            # Return default properties
+            return self.properties_manager.export_properties()
+
+        # Get properties for specific instance
+        instance = await self.get_instance(instance_id)
+        if not instance:
+            logger.warning(f"Instance {instance_id} not found")
+            return {}
+
+        # Get current properties from the page
+        try:
+            # Get both standard and injected properties
+            result = instance.driver.execute_script(
+                """
+                var props = {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    languages: navigator.languages,
+                    hardwareConcurrency: navigator.hardwareConcurrency,
+                    deviceMemory: navigator.deviceMemory,
+                    webdriver: navigator.webdriver,
+                    vendor: navigator.vendor
+                };
+
+                // Get WebGL properties if available
+                try {
+                    var canvas = document.createElement('canvas');
+                    var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (debugInfo) {
+                            props.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                            props.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                        }
+                    }
+                } catch (e) {}
+
+                // Get custom injected properties if they exist
+                if (window.__browserProperties) {
+                    Object.assign(props, window.__browserProperties);
+                }
+
+                // Get codec support if defined
+                if (window.codec_support) {
+                    props.codec_support = window.codec_support;
+                }
+
+                return props;
+            """
+            )
+            return result  # noqa: RET504
+        except Exception as e:
+            logger.error(f"Failed to get browser properties: {e}")
+            return {}
