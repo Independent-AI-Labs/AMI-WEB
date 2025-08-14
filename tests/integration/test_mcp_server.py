@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 # Add browser directory to path before any imports
+# IMPORTANT: Must be first to avoid namespace collision with root backend directory
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import asyncio
