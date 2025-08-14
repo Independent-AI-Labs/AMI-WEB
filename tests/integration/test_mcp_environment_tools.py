@@ -1,4 +1,11 @@
 """Integration tests for MCP environment management tools."""
+# ruff: noqa: E402
+
+import sys
+from pathlib import Path
+
+# Add browser directory to path before any imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import asyncio
 import contextlib
