@@ -245,7 +245,8 @@ class BrowserInstance:
             chrome_options = capabilities.get("goog:chromeOptions", {})
             args = chrome_options.get("args", [])
             return any("headless" in arg for arg in args)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to determine headless mode: {e}")
             return False
 
 

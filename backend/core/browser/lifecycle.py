@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -204,5 +205,6 @@ class BrowserLifecycle:
             # Try to get current URL as a health check
             _ = self.driver.current_url
             return True
-        except Exception:
+        except WebDriverException as e:
+            logger.debug(f"Browser health check failed: {e}")
             return False
