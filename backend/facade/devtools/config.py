@@ -1,6 +1,8 @@
 """Configuration for DevTools functionality."""
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -12,6 +14,15 @@ class DeviceEmulation:
     deviceScaleFactor: float  # noqa: N815 - CDP spec requires this name
     mobile: bool
     userAgent: str  # noqa: N815 - CDP spec requires this name
+
+
+def _load_user_agents_config() -> dict:
+    """Load user agents configuration from JSON file."""
+    config_path = Path(__file__).parent.parent.parent / "config" / "user_agents.json"
+    if config_path.exists():
+        with config_path.open() as f:
+            return json.load(f)
+    return {"presets": {}, "device_emulation": {}}
 
 
 # Predefined device configurations

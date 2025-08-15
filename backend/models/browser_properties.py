@@ -1,6 +1,8 @@
 """Browser properties model for runtime configuration."""
 
+import json
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -240,21 +242,38 @@ class BrowserPropertiesPreset(str, Enum):
     CUSTOM = "custom"
 
 
+def _load_user_agents_config() -> dict:
+    """Load user agents configuration from JSON file."""
+    config_path = Path(__file__).parent.parent / "config" / "user_agents.json"
+    if config_path.exists():
+        with config_path.open() as f:
+            return json.load(f)
+    return {"presets": {}, "device_emulation": {}}
+
+
 def get_preset_properties(preset: BrowserPropertiesPreset) -> BrowserProperties:
     """Get predefined browser properties for a preset."""
+    user_agents = _load_user_agents_config()
+
     if preset == BrowserPropertiesPreset.WINDOWS_CHROME:
+        preset_data = user_agents.get("presets", {}).get("windows_chrome", {})
         return BrowserProperties(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            platform="Win32",
+            user_agent=preset_data.get(
+                "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
+            platform=preset_data.get("platform", "Win32"),
             webgl_vendor=WebGLVendor.GOOGLE_INTEL,
             webgl_renderer=WebGLRenderer.ANGLE_INTEL_UHD,
             screen_resolution=(1920, 1080),
             hardware_concurrency=8,
         )
     if preset == BrowserPropertiesPreset.MAC_SAFARI:
+        preset_data = user_agents.get("presets", {}).get("mac_safari", {})
         return BrowserProperties(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            platform="MacIntel",
+            user_agent=preset_data.get(
+                "user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+            ),
+            platform=preset_data.get("platform", "MacIntel"),
             vendor="Apple Computer, Inc.",
             webgl_vendor=WebGLVendor.APPLE,
             webgl_renderer=WebGLRenderer.APPLE_M1,
@@ -264,8 +283,11 @@ def get_preset_properties(preset: BrowserPropertiesPreset) -> BrowserProperties:
         )
     if preset == BrowserPropertiesPreset.STEALTH:
         # Maximum anti-detection settings
+        preset_data = user_agents.get("presets", {}).get("stealth", {})
         return BrowserProperties(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            user_agent=preset_data.get(
+                "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
             webdriver_visible=False,
             automation_controlled=False,
             canvas_noise=True,
