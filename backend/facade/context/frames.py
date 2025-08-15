@@ -5,6 +5,7 @@ from typing import Any
 
 from loguru import logger
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from ...utils.exceptions import NavigationError
@@ -74,18 +75,18 @@ class FrameController(BaseController):
             element = self.driver.find_element(By.ID, frame)
             if element.tag_name.lower() in ["iframe", "frame"]:
                 return element
-        except Exception:  # noqa: S110
+        except NoSuchElementException:
             # Frame not found by ID, continue searching
-            pass
+            logger.debug(f"Frame not found by ID: {frame}")
 
         try:
             # Try by name
             element = self.driver.find_element(By.NAME, frame)
             if element.tag_name.lower() in ["iframe", "frame"]:
                 return element
-        except Exception:  # noqa: S110
+        except NoSuchElementException:
             # Frame not found by name, continue searching
-            pass
+            logger.debug(f"Frame not found by name: {frame}")
 
         # Finally try as CSS selector
         try:
