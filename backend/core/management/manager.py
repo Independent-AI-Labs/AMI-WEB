@@ -6,16 +6,16 @@ from typing import Any
 from base.backend.workers.types import PoolConfig, PoolType
 from loguru import logger
 
-from ...facade.media.screenshot import ScreenshotController  # noqa: E402
-from ...facade.navigation.navigator import Navigator  # noqa: E402
-from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo  # noqa: E402
-from ...models.security import SecurityConfig  # noqa: E402
-from ...utils.config import Config  # noqa: E402
-from ..browser.instance import BrowserInstance  # noqa: E402
-from ..browser.properties_manager import PropertiesManager  # noqa: E402
-from .browser_worker_pool import BrowserWorkerPool  # noqa: E402
-from .profile_manager import ProfileManager  # noqa: E402
-from .session_manager import SessionManager  # noqa: E402
+from ...facade.media.screenshot import ScreenshotController
+from ...facade.navigation.navigator import Navigator
+from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo
+from ...models.security import SecurityConfig
+from ...utils.config import Config
+from ..browser.instance import BrowserInstance
+from ..browser.properties_manager import PropertiesManager
+from .browser_worker_pool import BrowserWorkerPool
+from .profile_manager import ProfileManager
+from .session_manager import SessionManager
 
 
 class ChromeManager:

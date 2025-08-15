@@ -302,7 +302,8 @@ class ToolExecutor:
                 instance = await self.manager.restore_session(session_id)
                 self._active_instance_id = instance.id
                 return {"status": "loaded", "instance_id": instance.id}
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to restore session {session_id}: {e}")
                 return {"status": "not_found"}
 
         if tool_name == "session_list":

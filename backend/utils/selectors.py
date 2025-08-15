@@ -1,5 +1,9 @@
 """Selector parsing utilities."""
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def parse_selector(selector: str) -> tuple[str, str]:
     """Parse selector string to Selenium By locator.
@@ -69,5 +73,6 @@ def is_valid_selector(selector: str) -> bool:
     try:
         parse_selector(selector)
         return True
-    except Exception:
+    except (ValueError, SyntaxError) as e:
+        logger.debug(f"Invalid selector '{selector}': {e}")
         return False

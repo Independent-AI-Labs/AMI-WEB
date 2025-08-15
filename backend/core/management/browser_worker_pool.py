@@ -8,9 +8,9 @@ from base.backend.workers import WorkerPool, WorkerState
 from base.backend.workers.types import PoolConfig, WorkerInfo
 from loguru import logger
 
-from ...models.browser import ChromeOptions  # noqa: E402
-from ...utils.config import Config  # noqa: E402
-from ..browser.instance import BrowserInstance  # noqa: E402
+from ...models.browser import ChromeOptions
+from ...utils.config import Config
+from ..browser.instance import BrowserInstance
 
 if TYPE_CHECKING:
     from ..browser.properties_manager import PropertiesManager
