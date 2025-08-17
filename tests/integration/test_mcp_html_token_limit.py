@@ -33,7 +33,7 @@ async def test_mcp_html_limit(session_manager):
         # Testing MCP browser_get_html with token limits
 
         # Simulate the MCP tool execution directly
-        from backend.facade.navigation.extractor import ContentExtractor
+        from browser.backend.facade.navigation.extractor import ContentExtractor
 
         extractor = ContentExtractor(instance)
 

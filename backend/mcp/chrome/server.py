@@ -19,8 +19,7 @@ while current != current.parent:
     current = current.parent
 
 from base.backend.mcp.mcp_server import BaseMCPServer  # noqa: E402
-
-from backend.core.management.manager import ChromeManager  # noqa: E402
+from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 
 # Add chrome directory to path for tool imports
 sys.path.insert(0, str(Path(__file__).parent))

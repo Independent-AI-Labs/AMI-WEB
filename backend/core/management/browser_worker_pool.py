@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from base.backend.workers import WorkerPool, WorkerState
+from base.backend.workers.base import WorkerPool, WorkerState
 from base.backend.workers.types import PoolConfig, WorkerInfo
 from loguru import logger
 

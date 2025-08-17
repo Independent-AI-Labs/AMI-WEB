@@ -4,24 +4,28 @@
 import sys
 from pathlib import Path
 
-# Bootstrap path discovery - find base WITHOUT hardcoded parent counts
+# Bootstrap path discovery - find ORCHESTRATOR ROOT (parent with base/ submodule)
 current = Path(__file__).resolve().parent
+orchestrator_root = None
 while current != current.parent:
-    if (current / ".git").exists():
-        if (current / "base").exists() and (current / "base" / "backend" / "utils" / "path_finder.py").exists():
-            sys.path.insert(0, str(current / "base"))
-            break
-        elif current.name == "base" and (current / "backend" / "utils" / "path_finder.py").exists():
-            sys.path.insert(0, str(current))
-            break
+    if (current / ".git").exists() and (current / "base").exists():
+        # Found the main orchestrator root
+        orchestrator_root = current
+        break
     current = current.parent
 
-# Now we can import the proper path finder
-from backend.utils.path_finder import setup_base_import  # noqa: E402
+if not orchestrator_root:
+    raise RuntimeError("Could not find orchestrator root")
+
+# Add orchestrator root to path FIRST so we can import both base and local modules properly
+sys.path.insert(0, str(orchestrator_root))
+
+# Now import from base using proper namespace
+from base.backend.utils.path_finder import setup_base_import  # noqa: E402
 
 setup_base_import(Path(__file__))
 
-from backend.mcp.run_server import setup_environment  # noqa: E402
+from base.backend.mcp.run_server import setup_environment  # noqa: E402
 
 if __name__ == "__main__":
     # Setup environment first (will re-exec if needed)
@@ -33,9 +37,9 @@ if __name__ == "__main__":
     # NOW import after environment is set up
     import asyncio
 
-    from backend.core.management.manager import ChromeManager
-    from backend.mcp.chrome.server import BrowserMCPServer
-    from backend.mcp.run_server import run_server
+    from base.backend.mcp.run_server import run_server
+    from browser.backend.core.management.manager import ChromeManager
+    from browser.backend.mcp.chrome.server import BrowserMCPServer
 
     # Parse transport from args
     transport = "stdio"

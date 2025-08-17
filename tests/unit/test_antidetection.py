@@ -38,11 +38,12 @@ class TestAntidetectionScripts:
         """Test that manifest.json is valid."""
         manifest_path = extension_dir / "manifest.json"
 
-        with open(manifest_path) as f:
+        with manifest_path.open() as f:
             manifest = json.load(f)
 
         # Check required fields
-        assert manifest["manifest_version"] == 3
+        expected_manifest_version = 3
+        assert manifest["manifest_version"] == expected_manifest_version
         assert manifest["name"] == "Anti-Detection Helper"
         assert manifest["version"] == "1.0.0"
         assert "description" in manifest
@@ -60,7 +61,7 @@ class TestAntidetectionScripts:
         """Test that config file is valid JSON."""
         config_path = Path(__file__).parent.parent.parent / "web" / "config" / "antidetect-config.json"
 
-        with open(config_path) as f:
+        with config_path.open() as f:
             config = json.load(f)
 
         # Check structure
@@ -81,7 +82,7 @@ class TestAntidetectionScripts:
 
         for script_name in scripts:
             script_path = script_dir / script_name
-            with open(script_path) as f:
+            with script_path.open() as f:
                 content = f.read()
 
             # Basic syntax checks
@@ -97,7 +98,7 @@ class TestAntidetectionScripts:
         """Test that scripts don't use polling loops."""
         script_path = script_dir / "complete-antidetect.js"
 
-        with open(script_path) as f:
+        with script_path.open() as f:
             content = f.read()
 
         # Check for polling patterns
@@ -109,7 +110,7 @@ class TestAntidetectionScripts:
         """Test that inject.js doesn't pollute global namespace."""
         inject_path = extension_dir / "inject.js"
 
-        with open(inject_path) as f:
+        with inject_path.open() as f:
             content = f.read()
 
         # Check that the entire script is wrapped in IIFE or try block
@@ -131,7 +132,7 @@ class TestAntidetectionScripts:
         """Test that webdriver removal is optimized."""
         script_path = script_dir / "complete-antidetect.js"
 
-        with open(script_path) as f:
+        with script_path.open() as f:
             content = f.read()
 
         # Count methods used for webdriver removal
@@ -144,13 +145,14 @@ class TestAntidetectionScripts:
             method_count += 1
 
         # Should use 1-2 methods max, not 4+
-        assert method_count <= 2, f"Too many webdriver removal methods: {method_count}"
+        max_webdriver_methods = 2
+        assert method_count <= max_webdriver_methods, f"Too many webdriver removal methods: {method_count}"
 
     def test_extension_inject_script_wrapped(self, extension_dir):
         """Test that inject.js is properly wrapped."""
         inject_path = extension_dir / "inject.js"
 
-        with open(inject_path) as f:
+        with inject_path.open() as f:
             content = f.read()
 
         # Remove comments to check structure
@@ -179,7 +181,7 @@ class TestAntidetectionIntegration:
 
         # Inject our antidetect script directly
         script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
-        with open(script_path) as f:
+        with script_path.open() as f:
             script = f.read()
 
         driver.execute_script(script)
@@ -209,7 +211,7 @@ class TestAntidetectionIntegration:
 
         # Inject our script
         script_path = Path(__file__).parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
-        with open(script_path) as f:
+        with script_path.open() as f:
             script = f.read()
 
         driver.execute_script(script)

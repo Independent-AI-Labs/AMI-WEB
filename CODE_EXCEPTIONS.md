@@ -48,10 +48,12 @@ All these delays use configurable parameters passed by the user to simulate huma
 These scripts must modify `sys.path` BEFORE importing local modules to ensure correct module resolution.
 
 ### Pattern:
+
 ```python
 import sys
+
 sys.path.insert(0, project_root)  # Must come first
-from backend.chrome import ChromeManager  # Now safe to import
+from services.chrome import ChromeManager  # Now safe to import
 ```
 
 ## 4. Type Ignores for CDP Commands

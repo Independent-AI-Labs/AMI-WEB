@@ -17,10 +17,9 @@ import time
 import pytest
 import pytest_asyncio
 import websockets
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.mcp.chrome.server import BrowserMCPServer
 from loguru import logger
-
-from backend.core.management.manager import ChromeManager
-from backend.mcp.chrome.server import BrowserMCPServer
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless

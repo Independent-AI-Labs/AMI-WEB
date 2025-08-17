@@ -11,15 +11,19 @@ import pytest
 import pytest_asyncio
 from loguru import logger
 
-# Add parent directory to path for imports
-# IMPORTANT: Add browser directory FIRST to avoid namespace collision with root backend
-sys.path.insert(0, str(Path(__file__).parent.parent))  # browser directory
-# Add grandparent directory for base module (but AFTER browser to prioritize browser's backend)
-sys.path.insert(1, str(Path(__file__).parent.parent.parent))  # AMI-ORCHESTRATOR directory
+# Add orchestrator root to path for proper imports
+current = Path(__file__).resolve().parent
+while current != current.parent:
+    if (current / ".git").exists() and (current / "base").exists():
+        # Found the main orchestrator root - add it FIRST
+        sys.path.insert(0, str(current))
+        break
+    current = current.parent
 
-from backend.core.browser.instance import BrowserInstance  # noqa: E402
-from backend.core.management.manager import ChromeManager  # noqa: E402
-from backend.utils.config import Config  # noqa: E402
+from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
+from browser.backend.core.management.manager import ChromeManager  # noqa: E402
+from browser.backend.utils.config import Config  # noqa: E402
+
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
