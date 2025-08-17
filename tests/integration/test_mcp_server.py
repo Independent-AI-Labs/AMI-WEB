@@ -68,7 +68,7 @@ class MCPTestServer:
         self.manager.pool.max_instances = 3  # Limit max instances (for concurrent tests)
         await self.manager.start()
 
-        config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10}
+        config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10, "response_format": "json"}
         self.server = BrowserMCPServer(self.manager, config)
         await self.server.start()
 
