@@ -205,23 +205,24 @@ Our tests include performance benchmarks:
 
 ```python
 import pytest
-from backend.core.manager import ChromeManager
+from services.core.manager import ChromeManager
+
 
 @pytest.mark.asyncio
 async def test_my_awesome_feature():
     """Test that my feature works perfectly."""
     manager = ChromeManager()
     await manager.initialize()
-    
+
     # Get undetectable browser
     browser = await manager.get_or_create_instance(
         headless=False,
         anti_detect=True
     )
-    
+
     # Do something amazing
     browser.driver.get("https://example.com")
-    
+
     # Assert greatness
     assert "Example" in browser.driver.title
 ```

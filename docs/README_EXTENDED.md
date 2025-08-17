@@ -158,8 +158,8 @@ cp config.sample.yaml config.yaml
 Central orchestrator managing all browser operations.
 
 ```python
-from backend.core.management.manager import ChromeManager
-from backend.models.security import SecurityConfig, SecurityLevel
+from services.core.management.manager import ChromeManager
+from services.models.security import SecurityConfig, SecurityLevel
 
 # Initialize
 manager = ChromeManager(config_file="config.yaml")
@@ -167,27 +167,27 @@ await manager.initialize()
 
 # Get or create instance with all options
 instance = await manager.get_or_create_instance(
-    headless=True,                    # Run in headless mode
-    profile="my_profile",             # Use named profile (auto-created)
-    anti_detect=True,                  # Enable anti-detection (default: True)
-    use_pool=True,                     # Use pre-warmed pool (default: True)
+    headless=True,  # Run in headless mode
+    profile="my_profile",  # Use named profile (auto-created)
+    anti_detect=True,  # Enable anti-detection (default: True)
+    use_pool=True,  # Use pre-warmed pool (default: True)
     security_config=SecurityConfig.from_level(SecurityLevel.STANDARD),
-    download_dir="./downloads",       # Custom download directory
-    extensions=["path/to/extension"], # Chrome extensions to load
+    download_dir="./downloads",  # Custom download directory
+    extensions=["path/to/extension"],  # Chrome extensions to load
 )
 
 # Core instance management
-await manager.get_instance(instance_id)          # Get existing instance
-await manager.terminate_instance(instance_id)    # Fully terminate
-await manager.return_to_pool(instance_id)        # Return for reuse
-await manager.list_instances()                   # List all active
+await manager.get_instance(instance_id)  # Get existing instance
+await manager.terminate_instance(instance_id)  # Fully terminate
+await manager.return_to_pool(instance_id)  # Return for reuse
+await manager.list_instances()  # List all active
 
 # Session management
 session_id = await manager.save_session(instance_id, "shopping_session")
 restored = await manager.restore_session(session_id)
 
 # Browser properties (fingerprinting)
-from backend.models.browser_properties import BrowserPropertiesPreset
+from services.models.browser_properties import BrowserPropertiesPreset
 
 await manager.set_browser_properties(
     instance_id=instance.id,
@@ -216,7 +216,7 @@ await manager.shutdown()
 Manages Chrome profiles with complete isolation.
 
 ```python
-from backend.core.management.profile_manager import ProfileManager
+from services.core.management.profile_manager import ProfileManager
 
 profile_manager = ProfileManager(base_dir="./data/browser_profiles")
 
@@ -233,7 +233,7 @@ new_dir = profile_manager.copy_profile(source, dest)
 Saves and restores browser sessions.
 
 ```python
-from backend.core.management.session_manager import SessionManager
+from services.core.management.session_manager import SessionManager
 
 session_manager = SessionManager(session_dir="./data/sessions")
 await session_manager.initialize()
@@ -267,8 +267,9 @@ pool_stats = await manager.get_pool_stats()
 ### Navigation Components
 
 #### Navigator
+
 ```python
-from backend.facade.navigation.navigator import Navigator
+from services.facade.navigation.navigator import Navigator
 
 nav = Navigator(browser_instance)
 result = await nav.navigate(url, wait_for="domcontentloaded", timeout=30)
@@ -280,8 +281,9 @@ title = await nav.get_title()
 ```
 
 #### ContentExtractor
+
 ```python
-from backend.facade.navigation.extractor import ContentExtractor
+from services.facade.navigation.extractor import ContentExtractor
 
 extractor = ContentExtractor(browser_instance)
 html = await extractor.get_page_content()
@@ -295,8 +297,9 @@ forms = await extractor.extract_forms()
 ```
 
 #### Waiter
+
 ```python
-from backend.facade.navigation.waiter import Waiter
+from services.facade.navigation.waiter import Waiter
 
 waiter = Waiter(browser_instance)
 found = await waiter.wait_for_element(selector, timeout=10)
@@ -305,8 +308,9 @@ gone = await waiter.wait_for_element_hidden(selector, timeout=10)
 ```
 
 #### Scroller
+
 ```python
-from backend.facade.navigation.scroller import Scroller
+from services.facade.navigation.scroller import Scroller
 
 scroller = Scroller(browser_instance)
 await scroller.scroll_to_element(selector, smooth=True)
@@ -318,8 +322,9 @@ position = await scroller.get_scroll_position()
 ```
 
 #### StorageController
+
 ```python
-from backend.facade.navigation.storage import StorageController
+from services.facade.navigation.storage import StorageController
 
 storage = StorageController(browser_instance)
 value = await storage.get_local_storage(key)
@@ -333,8 +338,9 @@ await storage.clear_session_storage()
 ### Input Components
 
 #### MouseController
+
 ```python
-from backend.facade.input.mouse import MouseController
+from services.facade.input.mouse import MouseController
 
 mouse = MouseController(browser_instance)
 await mouse.click(selector, button="left", click_count=1)
@@ -347,8 +353,9 @@ await mouse.drag_from_to(start_x, start_y, end_x, end_y, duration=1.0)
 ```
 
 #### KeyboardController
+
 ```python
-from backend.facade.input.keyboard import KeyboardController
+from services.facade.input.keyboard import KeyboardController
 
 keyboard = KeyboardController(browser_instance)
 await keyboard.type_text(selector, text, clear=True, delay=0.1)
@@ -358,8 +365,9 @@ await keyboard.clear_field(selector)
 ```
 
 #### TouchController
+
 ```python
-from backend.facade.input.touch import TouchController
+from services.facade.input.touch import TouchController
 
 touch = TouchController(browser_instance)
 await touch.tap(selector)
@@ -370,8 +378,9 @@ await touch.pinch_zoom(selector, scale=2.0)
 ```
 
 #### FormsController
+
 ```python
-from backend.facade.input.forms import FormsController
+from services.facade.input.forms import FormsController
 
 forms = FormsController(browser_instance)
 await forms.fill_form(form_data)  # Dict of field_name: value
@@ -386,8 +395,9 @@ form_data = await forms.get_form_data(form_selector)
 ### Media Components
 
 #### ScreenshotController
+
 ```python
-from backend.facade.media.screenshot import ScreenshotController
+from services.facade.media.screenshot import ScreenshotController
 
 screenshot = ScreenshotController(browser_instance)
 png_bytes = await screenshot.capture_viewport()
@@ -400,8 +410,9 @@ file_path = await screenshot.save_screenshot(filename="screenshot.png")
 ### DevTools Components
 
 #### NetworkMonitor
+
 ```python
-from backend.facade.devtools.network import NetworkMonitor
+from services.facade.devtools.network import NetworkMonitor
 
 network = NetworkMonitor(browser_instance)
 await network.start_monitoring()
@@ -412,8 +423,9 @@ await network.stop_monitoring()
 ```
 
 #### PerformanceMonitor
+
 ```python
-from backend.facade.devtools.performance import PerformanceMonitor
+from services.facade.devtools.performance import PerformanceMonitor
 
 perf = PerformanceMonitor(browser_instance)
 metrics = await perf.get_metrics()
@@ -425,8 +437,9 @@ memory = await perf.get_memory_info()
 ### Context Components
 
 #### TabManager
+
 ```python
-from backend.facade.context.tabs import TabManager
+from services.facade.context.tabs import TabManager
 
 tabs = TabManager(browser_instance)
 tab_list = await tabs.get_tabs()
@@ -648,58 +661,60 @@ stats = await manager.get_pool_stats()
 
 ```python
 import asyncio
-from backend.core.management.manager import ChromeManager
-from backend.facade.navigation.navigator import Navigator
-from backend.facade.input.mouse import MouseController
-from backend.facade.input.keyboard import KeyboardController
-from backend.facade.media.screenshot import ScreenshotController
+from services.core.management.manager import ChromeManager
+from services.facade.navigation.navigator import Navigator
+from services.facade.input.mouse import MouseController
+from services.facade.input.keyboard import KeyboardController
+from services.facade.media.screenshot import ScreenshotController
+
 
 async def automate_form_submission():
     # Initialize manager
     manager = ChromeManager()
     await manager.initialize()
-    
+
     # Get browser instance with anti-detection
     instance = await manager.get_or_create_instance(
         headless=False,
         anti_detect=True,
         profile="automation_profile"
     )
-    
+
     # Initialize controllers
     nav = Navigator(instance)
     mouse = MouseController(instance)
     keyboard = KeyboardController(instance)
     screenshot = ScreenshotController(instance)
-    
+
     # Navigate to page
     await nav.navigate("https://example.com/form")
-    
+
     # Fill form
     await keyboard.type_text("#username", "john.doe", clear=True)
     await keyboard.type_text("#email", "john@example.com", clear=True)
-    
+
     # Click checkbox
     await mouse.click("#agree-terms")
-    
+
     # Take screenshot before submission
     await screenshot.save_screenshot("before_submit.png")
-    
+
     # Submit form
     await mouse.click("#submit-button")
-    
+
     # Wait for success
-    from backend.facade.navigation.waiter import Waiter
+    from services.facade.navigation.waiter import Waiter
     waiter = Waiter(instance)
     await waiter.wait_for_element(".success-message", timeout=10)
-    
+
     # Save session for later
     session_id = await manager.save_session(instance.id, "form_completed")
     print(f"Session saved: {session_id}")
-    
+
     # Cleanup
     await manager.terminate_instance(instance.id)
     await manager.shutdown()
+
 
 # Run the automation
 asyncio.run(automate_form_submission())

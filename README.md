@@ -93,9 +93,10 @@ AMI-WEB provides organizations with comprehensive browser automation that offers
 - **Event-Driven Core** - Reactive architecture with no polling
 
 ### Integration Options
+
 ```python
 # Python SDK
-from backend.core.management.manager import ChromeManager
+from services.core.management.manager import ChromeManager
 
 manager = ChromeManager()
 await manager.initialize()

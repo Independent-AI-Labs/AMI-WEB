@@ -1,9 +1,8 @@
 """Test the HTML token limiting functionality."""
 
 import pytest
-
-from backend.facade.navigation.extractor import ContentExtractor
-from backend.facade.navigation.navigator import Navigator
+from browser.backend.facade.navigation.extractor import ContentExtractor
+from browser.backend.facade.navigation.navigator import Navigator
 
 
 @pytest.mark.asyncio

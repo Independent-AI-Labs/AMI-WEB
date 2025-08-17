@@ -6,9 +6,9 @@ Test script for Chrome Manager
 import asyncio
 import json
 
-from backend.core.management.manager import ChromeManager
-from backend.facade.media.screenshot import ScreenshotController
-from backend.facade.navigation.navigator import Navigator
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.facade.media.screenshot import ScreenshotController
+from browser.backend.facade.navigation.navigator import Navigator
 
 
 async def test_basic_operations():
