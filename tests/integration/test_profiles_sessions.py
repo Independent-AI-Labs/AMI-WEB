@@ -5,11 +5,10 @@ from contextlib import suppress
 from pathlib import Path
 
 import pytest
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.core.management.profile_manager import ProfileManager
+from browser.backend.models.security import SecurityConfig, SecurityLevel
 from selenium.webdriver.common.by import By
-
-from backend.core.management.manager import ChromeManager
-from backend.core.management.profile_manager import ProfileManager
-from backend.models.security import SecurityConfig, SecurityLevel
 
 
 @pytest.fixture
