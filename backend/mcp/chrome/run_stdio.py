@@ -5,25 +5,19 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Smart path discovery - find project roots by looking for .git/.venv
+# Bootstrap paths - add base first so we can import smart_path
 current = Path(__file__).resolve().parent
-module_root = None
-main_root = None
-
 while current != current.parent:
-    # Found module root (has .venv or .git and backend/)
-    if not module_root and ((current / ".venv").exists() or (current / ".git").exists()) and (current / "backend").exists():
-        module_root = current
-    # Found main orchestrator (has base/ and .git)
-    if not main_root and (current / "base").exists() and (current / ".git").exists():
-        main_root = current
+    if (current / "base").exists() and (current / ".git").exists():
+        sys.path.insert(0, str(current / "base"))
+        break
     current = current.parent
 
-# Add paths in correct order: module first, then main
-if module_root and str(module_root) not in sys.path:
-    sys.path.insert(0, str(module_root))
-if main_root and str(main_root) not in sys.path:
-    sys.path.insert(0, str(main_root))
+# Now use the base smart path setup
+from backend.utils.smart_path import auto_setup  # noqa: E402
+
+# Auto setup with venv requirement
+paths = auto_setup(require_venv=True)
 
 from loguru import logger  # noqa: E402
 
@@ -43,7 +37,7 @@ async def main():
     # Look for config file
     config_file = None
     for config_name in ["config.yaml", "config.test.yaml", "config.sample.yaml"]:
-        config_path = module_root / config_name if module_root else Path.cwd() / config_name
+        config_path = paths.project_root / config_name if paths.project_root else Path.cwd() / config_name
         if config_path.exists():
             config_file = str(config_path)
             break
