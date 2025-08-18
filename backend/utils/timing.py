@@ -93,7 +93,7 @@ def with_timeout(timeout: float) -> Callable:
                 # Unix-based systems can use signal
                 import signal
 
-                def timeout_handler(signum, frame):  # noqa: ARG001
+                def timeout_handler(_signum, _frame):
                     raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s")
 
                 # Set timeout alarm
