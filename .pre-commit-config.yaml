@@ -43,6 +43,10 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [ pre-push ]
+        verbose: true
+        # Browser tests can take up to 5 minutes
+        # Default timeout is 120s, we need 300s (5 min)
+        # This is handled by pytest.ini timeout setting
 
   # Additional useful hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
