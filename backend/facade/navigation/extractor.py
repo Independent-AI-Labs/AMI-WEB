@@ -162,12 +162,18 @@ class ContentExtractor(BaseController):
         Returns:
             Parsed and limited HTML
         """
-        html = await self.get_page_source()
+        # Note: max_tokens and max_depth are not supported yet
+        # For now, just return the HTML as-is
+        # TODO: Implement token/depth limiting
+        return await self.get_page_source()
 
-        parser = HTMLParser(html)
-        # Note: max_tokens and max_depth are not supported by HTMLParser
-        # This would require updating the HTMLParser class
-        return parser.extract_text()
+    async def get_text(self) -> str:
+        """Get the text content of the page.
+
+        Returns:
+            Text content of the page
+        """
+        return await self.extract_text()
 
     async def extract_text(
         self,

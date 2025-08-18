@@ -1,6 +1,7 @@
 """Tool executor for MCP server."""
 
 import base64
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from browser.backend.core.management.manager import ChromeManager
@@ -13,6 +14,77 @@ class ToolExecutor:
     def __init__(self, manager: ChromeManager):
         self.manager = manager
         self._active_instance_id: str | None = None
+
+        # Initialize tool dispatch maps
+        self._browser_lifecycle_tools = self._init_lifecycle_tools()
+        self._browser_navigation_tools = self._init_navigation_tools()
+        self._browser_input_tools = self._init_input_tools()
+        self._browser_content_tools = self._init_content_tools()
+        self._browser_storage_tools = self._init_storage_tools()
+        self._browser_tab_tools = self._init_tab_tools()
+        self._browser_log_tools = self._init_log_tools()
+
+    def _init_lifecycle_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize browser lifecycle tool handlers."""
+        return {
+            "browser_launch": self._handle_browser_launch,
+            "browser_terminate": self._handle_browser_terminate,
+            "browser_list": self._handle_browser_list,
+            "browser_get_active": self._handle_browser_get_active,
+        }
+
+    def _init_navigation_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize navigation tool handlers."""
+        return {
+            "browser_navigate": self._handle_browser_navigate,
+            "browser_back": self._handle_browser_back,
+            "browser_forward": self._handle_browser_forward,
+            "browser_refresh": self._handle_browser_refresh,
+            "browser_get_url": self._handle_browser_get_url,
+        }
+
+    def _init_input_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize input tool handlers."""
+        return {
+            "browser_click": self._handle_browser_click,
+            "browser_type": self._handle_browser_type,
+            "browser_select": self._handle_browser_select,
+            "browser_scroll": self._handle_browser_scroll,
+            "browser_fill_form": self._handle_browser_fill_form,
+        }
+
+    def _init_content_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize content extraction tool handlers."""
+        return {
+            "browser_get_html": self._handle_browser_get_html,
+            "browser_get_text": self._handle_browser_get_text,
+            "browser_execute_script": self._handle_browser_execute_script,
+            "browser_extract_forms": self._handle_browser_extract_forms,
+            "browser_extract_links": self._handle_browser_extract_links,
+            "browser_screenshot": self._handle_browser_screenshot,
+        }
+
+    def _init_storage_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize storage tool handlers."""
+        return {
+            "browser_get_cookies": self._handle_browser_get_cookies,
+            "browser_set_cookies": self._handle_browser_set_cookies,
+            "browser_clear_cookies": self._handle_browser_clear_cookies,
+        }
+
+    def _init_tab_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize tab management tool handlers."""
+        return {
+            "browser_get_tabs": self._handle_browser_get_tabs,
+            "browser_switch_tab": self._handle_browser_switch_tab,
+        }
+
+    def _init_log_tools(self) -> dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]]:
+        """Initialize logging tool handlers."""
+        return {
+            "browser_get_console_logs": self._handle_browser_get_console_logs,
+            "browser_get_network_logs": self._handle_browser_get_network_logs,
+        }
 
     async def execute(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute a tool and return the result."""
@@ -27,239 +99,289 @@ class ToolExecutor:
             return await self._execute_session_tool(tool_name, arguments)
         raise ValueError(f"Unknown tool: {tool_name}")
 
-    async def _execute_browser_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:  # noqa: C901, PLR0911, PLR0912, PLR0915
-        """Execute browser-related tools."""
-        # Browser lifecycle tools
-        if tool_name == "browser_launch":
-            instance = await self.manager.get_or_create_instance(
-                headless=arguments.get("headless", True),
-                profile=arguments.get("profile"),
-                anti_detect=arguments.get("anti_detect", False),
-                use_pool=False,
-            )
-            self._active_instance_id = instance.id
-            return {"instance_id": instance.id, "status": "launched"}
+    async def _execute_browser_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:  # noqa: PLR0911
+        """Execute browser-related tools using dispatch maps."""
+        # Check lifecycle tools
+        if handler := self._browser_lifecycle_tools.get(tool_name):
+            return await handler(arguments)
 
-        if tool_name == "browser_terminate":
-            instance_id = arguments.get("instance_id") or self._active_instance_id
-            if not instance_id:
-                raise ValueError("No instance_id provided")
-            await self.manager.terminate_instance(instance_id)
-            if instance_id == self._active_instance_id:
-                self._active_instance_id = None
-            return {"status": "terminated"}
-
-        if tool_name == "browser_list":
-            instances = self.manager.list_instances()
-            return {"instances": instances}
-
-        if tool_name == "browser_get_active":
-            return {"instance_id": self._active_instance_id}
-
-        # Get active instance for other browser operations
+        # All other tools need an active instance
         instance = await self._get_active_instance(arguments.get("instance_id"))
 
-        # Navigation tools
-        if tool_name == "browser_navigate":
-            from browser.backend.facade.navigation.navigator import Navigator
+        # Store instance for handlers that need it
+        self._current_instance = instance
 
-            nav = Navigator(instance)
-            # Don't pass wait_for as a string - Navigator expects None or a WaitCondition object
-            await nav.navigate(
-                arguments["url"],
-                wait_for=None,  # Will default to waiting for load
-                timeout=arguments.get("timeout", 30),
-            )
-            return {"status": "navigated", "url": arguments["url"]}
+        # Check navigation tools
+        if handler := self._browser_navigation_tools.get(tool_name):
+            return await handler(arguments)
 
-        if tool_name == "browser_back":
-            from browser.backend.facade.navigation.navigator import Navigator
+        # Check input tools
+        if handler := self._browser_input_tools.get(tool_name):
+            return await handler(arguments)
 
-            nav = Navigator(instance)
-            await nav.back()
-            return {"status": "navigated_back"}
+        # Check content tools
+        if handler := self._browser_content_tools.get(tool_name):
+            return await handler(arguments)
 
-        if tool_name == "browser_forward":
-            from browser.backend.facade.navigation.navigator import Navigator
+        # Check storage tools
+        if handler := self._browser_storage_tools.get(tool_name):
+            return await handler(arguments)
 
-            nav = Navigator(instance)
-            await nav.forward()
-            return {"status": "navigated_forward"}
+        # Check tab tools
+        if handler := self._browser_tab_tools.get(tool_name):
+            return await handler(arguments)
 
-        if tool_name == "browser_refresh":
-            from browser.backend.facade.navigation.navigator import Navigator
-
-            nav = Navigator(instance)
-            await nav.refresh()
-            return {"status": "refreshed"}
-
-        if tool_name == "browser_get_url":
-            return {"url": instance.driver.current_url}
-
-        # Input tools
-        if tool_name == "browser_click":
-            from browser.backend.facade.input.mouse import MouseController
-
-            mouse = MouseController(instance)
-            # MouseController.click doesn't take button/click_count params
-            # Just use the selector for now
-            await mouse.click(arguments["selector"])
-            return {"status": "clicked"}
-
-        if tool_name == "browser_type":
-            from browser.backend.facade.input.keyboard import KeyboardController
-
-            input_ctrl = KeyboardController(instance)
-            await input_ctrl.type_text(
-                arguments["selector"],
-                arguments["text"],
-                clear=arguments.get("clear", False),
-            )
-            return {"status": "typed"}
-
-        if tool_name == "browser_select":
-            from browser.backend.facade.input.forms import FormsController
-
-            forms = FormsController(instance)
-            await forms.select_option(arguments["selector"], arguments["value"])
-            return {"status": "selected"}
-
-        if tool_name == "browser_scroll":
-            from browser.backend.facade.navigation.scroller import Scroller
-
-            scroller = Scroller(instance)
-            # Use the Scroller to handle scrolling
-            direction = arguments.get("direction", "down")
-            amount = arguments.get("amount", 300)
-
-            # Map direction to x/y offsets
-            x_offset = 0
-            y_offset = 0
-            if direction == "down":
-                y_offset = amount
-            elif direction == "up":
-                y_offset = -amount
-            elif direction == "left":
-                x_offset = -amount
-            elif direction == "right":
-                x_offset = amount
-
-            await scroller.scroll_by(x=x_offset, y=y_offset)
-            return {"status": "scrolled"}
-
-        if tool_name == "browser_execute_script":
-            script = arguments["script"]
-            args = arguments.get("args", [])
-            result = instance.driver.execute_script(script, *args)
-            return {"result": result}
-
-        # Content extraction tools
-        if tool_name == "browser_get_text":
-            from browser.backend.facade.navigation.extractor import ContentExtractor
-
-            extractor = ContentExtractor(instance)
-            text = await extractor.extract_text()
-            return {"text": text}
-
-        if tool_name == "browser_get_html":
-            from browser.backend.facade.navigation.extractor import ContentExtractor
-
-            extractor = ContentExtractor(instance)
-            if selector := arguments.get("selector"):
-                html = await extractor.get_element_html(selector)
-            else:
-                html = await extractor.get_page_source()
-            return {"html": html}
-
-        if tool_name == "browser_extract_forms":
-            from browser.backend.facade.navigation.extractor import ContentExtractor
-
-            extractor = ContentExtractor(instance)
-            forms_data = await extractor.extract_forms()
-            return {"forms": forms_data}
-
-        if tool_name == "browser_extract_links":
-            from browser.backend.facade.navigation.extractor import ContentExtractor
-
-            extractor = ContentExtractor(instance)
-            links = await extractor.extract_links(absolute=arguments.get("absolute", True))
-            return {"links": links}
-
-        # Screenshot tools
-        if tool_name == "browser_screenshot":
-            # ScreenshotController doesn't exist, use driver directly
-            if selector := arguments.get("selector"):
-                element = instance.driver.find_element("css selector", selector)
-                screenshot_data = element.screenshot_as_png
-            elif arguments.get("full_page", False):
-                # Save current position
-                original_size = instance.driver.get_window_size()
-                # Get full page dimensions
-                width = instance.driver.execute_script("return document.body.scrollWidth")
-                height = instance.driver.execute_script("return document.body.scrollHeight")
-                instance.driver.set_window_size(width, height)
-                screenshot_data = instance.driver.get_screenshot_as_png()
-                # Restore original size
-                instance.driver.set_window_size(original_size["width"], original_size["height"])
-            else:
-                screenshot_data = instance.driver.get_screenshot_as_png()
-            # Convert bytes to base64 for JSON serialization
-            screenshot_b64 = base64.b64encode(screenshot_data).decode("utf-8")
-            return {"screenshot": screenshot_b64, "format": "base64"}
-
-        # Storage tools
-        if tool_name == "browser_get_cookies":
-            # Get cookies directly from driver
-            cookies = instance.driver.get_cookies()
-            return {"cookies": cookies}
-
-        if tool_name == "browser_set_cookies":
-            # Set cookies directly without navigation
-            cookies = arguments["cookies"]
-            for cookie in cookies:
-                # Ensure required fields
-                cookie_dict = {"name": cookie["name"], "value": cookie["value"]}
-                # Add optional fields if present
-                if "domain" in cookie:
-                    cookie_dict["domain"] = cookie["domain"]
-                if "path" in cookie:
-                    cookie_dict["path"] = cookie.get("path", "/")
-                instance.driver.add_cookie(cookie_dict)
-            return {"status": "set", "count": len(cookies)}
-
-        if tool_name == "browser_clear_cookies":
-            instance.driver.delete_all_cookies()
-            return {"status": "cleared"}
-
-        # Tab management tools
-        if tool_name == "browser_get_tabs":
-            # Get all window handles
-            tabs = []
-            current_handle = instance.driver.current_window_handle
-            for handle in instance.driver.window_handles:
-                instance.driver.switch_to.window(handle)
-                tabs.append({"id": handle, "title": instance.driver.title, "url": instance.driver.current_url, "active": handle == current_handle})
-            # Switch back to current tab
-            instance.driver.switch_to.window(current_handle)
-            return {"tabs": tabs}
-
-        if tool_name == "browser_switch_tab":
-            tab_id = arguments["tab_id"]
-            instance.driver.switch_to.window(tab_id)
-            return {"status": "switched"}
-
-        # Logging tools
-        if tool_name == "browser_get_console_logs":
-            logs = await instance.get_console_logs()
-            # Convert datetime to string for JSON serialization
-            return {"logs": [log.model_dump(mode="json") for log in logs]}
-
-        if tool_name == "browser_get_network_logs":
-            logs = await instance._monitor.get_network_logs(instance.driver)
-            # Convert datetime to string for JSON serialization
-            return {"logs": [log.model_dump(mode="json") for log in logs]}
+        # Check log tools
+        if handler := self._browser_log_tools.get(tool_name):
+            return await handler(arguments)
 
         raise ValueError(f"Unknown browser tool: {tool_name}")
+
+    # Lifecycle handlers
+    async def _handle_browser_launch(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser launch."""
+        instance = await self.manager.get_or_create_instance(
+            headless=arguments.get("headless", True),
+            profile=arguments.get("profile"),
+            anti_detect=arguments.get("anti_detect", False),
+            use_pool=False,
+        )
+        self._active_instance_id = instance.id
+        return {"instance_id": instance.id, "status": "launched"}
+
+    async def _handle_browser_terminate(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser termination."""
+        instance_id = arguments.get("instance_id") or self._active_instance_id
+        if not instance_id:
+            raise ValueError("No instance_id provided")
+        await self.manager.terminate_instance(instance_id)
+        if instance_id == self._active_instance_id:
+            self._active_instance_id = None
+        return {"status": "terminated"}
+
+    async def _handle_browser_list(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser list."""
+        instances = self.manager.list_instances()
+        return {"instances": instances}
+
+    async def _handle_browser_get_active(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get active browser."""
+        return {"instance_id": self._active_instance_id}
+
+    # Navigation handlers
+    async def _handle_browser_navigate(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser navigation."""
+        from browser.backend.facade.navigation.navigator import Navigator
+
+        nav = Navigator(self._current_instance)
+        # Don't pass wait_for as a string - Navigator expects None or a WaitCondition object
+        await nav.navigate(
+            arguments["url"],
+            wait_for=None,  # Will default to waiting for load
+            timeout=arguments.get("timeout", 30),
+        )
+        return {"status": "navigated", "url": arguments["url"]}
+
+    async def _handle_browser_back(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser back navigation."""
+        from browser.backend.facade.navigation.navigator import Navigator
+
+        nav = Navigator(self._current_instance)
+        await nav.back()
+        return {"status": "navigated_back"}
+
+    async def _handle_browser_forward(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser forward navigation."""
+        from browser.backend.facade.navigation.navigator import Navigator
+
+        nav = Navigator(self._current_instance)
+        await nav.forward()
+        return {"status": "navigated_forward"}
+
+    async def _handle_browser_refresh(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser refresh."""
+        from browser.backend.facade.navigation.navigator import Navigator
+
+        nav = Navigator(self._current_instance)
+        await nav.refresh()
+        return {"status": "refreshed"}
+
+    async def _handle_browser_get_url(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get current URL."""
+        return {"url": self._current_instance.driver.current_url}
+
+    # Input handlers
+    async def _handle_browser_click(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser click."""
+        from browser.backend.facade.input.mouse import MouseController
+
+        mouse = MouseController(self._current_instance)
+        # MouseController.click doesn't take button/click_count params
+        # Just use the selector for now
+        await mouse.click(arguments["selector"])
+        return {"status": "clicked"}
+
+    async def _handle_browser_type(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser typing."""
+        from browser.backend.facade.input.keyboard import KeyboardController
+
+        input_ctrl = KeyboardController(self._current_instance)
+        await input_ctrl.type_text(
+            arguments["selector"],
+            arguments["text"],
+            clear=arguments.get("clear", False),
+        )
+        return {"status": "typed"}
+
+    async def _handle_browser_select(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser select."""
+        from browser.backend.facade.input.forms import FormsController
+
+        forms = FormsController(self._current_instance)
+        await forms.select_option(arguments["selector"], arguments["value"])
+        return {"status": "selected"}
+
+    async def _handle_browser_scroll(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser scroll."""
+        from browser.backend.facade.input.mouse import MouseController
+
+        mouse = MouseController(self._current_instance)
+        if arguments.get("to") == "bottom":
+            await mouse.scroll_to_bottom()
+        elif arguments.get("to") == "top":
+            await mouse.scroll_to_top()
+        elif "x" in arguments or "y" in arguments:
+            await mouse.scroll_to(arguments.get("x", 0), arguments.get("y", 0))
+        else:
+            # Default scroll down by some amount
+            await mouse.scroll_by(0, 300)
+        return {"status": "scrolled"}
+
+    async def _handle_browser_fill_form(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle browser form filling."""
+        from browser.backend.facade.input.forms import FormsController
+
+        forms = FormsController(self._current_instance)
+        await forms.fill_form(arguments["data"], submit=arguments.get("submit", False))
+        return {"status": "filled"}
+
+    # Content extraction handlers
+    async def _handle_browser_get_html(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get HTML."""
+        from browser.backend.facade.navigation.extractor import ContentExtractor
+
+        extractor = ContentExtractor(self._current_instance)
+        html = await extractor.get_parsed_html(max_tokens=arguments.get("max_tokens", 25000))
+        return {"html": html}
+
+    async def _handle_browser_get_text(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get text."""
+        from browser.backend.facade.navigation.extractor import ContentExtractor
+
+        extractor = ContentExtractor(self._current_instance)
+        text = await extractor.get_text()
+        return {"text": text}
+
+    async def _handle_browser_execute_script(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle script execution."""
+        result = self._current_instance.driver.execute_script(arguments["script"])
+        return {"result": result}
+
+    async def _handle_browser_extract_forms(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle form extraction."""
+        from browser.backend.facade.navigation.extractor import ContentExtractor
+
+        extractor = ContentExtractor(self._current_instance)
+        forms = await extractor.extract_forms()
+        return {"forms": forms}
+
+    async def _handle_browser_extract_links(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle link extraction."""
+        from browser.backend.facade.navigation.extractor import ContentExtractor
+
+        extractor = ContentExtractor(self._current_instance)
+        links = await extractor.extract_links()
+        return {"links": links}
+
+    async def _handle_browser_screenshot(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle screenshot capture."""
+        instance = self._current_instance
+        # ScreenshotController doesn't exist, use driver directly
+        if selector := arguments.get("selector"):
+            element = instance.driver.find_element("css selector", selector)
+            screenshot_data = element.screenshot_as_png
+        elif arguments.get("full_page", False):
+            # Save current position
+            original_size = instance.driver.get_window_size()
+            # Get full page dimensions
+            width = instance.driver.execute_script("return document.body.scrollWidth")
+            height = instance.driver.execute_script("return document.body.scrollHeight")
+            instance.driver.set_window_size(width, height)
+            screenshot_data = instance.driver.get_screenshot_as_png()
+            # Restore original size
+            instance.driver.set_window_size(original_size["width"], original_size["height"])
+        else:
+            screenshot_data = instance.driver.get_screenshot_as_png()
+        # Convert bytes to base64 for JSON serialization
+        screenshot_b64 = base64.b64encode(screenshot_data).decode("utf-8")
+        return {"screenshot": screenshot_b64, "format": "base64"}
+
+    # Storage handlers
+    async def _handle_browser_get_cookies(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get cookies."""
+        cookies = self._current_instance.driver.get_cookies()
+        return {"cookies": cookies}
+
+    async def _handle_browser_set_cookies(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle set cookies."""
+        cookies = arguments["cookies"]
+        for cookie in cookies:
+            # Ensure required fields
+            cookie_dict = {"name": cookie["name"], "value": cookie["value"]}
+            # Add optional fields if present
+            if "domain" in cookie:
+                cookie_dict["domain"] = cookie["domain"]
+            if "path" in cookie:
+                cookie_dict["path"] = cookie.get("path", "/")
+            self._current_instance.driver.add_cookie(cookie_dict)
+        return {"status": "set", "count": len(cookies)}
+
+    async def _handle_browser_clear_cookies(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle clear cookies."""
+        self._current_instance.driver.delete_all_cookies()
+        return {"status": "cleared"}
+
+    # Tab management handlers
+    async def _handle_browser_get_tabs(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get tabs."""
+        instance = self._current_instance
+        tabs = []
+        current_handle = instance.driver.current_window_handle
+        for handle in instance.driver.window_handles:
+            instance.driver.switch_to.window(handle)
+            tabs.append({"id": handle, "title": instance.driver.title, "url": instance.driver.current_url, "active": handle == current_handle})
+        # Switch back to current tab
+        instance.driver.switch_to.window(current_handle)
+        return {"tabs": tabs}
+
+    async def _handle_browser_switch_tab(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle switch tab."""
+        tab_id = arguments["tab_id"]
+        self._current_instance.driver.switch_to.window(tab_id)
+        return {"status": "switched"}
+
+    # Logging handlers
+    async def _handle_browser_get_console_logs(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get console logs."""
+        logs = await self._current_instance.get_console_logs()
+        # Convert datetime to string for JSON serialization
+        return {"logs": [log.model_dump(mode="json") for log in logs]}
+
+    async def _handle_browser_get_network_logs(self, _arguments: dict[str, Any]) -> dict[str, Any]:
+        """Handle get network logs."""
+        logs = await self._current_instance._monitor.get_network_logs(self._current_instance.driver)
+        # Convert datetime to string for JSON serialization
+        return {"logs": [log.model_dump(mode="json") for log in logs]}
 
     async def _execute_profile_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute profile-related tools."""
