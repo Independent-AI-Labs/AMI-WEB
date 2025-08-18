@@ -20,7 +20,33 @@ MIN_KEYS_FOR_COMBINATION = 2
 class KeyboardController(BaseController):
     """Handles keyboard input and text entry operations."""
 
-    async def type_text(self, selector: str, text: str, clear: bool = True, delay: int = 0, wait: bool = True, timeout: int = 10) -> None:  # noqa: C901
+    async def _type_text_sync(self, element, text: str, clear: bool, delay: int) -> None:
+        """Type text synchronously in thread context."""
+        if clear:
+            element.clear()
+
+        if delay > 0:
+            for char in text:
+                element.send_keys(char)
+                time.sleep(delay / 1000)
+        else:
+            element.send_keys(text)
+
+    async def _type_text_async(self, element, text: str, clear: bool, delay: int) -> None:
+        """Type text asynchronously."""
+        loop = asyncio.get_event_loop()
+
+        if clear:
+            await loop.run_in_executor(None, element.clear)
+
+        if delay > 0:
+            for char in text:
+                await loop.run_in_executor(None, element.send_keys, char)
+                await asyncio.sleep(delay / 1000)
+        else:
+            await loop.run_in_executor(None, element.send_keys, text)
+
+    async def type_text(self, selector: str, text: str, clear: bool = True, delay: int = 0, wait: bool = True, timeout: int = 10) -> None:
         """Type text into an element.
 
         Args:
@@ -40,29 +66,9 @@ class KeyboardController(BaseController):
                 raise InputError(f"Element not found: {selector}")
 
             if self._is_in_thread_context():
-                # Synchronous operation in thread context
-                if clear:
-                    element.clear()
-
-                if delay > 0:
-                    for char in text:
-                        element.send_keys(char)
-                        time.sleep(delay / 1000)
-                else:
-                    element.send_keys(text)
+                await self._type_text_sync(element, text, clear, delay)
             else:
-                # Normal async operation
-                loop = asyncio.get_event_loop()
-
-                if clear:
-                    await loop.run_in_executor(None, element.clear)
-
-                if delay > 0:
-                    for char in text:
-                        await loop.run_in_executor(None, element.send_keys, char)
-                        await asyncio.sleep(delay / 1000)
-                else:
-                    await loop.run_in_executor(None, element.send_keys, text)
+                await self._type_text_async(element, text, clear, delay)
 
             self.instance.update_activity()
             logger.debug(f"Typed text into: {selector}")
