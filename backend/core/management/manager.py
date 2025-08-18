@@ -316,7 +316,7 @@ class ChromeManager:
         logger.info(f"Saved session {session_id} for instance {instance_id}")
         return session_id
 
-    async def restore_session(self, session_id: str, instance_id: str | None = None) -> BrowserInstance:  # noqa: ARG002
+    async def restore_session(self, session_id: str, _instance_id: str | None = None) -> BrowserInstance:
         """Restore browser session.
 
         Args:
@@ -524,7 +524,7 @@ class ChromeManager:
         # Get current properties from the page
         try:
             # Get both standard and injected properties
-            result = instance.driver.execute_script(
+            return instance.driver.execute_script(
                 """
                 var props = {
                     userAgent: navigator.userAgent,
@@ -563,7 +563,6 @@ class ChromeManager:
                 return props;
             """
             )
-            return result  # noqa: RET504
         except Exception as e:
             logger.error(f"Failed to get browser properties: {e}")
             return {}
