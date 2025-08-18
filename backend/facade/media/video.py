@@ -109,7 +109,7 @@ class VideoRecorder(BaseController):
         self.recording_sessions[session_id]["session"].status = "recording"
         logger.info(f"Resumed recording session {session_id}")
 
-    async def _record_loop(self, session_id: str, output_path: str, fps: int, codec: str) -> None:  # noqa: ARG002
+    async def _record_loop(self, session_id: str, output_path: str, fps: int, _codec: str) -> None:
         """Recording loop that captures frames.
 
         Args:
