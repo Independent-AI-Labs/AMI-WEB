@@ -244,7 +244,60 @@ class FormsController(BaseController):
             logger.error(f"Form submit failed for {selector}: {e}")
             raise InputError(f"Failed to submit form {selector}: {e}") from e
 
-    async def fill_form(self, form_data: dict[str, str | bool], submit: bool = False) -> None:  # noqa: C901
+    async def _fill_select_field(self, selector: str, value: str | bool) -> None:
+        """Fill a select field."""
+        await self.select_option(selector, text=str(value))
+
+    async def _fill_checkbox_field(self, selector: str, value: str | bool) -> None:
+        """Fill a checkbox field."""
+        if value:
+            await self.check_checkbox(selector)
+        else:
+            await self.uncheck_checkbox(selector)
+
+    async def _fill_radio_field(self, selector: str, value: str | bool) -> None:
+        """Fill a radio field."""
+        if value:
+            await self.select_radio(selector)
+
+    async def _fill_file_field(self, selector: str, value: str | bool) -> None:
+        """Fill a file upload field."""
+        await self.upload_file(selector, str(value))
+
+    async def _fill_text_field(self, selector: str, value: str | bool) -> None:
+        """Fill a text input field."""
+        from .keyboard import KeyboardController
+
+        keyboard = KeyboardController(self.instance)
+        await keyboard.type_text(selector, str(value), clear=True)
+
+    async def _fill_single_field(self, selector: str, value: str | bool, element: WebElement) -> None:
+        """Fill a single form field based on its type."""
+        tag_name = element.tag_name.lower()
+        input_type = element.get_attribute("type")
+
+        # Dispatch to appropriate handler
+        if tag_name == "select":
+            await self._fill_select_field(selector, value)
+        elif input_type == "checkbox":
+            await self._fill_checkbox_field(selector, value)
+        elif input_type == "radio":
+            await self._fill_radio_field(selector, value)
+        elif input_type == "file":
+            await self._fill_file_field(selector, value)
+        else:
+            await self._fill_text_field(selector, value)
+
+    async def _submit_form(self) -> None:
+        """Submit the form."""
+        submit_button = await self._find_element("button[type='submit'], input[type='submit']")
+        if submit_button:
+            from .mouse import MouseController
+
+            mouse = MouseController(self.instance)
+            await mouse.click("button[type='submit'], input[type='submit']")
+
+    async def fill_form(self, form_data: dict[str, str | bool], submit: bool = False) -> None:
         """Fill a form with provided data.
 
         Args:
@@ -261,35 +314,10 @@ class FormsController(BaseController):
                     logger.warning(f"Form field not found: {selector}")
                     continue
 
-                tag_name = element.tag_name.lower()
-                input_type = element.get_attribute("type")
-
-                if tag_name == "select":
-                    await self.select_option(selector, text=str(value))
-                elif input_type == "checkbox":
-                    if value:
-                        await self.check_checkbox(selector)
-                    else:
-                        await self.uncheck_checkbox(selector)
-                elif input_type == "radio":
-                    if value:
-                        await self.select_radio(selector)
-                elif input_type == "file":
-                    await self.upload_file(selector, str(value))
-                else:
-                    # Text input, textarea, etc.
-                    from .keyboard import KeyboardController
-
-                    keyboard = KeyboardController(self.instance)
-                    await keyboard.type_text(selector, str(value), clear=True)
+                await self._fill_single_field(selector, value, element)
 
             if submit:
-                submit_button = await self._find_element("button[type='submit'], input[type='submit']")
-                if submit_button:
-                    from .mouse import MouseController
-
-                    mouse = MouseController(self.instance)
-                    await mouse.click("button[type='submit'], input[type='submit']")
+                await self._submit_form()
 
             self.instance.update_activity()
             logger.debug("Form filled successfully")
