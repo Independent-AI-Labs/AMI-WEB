@@ -22,7 +22,7 @@ class BrowserWorker:
 
     def __init__(
         self,
-        worker_id: str,  # noqa: ARG002
+        _worker_id: str,
         instance: BrowserInstance,
         created_at: datetime | None = None,
     ):
@@ -207,7 +207,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         """Destroy a worker."""
         await self._cleanup_worker(worker)
 
-    async def acquire_browser(self, options: ChromeOptions | None = None) -> BrowserInstance:  # noqa: ARG002
+    async def acquire_browser(self, _options: ChromeOptions | None = None) -> BrowserInstance:
         """Acquire a browser instance from the pool (convenience method).
 
         Args:
