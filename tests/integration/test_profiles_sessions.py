@@ -18,28 +18,61 @@ async def backend():
     from pathlib import Path
 
     import yaml
+    from browser.backend.utils.config import Config
 
-    # Create a temporary config file with proper paths
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-        config = {
-            "backend": {
-                "browser": {
-                    "chrome_binary_path": "./build/chromium-win/chrome.exe",
-                    "chromedriver_path": "./build/chromedriver.exe",
-                    "default_headless": True,
-                },
-                "storage": {
-                    "profiles_dir": "./data/test_profiles",
-                    "download_dir": "./data/test_downloads",
-                    "session_dir": "./data/test_sessions",
-                },
+    # Try to use existing config.yaml or config.test.yaml first
+    config_file = None
+    if Path("config.yaml").exists():
+        config_file = "config.yaml"
+    elif Path("config.test.yaml").exists():
+        config_file = "config.test.yaml"
+
+    if config_file:
+        # Load existing config and modify storage paths for testing
+        existing_config = Config.load(config_file)
+        config_data = existing_config._data.copy()
+
+        # Override storage paths for test isolation
+        if "backend" not in config_data:
+            config_data["backend"] = {}
+        if "storage" not in config_data["backend"]:
+            config_data["backend"]["storage"] = {}
+
+        config_data["backend"]["storage"].update(
+            {
+                "profiles_dir": "./data/test_profiles",
+                "download_dir": "./data/test_downloads",
+                "session_dir": "./data/test_sessions",
             }
-        }
-        yaml.dump(config, f)
-        config_file = f.name
+        )
+
+        # Create temporary config with correct paths
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_data, f)
+            temp_config_file = f.name
+
+        manager = ChromeManager(config_file=temp_config_file)
+    else:
+        # Fallback to creating config from scratch
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            config = {
+                "backend": {
+                    "browser": {
+                        "default_headless": True,
+                    },
+                    "storage": {
+                        "profiles_dir": "./data/test_profiles",
+                        "download_dir": "./data/test_downloads",
+                        "session_dir": "./data/test_sessions",
+                    },
+                }
+            }
+            yaml.dump(config, f)
+            temp_config_file = f.name
+
+        manager = ChromeManager(config_file=temp_config_file)
 
     try:
-        manager = ChromeManager(config_file=config_file)
         # Don't initialize pool to avoid conflicts with profile tests
         # Just initialize the session manager
         await manager.session_manager.initialize()
@@ -47,7 +80,8 @@ async def backend():
         yield manager
         await manager.shutdown()
     finally:
-        Path(config_file).unlink(missing_ok=True)
+        if temp_config_file:
+            Path(temp_config_file).unlink(missing_ok=True)
 
 
 @pytest.fixture
