@@ -60,7 +60,17 @@ class MCPTestServer:
 
     async def _setup_server(self):
         """Set up the server components."""
-        self.manager = ChromeManager(config_file="config.test.yaml")
+        # Use config.yaml if it exists, otherwise config.test.yaml, otherwise defaults
+        from pathlib import Path
+
+        config_file = "config.test.yaml"
+        if Path("config.yaml").exists():
+            config_file = "config.yaml"
+        elif not Path("config.test.yaml").exists():
+            # Will use defaults if neither exists
+            config_file = None
+
+        self.manager = ChromeManager(config_file=config_file)
         # Override pool settings for efficient test reuse
         self.manager.pool.min_instances = 1  # Keep 1 instance ready
         self.manager.pool.warm_instances = 1  # Keep 1 warm for reuse
