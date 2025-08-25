@@ -5,28 +5,31 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Find orchestrator root for proper imports
-current = Path(__file__).resolve().parent
-while current != current.parent:
-    if (current / ".git").exists() and (current / "base").exists():
-        orchestrator_root = current
+# STANDARD IMPORT SETUP - DO NOT MODIFY
+current_file = Path(__file__).resolve()
+orchestrator_root = current_file
+while orchestrator_root != orchestrator_root.parent:
+    if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
         break
-    current = current.parent
+    orchestrator_root = orchestrator_root.parent
 else:
-    raise RuntimeError("Could not find orchestrator root")
+    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
 
-# Add paths for imports
-sys.path.insert(0, str(orchestrator_root))
-sys.path.insert(0, str(orchestrator_root / "base"))
+if str(orchestrator_root) not in sys.path:
+    sys.path.insert(0, str(orchestrator_root))
 
-from backend.utils.path_utils import ModuleSetup  # noqa: E402
+module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
+module_root = current_file.parent
+while module_root != orchestrator_root:
+    if module_root.name in module_names:
+        if str(module_root) not in sys.path:
+            sys.path.insert(0, str(module_root))
+        break
+    module_root = module_root.parent
 
-# Ensure we're running in the correct virtual environment
+from base.backend.utils.module_setup import ModuleSetup  # noqa: E402
+
 ModuleSetup.ensure_running_in_venv(Path(__file__))
-
-# Add browser module to path
-module_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(module_root))
 
 # Now import the server components
 from base.scripts.run_mcp_server import run_stdio  # noqa: E402
