@@ -12,6 +12,7 @@ from ...utils.exceptions import SessionError
 
 if TYPE_CHECKING:
     from ..browser.instance import BrowserInstance
+    from .manager import ChromeManager
 
 
 class SessionManager:
@@ -92,11 +93,12 @@ class SessionManager:
         logger.info(f"Saved session {session_id}")
         return session_id
 
-    async def restore_session(self, session_id: str) -> "BrowserInstance":
+    async def restore_session(self, session_id: str, manager: "ChromeManager") -> "BrowserInstance":
         """Restore a browser session.
 
         Args:
             session_id: The session ID to restore
+            manager: The ChromeManager instance to create the browser with
 
         Returns:
             A new browser instance with the restored session
@@ -110,27 +112,36 @@ class SessionManager:
         if not session_file.exists():
             raise SessionError(f"Session file not found for {session_id}")
 
-        # Load session data (will be used when proper restoration is implemented)
+        # Load session data
         with session_file.open() as f:
-            _ = json.load(f)  # session_data will be used in full implementation
+            session_data = json.load(f)
 
-        # Create new instance with the same profile
-        from .instance import BrowserInstance
+        # Create new instance with the saved profile
+        profile_name = session_data.get("profile")
+        instance = await manager.get_or_create_instance(
+            profile=profile_name,
+            headless=False,  # Sessions are typically for interactive use
+        )
 
-        # Note: This is a simplified implementation
-        # In a real scenario, we'd need access to the ChromeManager instance
-        # to properly create and configure the browser instance
-        instance = BrowserInstance()
+        # Restore the session state
+        if instance.driver:
+            # Navigate to the saved URL
+            if session_data.get("url"):
+                instance.driver.get(session_data["url"])
 
-        # The actual restoration would happen in ChromeManager.restore_session
-        # which would:
-        # 1. Create instance with the saved profile
-        # 2. Navigate to the saved URL
-        # 3. Restore cookies
-        # For now, we return a placeholder instance
-        # The ChromeManager will handle the actual restoration
+            # Restore cookies
+            if session_data.get("cookies"):
+                for cookie in session_data["cookies"]:
+                    try:
+                        instance.driver.add_cookie(cookie)
+                    except Exception as e:
+                        logger.warning(f"Failed to restore cookie: {e}")
 
-        logger.info(f"Restored session {session_id} metadata")
+            # Refresh to apply cookies
+            if session_data.get("url"):
+                instance.driver.refresh()
+
+        logger.info(f"Restored session {session_id} with profile {profile_name}")
         return instance
 
     async def list_sessions(self) -> list[dict[str, Any]]:

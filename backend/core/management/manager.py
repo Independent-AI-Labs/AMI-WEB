@@ -326,8 +326,8 @@ class ChromeManager:
         Returns:
             Browser instance with restored session
         """
-        # SessionManager's restore_session creates a new instance
-        instance = await self.session_manager.restore_session(session_id)
+        # SessionManager's restore_session creates a new instance using this manager
+        instance = await self.session_manager.restore_session(session_id, self)
 
         # Track as standalone instance
         self._standalone_instances[instance.id] = instance
