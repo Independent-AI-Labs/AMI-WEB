@@ -20,6 +20,7 @@ class TestScreenSpaceClicks:
     """Test screen-space click functionality."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_click_at_coordinates(self, browser_instance, test_html_server):
         """Test clicking at specific coordinates."""
         nav = Navigator(browser_instance)
@@ -51,6 +52,7 @@ class TestScreenSpaceClicks:
         assert status == "Incorrect text. Please try again."  # Should show error because no text entered
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_double_click_at_coordinates(self, browser_instance, test_html_server):
         """Test double-clicking at coordinates."""
         nav = Navigator(browser_instance)
@@ -89,6 +91,7 @@ class TestScreenSpaceClicks:
         assert count == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_right_click_at_coordinates(self, browser_instance, test_html_server):
         """Test right-clicking at coordinates."""
         nav = Navigator(browser_instance)
@@ -130,6 +133,7 @@ class TestScreenSpaceDrag:
     """Test screen-space drag functionality."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_drag_from_to_coordinates(self, browser_instance, test_html_server):
         """Test dragging from one coordinate to another."""
         nav = Navigator(browser_instance)
@@ -207,6 +211,7 @@ class TestScreenSpaceDrag:
         assert abs(final_pos["top"] - 275) < drag_margin
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_puzzle_captcha_drag(self, browser_instance, test_html_server):
         """Test solving a puzzle CAPTCHA using drag."""
         nav = Navigator(browser_instance)
@@ -309,6 +314,7 @@ class TestZoomInteractions:
     """Test zoom functionality."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_zoom_scale(self, browser_instance, test_html_server):
         """Test zooming the page."""
         nav = Navigator(browser_instance)
@@ -348,6 +354,7 @@ class TestZoomInteractions:
         await extractor.execute_script("document.body.style.transform = 'scale(1.0)'")
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_zoom_at_center(self, browser_instance, test_html_server):
         """Test zooming at specific center point."""
         nav = Navigator(browser_instance)
@@ -387,6 +394,7 @@ class TestSwipeGestures:
     """Test swipe gestures."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_swipe_horizontal(self, browser_instance, test_html_server):
         """Test horizontal swipe gesture."""
         nav = Navigator(browser_instance)
@@ -449,6 +457,7 @@ class TestSwipeGestures:
         assert swipe_direction == "left"
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_swipe_vertical(self, browser_instance, test_html_server):
         """Test vertical swipe gesture."""
         nav = Navigator(browser_instance)
@@ -514,6 +523,7 @@ class TestTextExtraction:
     """Test text extraction functionality."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_extract_text_from_page(self, browser_instance, test_html_server):
         """Test extracting human-readable text from a page."""
         nav = Navigator(browser_instance)
@@ -536,6 +546,7 @@ class TestTextExtraction:
         assert "Login Form" in flat_text
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_extract_links(self, browser_instance, test_html_server):
         """Test extracting links from a page."""
         nav = Navigator(browser_instance)
@@ -569,6 +580,7 @@ class TestTextExtraction:
             assert "title" in link
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_extract_forms(self, browser_instance, test_html_server):
         """Test extracting form information."""
         nav = Navigator(browser_instance)

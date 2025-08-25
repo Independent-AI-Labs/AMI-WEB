@@ -17,6 +17,7 @@ class TestMCPServerIntegration:
     """Test MCP server with real browser integration."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_ping_pong(self, mcp_client):
         """Test ping-pong messaging."""
         # Send ping and verify pong response
@@ -24,6 +25,7 @@ class TestMCPServerIntegration:
         assert result.get("status") == "pong"
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_server_initialization(self, mcp_client):
         """Test server initializes correctly."""
         # Client already initialized in fixture
@@ -126,6 +128,7 @@ class TestMCPServerIntegration:
         assert data["result"]["password"] == test_password
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_concurrent_browser_instances(self, mcp_client):
         """Test managing multiple browser instances concurrently."""
         instance_ids = []
@@ -195,6 +198,7 @@ class TestMCPServerIntegration:
             await mcp_client.terminate(instance_id)
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_error_handling(self, mcp_client):
         """Test error handling for invalid operations."""
         # Try to navigate with invalid instance ID
@@ -238,6 +242,7 @@ class TestMCPServerResilience:
             logger.debug(f"Cleanup error (expected): {e}")
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_timeout_handling(self, mcp_client, browser_instance):
         """Test handling of long-running operations."""
         # Execute a long-running script
@@ -254,6 +259,7 @@ class TestMCPServerResilience:
         assert data["result"] == "done"
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_resource_cleanup(self, mcp_client):
         """Test proper resource cleanup."""
         instance_ids = []

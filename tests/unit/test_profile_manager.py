@@ -274,7 +274,7 @@ class TestProfileValidation:
             }
 
             manager.validate_profile = Mock(
-                side_effect=lambda p: ("properties" in p and p["properties"].get("userAgent") and isinstance(p["properties"].get("languages"), list))
+                side_effect=lambda p: bool("properties" in p and p["properties"].get("userAgent") and isinstance(p["properties"].get("languages"), list))
             )
 
             assert manager.validate_profile(valid_profile) is True
@@ -346,9 +346,12 @@ class TestProfilePersistence:
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
             manager.profiles = {}
-            manager.import_profile = AsyncMock(
-                side_effect=lambda data: manager.profiles.update({data["id"]: json.loads(data) if isinstance(data, str) else data})
-            )
+
+            async def mock_import(data):
+                profile = json.loads(data) if isinstance(data, str) else data
+                manager.profiles[profile["id"]] = profile
+
+            manager.import_profile = AsyncMock(side_effect=mock_import)
 
             profile_data = """{
                 "id": "profile-imported",

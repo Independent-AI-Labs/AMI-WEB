@@ -12,6 +12,7 @@ class TestAntiDetection:
     """Test anti-detection features on bot.sannysoft.com."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_first_tab_antidetection(self, antidetect_browser):
         """Test anti-detection on first tab."""
         instance = antidetect_browser
@@ -56,6 +57,7 @@ class TestAntiDetection:
             pass  # Cleanup handled by fixture
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_second_tab_antidetection(self, antidetect_browser):  # noqa: C901
         """Test anti-detection on second tab opened via window.open()."""
         instance = antidetect_browser
@@ -232,6 +234,7 @@ class TestAntiDetection:
             pass  # Cleanup handled by fixture
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_mcp_manager_antidetection(self, session_manager):
         """Test that ChromeManager (used by MCP) has anti-detection by default."""
         manager = session_manager
@@ -281,6 +284,7 @@ class TestH264Codec:
     """Test H.264 codec support."""
 
     @pytest.mark.asyncio
+    @pytest.mark.slow
     async def test_h264_codec_response(self, antidetect_browser):
         """Test that H.264 codec is properly supported."""
         instance = antidetect_browser
