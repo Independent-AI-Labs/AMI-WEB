@@ -2,30 +2,12 @@
 """Run Browser MCP server."""
 
 import asyncio
-import sys
 from pathlib import Path
 
-# STANDARD IMPORT SETUP - DO NOT MODIFY
-current_file = Path(__file__).resolve()
-orchestrator_root = current_file
-while orchestrator_root != orchestrator_root.parent:
-    if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
-        break
-    orchestrator_root = orchestrator_root.parent
-else:
-    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
+# Use standard import setup
+from base.backend.utils.standard_imports import setup_imports
 
-if str(orchestrator_root) not in sys.path:
-    sys.path.insert(0, str(orchestrator_root))
-
-module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
-module_root = current_file.parent
-while module_root != orchestrator_root:
-    if module_root.name in module_names:
-        if str(module_root) not in sys.path:
-            sys.path.insert(0, str(module_root))
-        break
-    module_root = module_root.parent
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.utils.module_setup import ModuleSetup  # noqa: E402
 
@@ -42,7 +24,7 @@ async def main():
     # Get config file if exists
     config_file = None
     for name in ["config.yaml", "config.test.yaml"]:
-        path = module_root / name
+        path = MODULE_ROOT / name
         if path.exists():
             config_file = str(path)
             break
