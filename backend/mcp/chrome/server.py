@@ -3,29 +3,11 @@
 import sys
 from pathlib import Path
 
+# Use standard import setup
+from base.backend.utils.standard_imports import setup_imports
 from loguru import logger
 
-# STANDARD IMPORT SETUP - DO NOT MODIFY
-current_file = Path(__file__).resolve()
-orchestrator_root = current_file
-while orchestrator_root != orchestrator_root.parent:
-    if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
-        break
-    orchestrator_root = orchestrator_root.parent
-else:
-    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
-
-if str(orchestrator_root) not in sys.path:
-    sys.path.insert(0, str(orchestrator_root))
-
-module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
-module_root = current_file.parent
-while module_root != orchestrator_root:
-    if module_root.name in module_names:
-        if str(module_root) not in sys.path:
-            sys.path.insert(0, str(module_root))
-        break
-    module_root = module_root.parent
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.mcp.server_base import StandardMCPServer  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
