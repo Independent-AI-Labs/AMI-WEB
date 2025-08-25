@@ -148,7 +148,7 @@ class TestMCPServerConnection:
         # mcp_server is the test server instance
 
         # Connect to the server
-        async with websockets.connect("ws://localhost:8766", open_timeout=5) as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}", open_timeout=5) as websocket:
             # Send initialize request
             await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "initialize", "params": {}, "id": 1}))
 
@@ -186,7 +186,7 @@ class TestMCPServerConnection:
         """Test ping-pong messaging."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Send ping using JSON-RPC
             await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "ping", "params": {}, "id": 1}))
 
@@ -203,7 +203,7 @@ class TestMCPServerConnection:
         """Test listing available tools."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Request tool list using JSON-RPC
             await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}))
 
@@ -225,7 +225,7 @@ class TestMCPBrowserOperations:
         """Test launching browser via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch browser using JSON-RPC
             request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
 
@@ -261,7 +261,7 @@ class TestMCPBrowserOperations:
         """Test navigation and screenshot via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766", ping_interval=None) as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}", ping_interval=None) as websocket:
             # Launch browser
             launch_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
 
@@ -321,7 +321,7 @@ class TestMCPBrowserOperations:
         """Test input operations via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             launch_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
 
@@ -382,7 +382,7 @@ class TestMCPBrowserOperations:
         """Test script execution via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -435,7 +435,7 @@ class TestMCPCookieManagement:
         """Test getting and setting cookies via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -516,7 +516,7 @@ class TestMCPTabManagement:
         """Test tab operations via MCP."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch browser
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -557,7 +557,7 @@ class TestMCPErrorHandling:
         """Test calling invalid tool."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Call non-existent tool
             request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "invalid_tool", "arguments": {}}, "id": 1}
 
@@ -573,7 +573,7 @@ class TestMCPErrorHandling:
         """Test operations on invalid instance."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Try to navigate with invalid instance
             request = {
                 "jsonrpc": "2.0",
@@ -594,7 +594,7 @@ class TestMCPErrorHandling:
         """Test handling malformed requests."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Send invalid JSON
             await websocket.send("not valid json")
             response = await websocket.recv()
@@ -613,7 +613,7 @@ class TestMCPConcurrency:
         # mcp_server is the test server instance
 
         async def client_task(client_id):
-            async with websockets.connect("ws://localhost:8766") as websocket:
+            async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
                 # Each client launches a browser
                 await websocket.send(
                     json.dumps(
@@ -655,7 +655,7 @@ class TestMCPConcurrency:
         """Test concurrent operations on same browser instance."""
         # mcp_server is the test server instance
 
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch browser
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})

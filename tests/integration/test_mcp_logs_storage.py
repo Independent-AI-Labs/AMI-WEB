@@ -26,7 +26,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_get_html(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving raw HTML via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch browser using JSON-RPC
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -75,7 +75,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_get_text(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving text content via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -122,7 +122,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_extract_forms(self, mcp_server, test_html_server):  # noqa: F811
         """Test extracting form data via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -176,7 +176,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_extract_links(self, mcp_server, test_html_server):  # noqa: F811
         """Test extracting links via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -223,7 +223,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_console_logs(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving console logs via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate to page with console logs
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
@@ -274,7 +274,7 @@ class TestMCPLogsAndStorage:
     @pytest.mark.asyncio
     async def test_network_logs(self, mcp_server, test_html_server):  # noqa: F811
         """Test retrieving network logs via MCP."""
-        async with websockets.connect("ws://localhost:8766") as websocket:
+        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
             # Launch and navigate
             await websocket.send(
                 json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
