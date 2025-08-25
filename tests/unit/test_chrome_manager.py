@@ -170,9 +170,15 @@ class TestChromeManagerSessions:
         with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
             manager = mock_manager_class()
             manager.session_manager = mock_session_manager
-            manager.get_or_create_instance = AsyncMock(return_value=mock_browser_instance)
-
             mock_session_manager.get_session = AsyncMock(return_value={"id": "session-123", "cookies": [], "local_storage": {}})
+
+            # Mock the get_or_create_instance to call get_session
+            async def mock_get_or_create(session_id=None, **kwargs):  # noqa: ARG001
+                if session_id:
+                    await mock_session_manager.get_session(session_id)
+                return mock_browser_instance
+
+            manager.get_or_create_instance = AsyncMock(side_effect=mock_get_or_create)
 
             instance = await manager.get_or_create_instance(session_id="session-123")
 
@@ -203,9 +209,15 @@ class TestChromeManagerProfiles:
         with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
             manager = mock_manager_class()
             manager.profile_manager = mock_profile_manager
-            manager.get_or_create_instance = AsyncMock(return_value=mock_browser_instance)
-
             mock_profile_manager.get_profile = AsyncMock(return_value={"id": "profile-123", "user_agent": "Custom UA", "properties": {}})
+
+            # Mock the get_or_create_instance to call get_profile
+            async def mock_get_or_create(profile_id=None, **kwargs):  # noqa: ARG001
+                if profile_id:
+                    await mock_profile_manager.get_profile(profile_id)
+                return mock_browser_instance
+
+            manager.get_or_create_instance = AsyncMock(side_effect=mock_get_or_create)
 
             instance = await manager.get_or_create_instance(profile_id="profile-123")
 
