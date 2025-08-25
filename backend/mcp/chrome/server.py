@@ -6,17 +6,27 @@ from typing import Any
 
 from loguru import logger
 
-# Smart path discovery - find project roots by looking for .git/.venv
-current = Path(__file__).resolve().parent
-while current != current.parent:
-    # Found main orchestrator (has base/ and .git)
-    if (current / "base").exists() and (current / ".git").exists():
-        sys.path.insert(0, str(current))
+# STANDARD IMPORT SETUP - DO NOT MODIFY
+current_file = Path(__file__).resolve()
+orchestrator_root = current_file
+while orchestrator_root != orchestrator_root.parent:
+    if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
         break
-    # Found module root (has .venv or .git and backend/)
-    if ((current / ".venv").exists() or (current / ".git").exists()) and (current / "backend").exists() and str(current) not in sys.path:
-        sys.path.insert(0, str(current))
-    current = current.parent
+    orchestrator_root = orchestrator_root.parent
+else:
+    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
+
+if str(orchestrator_root) not in sys.path:
+    sys.path.insert(0, str(orchestrator_root))
+
+module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
+module_root = current_file.parent
+while module_root != orchestrator_root:
+    if module_root.name in module_names:
+        if str(module_root) not in sys.path:
+            sys.path.insert(0, str(module_root))
+        break
+    module_root = module_root.parent
 
 from base.backend.mcp.mcp_server import BaseMCPServer  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
