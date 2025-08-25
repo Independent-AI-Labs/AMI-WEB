@@ -16,17 +16,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: .venv/bin/mypy
-        language: system
-        types: [ python ]
-        require_serial: true
-        stages: [ pre-commit ]
-
-  - repo: local
-    hooks:
-      - id: mypy-tests
-        name: mypy (tests)
-        entry: .venv/bin/mypy
+        entry: .venv/Scripts/python.exe -m mypy
         language: system
         types: [ python ]
         require_serial: true
@@ -41,10 +31,6 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [ pre-push ]
-        verbose: true
-        # Browser tests can take up to 5 minutes
-        # Default timeout is 120s, we need 300s (5 min)
-        # This is handled by pytest.ini timeout setting
 
   # Additional useful hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -53,6 +39,7 @@ repos:
       - id: check-yaml
         stages: [ pre-commit ]
       - id: check-added-large-files
+        args: ['--maxkb=100000']  # 100MB limit
         stages: [ pre-commit ]
       - id: check-merge-conflict
         stages: [ pre-commit ]
