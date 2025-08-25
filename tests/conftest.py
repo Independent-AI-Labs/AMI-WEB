@@ -38,26 +38,28 @@ logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
 
-# Global manager instance for all tests
-_GLOBAL_MANAGER = None
+# NO GLOBAL STATE - Each test gets its own manager instance
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
 async def session_manager():
-    """Create a single Chrome manager for the entire test session."""
-    global _GLOBAL_MANAGER  # noqa: PLW0603
-    if _GLOBAL_MANAGER is None:
-        # Use test config for testing
-        test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
-        _GLOBAL_MANAGER = ChromeManager(config_file=test_config)
-        # Pool is configured through the manager's constructor using config file
-        # No need to modify pool settings directly - they're set via PoolConfig
-        await _GLOBAL_MANAGER.start()
-        logger.info("Created global ChromeManager for test session")
+    """Create a Chrome manager instance for each test."""
+    # Use test config for testing
+    test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
+    manager = ChromeManager(config_file=test_config)
+    # Pool is configured through the manager's constructor using config file
+    # No need to modify pool settings directly - they're set via PoolConfig
+    await manager.start()
+    logger.info("Created ChromeManager for test")
 
-    yield _GLOBAL_MANAGER
+    yield manager
 
-    # Cleanup will happen in cleanup_at_exit
+    # Cleanup after test
+    try:
+        await manager.stop()
+        logger.info("Stopped ChromeManager after test")
+    except Exception as e:
+        logger.warning(f"Error stopping manager: {e}")
 
 
 @pytest_asyncio.fixture
@@ -128,10 +130,14 @@ def test_html_server():
     server.stop()  # Stops the thread
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
 async def test_server():
-    """Start test HTTP server for the entire test session."""
-    server = HTMLTestServer(port=8888)
+    """Start test HTTP server for each test."""
+    import random
+
+    # Use a random port to avoid conflicts
+    port = random.randint(9000, 9999)  # noqa: S311
+    server = HTMLTestServer(port=port)
     try:
         base_url = await server.start()
         logger.info(f"Test server started at {base_url}")
@@ -228,31 +234,12 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "pool: marks tests related to browser pool")
 
 
-async def cleanup_manager():
-    """Properly shutdown the global manager."""
-    global _GLOBAL_MANAGER  # noqa: PLW0603
-    if _GLOBAL_MANAGER:
-        try:
-            logger.info("Shutting down global ChromeManager")
-            await _GLOBAL_MANAGER.shutdown()
-            _GLOBAL_MANAGER = None
-        except Exception as e:
-            logger.error(f"Error shutting down manager: {e}")
+# Removed cleanup_manager - no global state to clean up
 
 
 def cleanup_processes():
     """Kill any remaining browser or server processes."""
-    # First try to properly shutdown the manager
-    import asyncio
-
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(cleanup_manager())
-        else:
-            loop.run_until_complete(cleanup_manager())
-    except Exception:  # noqa: S110
-        pass
+    # No global manager to clean up - each test handles its own
 
     # Try to log cleanup, but suppress any errors if logger is closed
     try:
