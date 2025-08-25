@@ -62,6 +62,8 @@ class TestMCPProtocol:
         await mock_transport.send(json.dumps(request))
 
         assert mock_transport.messages[0] == request
+        # The mock transport's receive returns the response directly
+        mock_transport.receive = AsyncMock(return_value=json.dumps(response))
         result = await mock_transport.receive()
         assert json.loads(result) == response
 
