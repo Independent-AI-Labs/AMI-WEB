@@ -4,6 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+# Import fixtures for use in tests
+pytest_plugins = ["tests.unit.fixtures"]
+
 
 class TestChromeManager:
     """Test ChromeManager without real browser instances."""
