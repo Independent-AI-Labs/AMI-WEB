@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -28,7 +27,7 @@ while module_root != orchestrator_root:
         break
     module_root = module_root.parent
 
-from base.backend.mcp.mcp_server import BaseMCPServer  # noqa: E402
+from base.backend.mcp.server_base import StandardMCPServer  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 
 # Add chrome directory to path for tool imports
@@ -38,7 +37,7 @@ from tools.executor import ToolExecutor  # noqa: E402
 from tools.registry import ToolRegistry  # noqa: E402
 
 
-class BrowserMCPServer(BaseMCPServer):
+class BrowserMCPServer(StandardMCPServer[ToolRegistry, ToolExecutor]):
     """MCP server for Chrome Manager - defines browser automation tools only."""
 
     def __init__(self, manager: ChromeManager, config: dict | None = None):
@@ -49,16 +48,21 @@ class BrowserMCPServer(BaseMCPServer):
             config: Server configuration
         """
         self.manager = manager
-
-        # Initialize tool registry and executor for execution
-        self.registry = ToolRegistry()
-        register_all_tools(self.registry)
-        self.executor = ToolExecutor(manager)
-
-        # Initialize base with config
-        super().__init__(config)
-
+        # Pass manager to parent for executor initialization
+        super().__init__(config, manager=manager)
         logger.info(f"Browser MCP server initialized with {len(self.tools)} tools")
+
+    def get_registry_class(self) -> type[ToolRegistry]:
+        """Get the tool registry class."""
+        return ToolRegistry
+
+    def get_executor_class(self) -> type[ToolExecutor]:
+        """Get the tool executor class."""
+        return ToolExecutor
+
+    def register_tools_to_registry(self, registry: ToolRegistry) -> None:
+        """Register browser tools to the registry."""
+        register_all_tools(registry)
 
     def register_tools(self) -> None:
         """Register all Chrome Manager tools."""
@@ -69,15 +73,4 @@ class BrowserMCPServer(BaseMCPServer):
                 "inputSchema": {"type": "object", "properties": tool.parameters.get("properties", {}), "required": tool.parameters.get("required", [])},
             }
 
-    async def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Execute a browser automation tool.
-
-        Args:
-            tool_name: Name of the tool to execute
-            arguments: Tool arguments
-
-        Returns:
-            Tool execution result
-        """
-        # Execute using the tool executor
-        return await self.executor.execute(tool_name, arguments)
+    # execute_tool is inherited from StandardMCPServer
