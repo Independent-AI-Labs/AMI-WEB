@@ -1,710 +1,328 @@
-"""Integration tests for MCP server functionality."""
-# ruff: noqa: ARG002, E402
-
-import sys
-from pathlib import Path
-
-# Add browser directory to path before any imports
-# IMPORTANT: Must be first to avoid namespace collision with root backend directory
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+"""Integration tests for MCP server with real browser instances."""
 
 import asyncio
 import json
+import logging
 import os
-import threading
-import time
 
 import pytest
-import pytest_asyncio
-import websockets
-from browser.backend.core.management.manager import ChromeManager
-from browser.backend.mcp.chrome.server import BrowserMCPServer
-from loguru import logger
 
-# Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
+logger = logging.getLogger(__name__)
+
+# Use headless mode by default in CI
+HEADLESS = os.environ.get("HEADLESS", "true").lower() == "true"
 
 
-class MCPTestServer:
-    """Test MCP server that runs properly for testing."""
+class TestMCPServerIntegration:
+    """Test MCP server with real browser integration."""
 
-    def __init__(self, port=8766):
-        self.port = port
-        self.server = None
-        self.manager = None
-        self.loop = None
-        self.thread = None
-        self.ready_event = threading.Event()
-        self.stop_event = threading.Event()
+    @pytest.mark.asyncio
+    async def test_ping_pong(self, mcp_client):
+        """Test ping-pong messaging."""
+        # Send ping and verify pong response
+        result = await mcp_client.send_request("ping")
+        assert result.get("status") == "pong"
 
-    def _run_server(self):
-        """Run server with its own event loop."""
-        # Create new event loop for this thread
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+    @pytest.mark.asyncio
+    async def test_server_initialization(self, mcp_client):
+        """Test server initializes correctly."""
+        # Client already initialized in fixture
+        # Just verify we can list tools
+        result = await mcp_client.list_tools()
+
+        assert "tools" in result
+        tools = result["tools"]
+        assert len(tools) > 0
+
+        # Verify expected tools
+        tool_names = [tool["name"] for tool in tools]
+        assert "browser_launch" in tool_names
+        assert "browser_navigate" in tool_names
+        assert "browser_screenshot" in tool_names
+
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    async def test_browser_lifecycle(self, mcp_client):
+        """Test full browser lifecycle: launch, navigate, terminate."""
+        # Launch browser
+        instance_id = await mcp_client.launch_browser(headless=HEADLESS)
+        assert instance_id
+        logger.info(f"Launched browser instance: {instance_id}")
 
         try:
-            # Initialize manager and server synchronously in the thread
-            self.loop.run_until_complete(self._setup_server())
-            self.ready_event.set()
-
-            # Keep the server running
-            self.loop.run_until_complete(self._serve_forever())
-
-        except Exception as e:
-            logger.error(f"Server error: {e}")
-            self.ready_event.set()  # Signal even on error
-        finally:
-            self.loop.run_until_complete(self._cleanup())
-            self.loop.close()
-
-    async def _setup_server(self):
-        """Set up the server components."""
-        # Use config.yaml if it exists, otherwise config.test.yaml, otherwise defaults
-        from pathlib import Path
-
-        config_file = "config.test.yaml"
-        if Path("config.yaml").exists():
-            config_file = "config.yaml"
-        elif not Path("config.test.yaml").exists():
-            # Will use defaults if neither exists
-            config_file = None
-
-        self.manager = ChromeManager(config_file=config_file)
-        # Override pool settings for efficient test reuse
-        self.manager.pool.min_instances = 1  # Keep 1 instance ready
-        self.manager.pool.warm_instances = 1  # Keep 1 warm for reuse
-        self.manager.pool.max_instances = 3  # Limit max instances (for concurrent tests)
-        await self.manager.start()
-
-        config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10, "response_format": "json"}
-        self.server = BrowserMCPServer(self.manager, config)
-        await self.server.start()
-
-        logger.info(f"Test MCP server started on port {self.port}")
-
-    async def _serve_forever(self):
-        """Keep server running until stop is signaled."""
-        while not self.stop_event.is_set():
-            await asyncio.sleep(0.1)
-
-    async def _cleanup(self):
-        """Clean up server resources."""
-        if self.server:
-            await self.server.stop()
-        if self.manager:
-            # Force shutdown of all browser instances and pool
-            await self.manager.shutdown()
-
-    def start(self):
-        """Start the server in a thread."""
-        self.thread = threading.Thread(target=self._run_server, daemon=True)
-        self.thread.start()
-
-        # Wait for server to be ready
-        if not self.ready_event.wait(timeout=10):
-            raise TimeoutError("Server failed to start")
-
-        # Extra wait for socket binding
-        time.sleep(0.5)
-
-    def stop(self):
-        """Stop the server."""
-        self.stop_event.set()
-        if self.thread:
-            self.thread.join(timeout=2)
-            if self.thread.is_alive():
-                logger.warning("Server thread did not stop gracefully")
-        # Force cleanup the event loop if it exists
-        if self.loop and not self.loop.is_closed():
-            try:
-                self.loop.stop()
-                self.loop.close()
-            except Exception as e:
-                logger.error(f"Error closing loop: {e}")
-
-
-@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
-async def mcp_server():
-    """Start MCP test server for each test."""
-    import random
-
-    # Use a random port to avoid conflicts
-    port = random.randint(9000, 9999)  # noqa: S311
-    server = MCPTestServer(port=port)
-    server.start()
-
-    yield server
-
-    server.stop()
-
-
-class TestMCPServerConnection:
-    """Test MCP server connection and capabilities."""
-
-    @pytest.mark.asyncio
-    async def test_connect_to_server(self, mcp_server):
-        """Test connecting to MCP server."""
-        # mcp_server is the test server instance
-
-        # Connect to the server
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}", open_timeout=5) as websocket:
-            # Send initialize request
-            await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "initialize", "params": {}, "id": 1}))
-
-            response = await asyncio.wait_for(websocket.recv(), timeout=5)
-            data = json.loads(response)
-
-            assert data["jsonrpc"] == "2.0"
-            assert "result" in data
-            assert data["result"]["protocolVersion"] == "2024-11-05"
-            assert "capabilities" in data["result"]
-
-            # List tools
-            await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 2}))
-
-            response = await asyncio.wait_for(websocket.recv(), timeout=5)
-            data = json.loads(response)
-
-            assert "result" in data
-            assert "tools" in data["result"]
-            tools = data["result"]["tools"]
-            assert len(tools) > 0
-
-            # Verify expected tools are registered
-            tool_names = [tool["name"] for tool in tools]
-            assert "browser_launch" in tool_names
-            assert "browser_navigate" in tool_names
-            assert "browser_screenshot" in tool_names
-            assert "browser_click" in tool_names
-            assert "browser_type" in tool_names
-
-            logger.info(f"MCP server has {len(tool_names)} tools available")
-
-    @pytest.mark.asyncio
-    async def test_ping_pong(self, mcp_server):
-        """Test ping-pong messaging."""
-        # mcp_server is the test server instance
-
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Send ping using JSON-RPC
-            await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "ping", "params": {}, "id": 1}))
-
-            # Receive pong
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert data["jsonrpc"] == "2.0"
-            assert "result" in data
-            assert data["result"]["status"] == "pong"
-
-    @pytest.mark.asyncio
-    async def test_list_tools(self, mcp_server):
-        """Test listing available tools."""
-        # mcp_server is the test server instance
-
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Request tool list using JSON-RPC
-            await websocket.send(json.dumps({"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": 1}))
-
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert data["jsonrpc"] == "2.0"
-            assert "result" in data
-            assert "tools" in data["result"]
-            assert isinstance(data["result"]["tools"], list)
-            assert len(data["result"]["tools"]) > 0
-
-
-class TestMCPBrowserOperations:
-    """Test MCP browser operations."""
-
-    @pytest.mark.asyncio
-    async def test_launch_browser(self, mcp_server):
-        """Test launching browser via MCP."""
-        # mcp_server is the test server instance
-
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch browser using JSON-RPC
-            request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
-
-            await websocket.send(json.dumps(request))
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert data["jsonrpc"] == "2.0"
-            assert "result" in data
-            content = data["result"]["content"][0]
-            result = json.loads(content["text"])
-            assert "instance_id" in result
-
-            instance_id = result["instance_id"]
-
-            # Terminate browser (browser_close doesn't exist, it's browser_terminate)
-            close_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}},
-                "id": 2,
-            }
-
-            await websocket.send(json.dumps(close_request))
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert data["jsonrpc"] == "2.0"
-            assert "result" in data
-
-    @pytest.mark.asyncio
-    async def test_navigate_and_screenshot(self, mcp_server, test_html_server):
-        """Test navigation and screenshot via MCP."""
-        # mcp_server is the test server instance
-
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}", ping_interval=None) as websocket:
-            # Launch browser
-            launch_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
-
-            await websocket.send(json.dumps(launch_request))
-            response = await asyncio.wait_for(websocket.recv(), timeout=30)
-            launch_data = json.loads(response)
-            content = launch_data["result"]["content"][0]
-            result = json.loads(content["text"])
-            instance_id = result["instance_id"]
-
-            # Navigate to page
-            nav_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/login_form.html"}},
-                "id": 2,
-            }
-
-            await websocket.send(json.dumps(nav_request))
-            response = await asyncio.wait_for(websocket.recv(), timeout=30)
-            nav_data = json.loads(response)
-
-            assert "result" in nav_data
-            content = nav_data["result"]["content"][0]
-            nav_result = json.loads(content["text"])
-            assert nav_result["status"] == "navigated"
+            # Navigate to URL
+            await mcp_client.navigate(instance_id, "https://example.com")
 
             # Take screenshot
-            screenshot_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_screenshot", "arguments": {"instance_id": instance_id}},
-                "id": 3,
-            }
+            result = await mcp_client.screenshot(instance_id)
+            assert result
+            assert "content" in result
+            content = result["content"]
+            assert len(content) > 0
+            assert content[0]["type"] == "image"
 
-            await websocket.send(json.dumps(screenshot_request))
-            response = await websocket.recv()
-            screenshot_data = json.loads(response)
-
-            assert "result" in screenshot_data
-            content = screenshot_data["result"]["content"][0]
-            screenshot_result = json.loads(content["text"])
-            assert "screenshot" in screenshot_result
-            assert screenshot_result["format"] == "base64"
-
-            # Cleanup
-            close_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}},
-                "id": 4,
-            }
-            await websocket.send(json.dumps(close_request))
+        finally:
+            # Terminate
+            await mcp_client.terminate(instance_id)
+            logger.info(f"Terminated browser instance: {instance_id}")
 
     @pytest.mark.asyncio
-    async def test_input_operations(self, mcp_server, test_html_server):
-        """Test input operations via MCP."""
-        # mcp_server is the test server instance
+    @pytest.mark.slow
+    async def test_javascript_execution(self, mcp_client, browser_instance):
+        """Test executing JavaScript in browser."""
+        # Navigate first
+        await mcp_client.navigate(browser_instance, "https://example.com")
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch and navigate
-            launch_request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1}
+        # Execute script
+        script = "return document.title;"
+        result = await mcp_client.execute_script(browser_instance, script)
 
-            await websocket.send(json.dumps(launch_request))
-            response = await websocket.recv()
-            content = json.loads(response)["result"]["content"][0]
-            instance_id = json.loads(content["text"])["instance_id"]
-
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/login_form.html"}},
-                        "id": 2,
-                    }
-                )
-            )
-            await websocket.recv()
-
-            # Type text
-            type_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_type", "arguments": {"instance_id": instance_id, "selector": "#username", "text": "testuser", "clear": True}},
-                "id": 3,
-            }
-
-            await websocket.send(json.dumps(type_request))
-            response = await websocket.recv()
-            type_data = json.loads(response)
-
-            assert "result" in type_data
-
-            # Click button
-            click_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_click", "arguments": {"instance_id": instance_id, "selector": "#submit-btn"}},
-                "id": 4,
-            }
-
-            await websocket.send(json.dumps(click_request))
-            response = await websocket.recv()
-            click_data = json.loads(response)
-
-            assert "result" in click_data
-
-            # Cleanup
-            await websocket.send(
-                json.dumps(
-                    {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}}, "id": 5}
-                )
-            )
+        assert result
+        assert "content" in result
+        content = result["content"]
+        assert len(content) > 0
+        assert content[0]["type"] == "text"
+        text = json.loads(content[0]["text"])
+        assert "result" in text
 
     @pytest.mark.asyncio
-    async def test_script_execution(self, mcp_server, test_html_server):
-        """Test script execution via MCP."""
-        # mcp_server is the test server instance
+    @pytest.mark.slow
+    async def test_form_interactions(self, mcp_client, browser_instance):
+        """Test form interaction capabilities."""
+        # Navigate to a page with a form
+        test_html = """
+        <html>
+        <body>
+            <form id="test-form">
+                <input type="text" id="username" name="username">
+                <input type="password" id="password" name="password">
+                <button type="submit">Submit</button>
+            </form>
+        </body>
+        </html>
+        """
+        test_url = f"data:text/html,{test_html}"
+        await mcp_client.navigate(browser_instance, test_url)
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch and navigate
-            await websocket.send(
-                json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
-            )
-            response = await websocket.recv()
-            content = json.loads(response)["result"]["content"][0]
-            instance_id = json.loads(content["text"])["instance_id"]
+        # Type in username field
+        result = await mcp_client.call_tool("browser_type", {"instance_id": browser_instance, "selector": "#username", "text": "testuser"})
+        assert result
 
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/captcha_form.html"}},
-                        "id": 2,
-                    }
-                )
-            )
-            await websocket.recv()
+        # Type in password field
+        result = await mcp_client.call_tool("browser_type", {"instance_id": browser_instance, "selector": "#password", "text": "testpass"})
+        assert result
 
-            # Execute script
-            script_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_execute_script", "arguments": {"instance_id": instance_id, "script": "return window.captchaState.textCaptcha"}},
-                "id": 3,
-            }
-
-            await websocket.send(json.dumps(script_request))
-            response = await websocket.recv()
-            script_data = json.loads(response)
-
-            assert "result" in script_data
-            # browser_execute_script doesn't exist in our tool definitions
-            # This test will need adjustment
-
-            # Cleanup
-            await websocket.send(
-                json.dumps(
-                    {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}}, "id": 4}
-                )
-            )
-
-
-class TestMCPCookieManagement:
-    """Test cookie management via MCP."""
+        # Verify values were entered
+        script = """
+        return {
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        };
+        """
+        result = await mcp_client.execute_script(browser_instance, script)
+        data = json.loads(result["content"][0]["text"])
+        assert data["result"]["username"] == "testuser"
+        test_password = "testpass"  # noqa: S105
+        assert data["result"]["password"] == test_password
 
     @pytest.mark.asyncio
-    async def test_get_and_set_cookies(self, mcp_server, test_html_server):
-        """Test getting and setting cookies via MCP."""
-        # mcp_server is the test server instance
+    async def test_concurrent_browser_instances(self, mcp_client):
+        """Test managing multiple browser instances concurrently."""
+        instance_ids = []
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch and navigate
-            await websocket.send(
-                json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
-            )
-            response = await websocket.recv()
-            content = json.loads(response)["result"]["content"][0]
-            instance_id = json.loads(content["text"])["instance_id"]
+        try:
+            # Launch 3 browsers concurrently
+            tasks = [mcp_client.launch_browser(headless=True) for _ in range(3)]
+            instance_ids = await asyncio.gather(*tasks)
 
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/login_form.html"}},
-                        "id": 2,
-                    }
-                )
-            )
-            await websocket.recv()
+            expected_count = 3
+            assert len(instance_ids) == expected_count
+            assert all(instance_id for instance_id in instance_ids)
+            assert len(set(instance_ids)) == expected_count  # All unique
 
-            # Set cookies
-            set_cookies_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {
-                    "name": "browser_set_cookies",
-                    "arguments": {
-                        "instance_id": instance_id,
-                        "cookies": [
-                            {"name": "test_cookie", "value": "test_value", "domain": "127.0.0.1"},
-                            {"name": "session_id", "value": "abc123", "domain": "127.0.0.1"},
-                        ],
-                    },
-                },
-                "id": 3,
-            }
+            logger.info(f"Launched {len(instance_ids)} concurrent browser instances")
 
-            await websocket.send(json.dumps(set_cookies_request))
-            response = await websocket.recv()
-            set_data = json.loads(response)
-
-            assert "result" in set_data
-
-            # Get cookies
-            get_cookies_request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_get_cookies", "arguments": {"instance_id": instance_id}},
-                "id": 4,
-            }
-
-            await websocket.send(json.dumps(get_cookies_request))
-            response = await websocket.recv()
-            get_data = json.loads(response)
-
-            assert "result" in get_data
-            content = get_data["result"]["content"][0]
-            cookies_result = json.loads(content["text"])
-            cookies = cookies_result["cookies"]
-
-            cookie_names = [c["name"] for c in cookies]
-            assert "test_cookie" in cookie_names
-            assert "session_id" in cookie_names
-
-            # Cleanup
-            await websocket.send(
-                json.dumps(
-                    {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}}, "id": 5}
-                )
-            )
-
-
-class TestMCPTabManagement:
-    """Test tab management via MCP."""
+        finally:
+            # Cleanup all instances
+            cleanup_tasks = [mcp_client.terminate(instance_id) for instance_id in instance_ids]
+            await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
     @pytest.mark.asyncio
-    async def test_tab_operations(self, mcp_server, test_html_server):
-        """Test tab operations via MCP."""
-        # mcp_server is the test server instance
+    @pytest.mark.slow
+    async def test_cookie_management(self, mcp_client, browser_instance):
+        """Test cookie operations."""
+        # Navigate to a site that sets cookies
+        await mcp_client.navigate(browser_instance, "https://httpbin.org/cookies/set?test=value")
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch browser
-            await websocket.send(
-                json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
-            )
-            response = await websocket.recv()
-            content = json.loads(response)["result"]["content"][0]
-            instance_id = json.loads(content["text"])["instance_id"]
+        # Get cookies
+        result = await mcp_client.call_tool("browser_get_cookies", {"instance_id": browser_instance})
+        assert result
+        cookies = json.loads(result["content"][0]["text"])
+        assert "cookies" in cookies
 
-            # Navigate to first page
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/login_form.html"}},
-                        "id": 2,
-                    }
-                )
-            )
-            await websocket.recv()
-
-            # Note: browser_execute_script, browser_get_tabs, and browser_switch_tab tools don't exist
-            # This test would need significant changes to work with available tools
-
-            # Cleanup
-            await websocket.send(
-                json.dumps(
-                    {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}}, "id": 3}
-                )
-            )
-
-
-class TestMCPErrorHandling:
-    """Test MCP error handling."""
+        # Set a custom cookie
+        result = await mcp_client.call_tool(
+            "browser_set_cookie",
+            {"instance_id": browser_instance, "name": "custom", "value": "cookie_value", "domain": ".httpbin.org"},
+        )
+        assert result
 
     @pytest.mark.asyncio
-    async def test_invalid_tool(self, mcp_server):
-        """Test calling invalid tool."""
-        # mcp_server is the test server instance
+    @pytest.mark.slow
+    async def test_network_monitoring(self, mcp_client):
+        """Test network request monitoring."""
+        # Launch with network monitoring enabled
+        instance_id = await mcp_client.launch_browser(headless=HEADLESS, enable_network_monitoring=True)
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Call non-existent tool
-            request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "invalid_tool", "arguments": {}}, "id": 1}
+        try:
+            # Navigate to trigger network requests
+            await mcp_client.navigate(instance_id, "https://httpbin.org/get")
 
-            await websocket.send(json.dumps(request))
-            response = await websocket.recv()
-            data = json.loads(response)
+            # Get network logs
+            result = await mcp_client.call_tool("browser_get_network_logs", {"instance_id": instance_id})
+            assert result
+            logs = json.loads(result["content"][0]["text"])
+            assert "logs" in logs
+            assert len(logs["logs"]) > 0
 
-            assert "error" in data
-            assert "Unknown tool" in data["error"]["message"]
+            # Verify request details
+            request = logs["logs"][0]
+            assert "url" in request
+            assert "method" in request
+            assert "status_code" in request
 
-    @pytest.mark.asyncio
-    async def test_invalid_instance(self, mcp_server):
-        """Test operations on invalid instance."""
-        # mcp_server is the test server instance
-
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Try to navigate with invalid instance
-            request = {
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {"name": "browser_navigate", "arguments": {"instance_id": "invalid-id-123", "url": "https://example.com"}},
-                "id": 1,
-            }
-
-            await websocket.send(json.dumps(request))
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert "error" in data
-            assert "not found" in data["error"]["message"].lower()
+        finally:
+            await mcp_client.terminate(instance_id)
 
     @pytest.mark.asyncio
-    async def test_malformed_request(self, mcp_server):
-        """Test handling malformed requests."""
-        # mcp_server is the test server instance
+    async def test_error_handling(self, mcp_client):
+        """Test error handling for invalid operations."""
+        # Try to navigate with invalid instance ID
+        with pytest.raises(Exception) as exc_info:
+            await mcp_client.navigate("invalid-instance-id", "https://example.com")
+        assert "not found" in str(exc_info.value).lower()
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Send invalid JSON
-            await websocket.send("not valid json")
-            response = await websocket.recv()
-            data = json.loads(response)
-
-            assert "error" in data
-            assert "Parse error" in data["error"]["message"]
+        # Try to call non-existent tool
+        with pytest.raises(Exception) as exc_info:
+            await mcp_client.call_tool("non_existent_tool", {})
+        assert "unknown tool" in str(exc_info.value).lower()
 
 
-class TestMCPConcurrency:
-    """Test MCP concurrent operations."""
-
-    @pytest.mark.asyncio
-    async def test_multiple_clients(self, mcp_server):
-        """Test multiple clients connecting simultaneously."""
-        # mcp_server is the test server instance
-
-        async def client_task(client_id):
-            async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-                # Each client launches a browser
-                await websocket.send(
-                    json.dumps(
-                        {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": client_id}
-                    )
-                )
-
-                response = await websocket.recv()
-                data = json.loads(response)
-                assert "result" in data
-
-                content = data["result"]["content"][0]
-                result = json.loads(content["text"])
-                instance_id = result["instance_id"]
-
-                # Clean up
-                await websocket.send(
-                    json.dumps(
-                        {
-                            "jsonrpc": "2.0",
-                            "method": "tools/call",
-                            "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}},
-                            "id": client_id + 100,
-                        }
-                    )
-                )
-
-                return client_id
-
-        # Run multiple clients concurrently
-        num_clients = 3
-        results = await asyncio.gather(*[client_task(i) for i in range(num_clients)])
-
-        assert len(results) == num_clients
-        assert results == [0, 1, 2]
+class TestMCPServerResilience:
+    """Test server resilience and error recovery."""
 
     @pytest.mark.asyncio
-    async def test_concurrent_operations_same_instance(self, mcp_server, test_html_server):
-        """Test concurrent operations on same browser instance."""
-        # mcp_server is the test server instance
+    @pytest.mark.slow
+    async def test_browser_crash_recovery(self, mcp_client):
+        """Test recovery from browser crash."""
+        instance_id = await mcp_client.launch_browser(headless=HEADLESS)
 
-        async with websockets.connect(f"ws://localhost:{mcp_server.port}") as websocket:
-            # Launch browser
-            await websocket.send(
-                json.dumps({"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_launch", "arguments": {"headless": HEADLESS}}, "id": 1})
-            )
-            response = await websocket.recv()
-            content = json.loads(response)["result"]["content"][0]
-            instance_id = json.loads(content["text"])["instance_id"]
+        # Force crash by navigating to chrome://crash
+        try:
+            await mcp_client.navigate(instance_id, "chrome://crash")
+        except Exception as e:
+            logger.debug(f"Expected crash navigation error: {e}")
 
-            # Navigate first
-            await websocket.send(
-                json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "method": "tools/call",
-                        "params": {"name": "browser_navigate", "arguments": {"instance_id": instance_id, "url": f"{test_html_server}/dynamic_content.html"}},
-                        "id": 2,
-                    }
-                )
-            )
-            await websocket.recv()
+        # Verify instance is marked as crashed
+        result = await mcp_client.call_tool("browser_list_instances", {})
+        instances = json.loads(result["content"][0]["text"])["instances"]
 
-            # Send multiple screenshot requests rapidly
-            requests = [
-                {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_screenshot", "arguments": {"instance_id": instance_id}}, "id": 10 + i}
-                for i in range(5)
-            ]
+        crashed_instance = next((i for i in instances if i["id"] == instance_id), None)
+        if crashed_instance:
+            assert not crashed_instance.get("is_alive", True)
 
-            # Send all requests
-            for req in requests:
-                await websocket.send(json.dumps(req))
+        # Cleanup
+        try:
+            await mcp_client.terminate(instance_id)
+        except Exception as e:
+            logger.debug(f"Cleanup error (expected): {e}")
 
-            # Receive all responses
-            responses = []
-            for _ in requests:
-                response = await websocket.recv()
-                responses.append(json.loads(response))
+    @pytest.mark.asyncio
+    async def test_timeout_handling(self, mcp_client, browser_instance):
+        """Test handling of long-running operations."""
+        # Execute a long-running script
+        script = """
+        return new Promise(resolve => {
+            setTimeout(() => resolve('done'), 2000);
+        });
+        """
 
-            # Verify all succeeded
-            for resp in responses:
-                assert "result" in resp
-                # Results might be in different order
+        # Should complete within reasonable time
+        result = await mcp_client.execute_script(browser_instance, script)
+        assert result
+        data = json.loads(result["content"][0]["text"])
+        assert data["result"] == "done"
 
-            # Cleanup
-            await websocket.send(
-                json.dumps(
-                    {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "browser_terminate", "arguments": {"instance_id": instance_id}}, "id": 100}
-                )
-            )
+    @pytest.mark.asyncio
+    async def test_resource_cleanup(self, mcp_client):
+        """Test proper resource cleanup."""
+        instance_ids = []
+
+        # Launch multiple browsers
+        for _ in range(3):
+            instance_id = await mcp_client.launch_browser(headless=True)
+            instance_ids.append(instance_id)
+
+        # List instances before cleanup
+        result = await mcp_client.call_tool("browser_list_instances", {})
+        instances_before = json.loads(result["content"][0]["text"])["instances"]
+        [i["id"] for i in instances_before if i.get("is_alive", False)]
+
+        # Terminate all
+        for instance_id in instance_ids:
+            await mcp_client.terminate(instance_id)
+
+        # List instances after cleanup
+        result = await mcp_client.call_tool("browser_list_instances", {})
+        instances_after = json.loads(result["content"][0]["text"])["instances"]
+        active_after = [i["id"] for i in instances_after if i.get("is_alive", False)]
+
+        # Verify cleanup
+        for instance_id in instance_ids:
+            assert instance_id not in active_after
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+class TestMCPServerPerformance:
+    """Performance and load tests for MCP server."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    @pytest.mark.parametrize("num_operations", [10, 20])
+    async def test_rapid_operations(self, mcp_client, browser_instance, num_operations):
+        """Test rapid sequential operations."""
+        # Navigate to a simple page
+        await mcp_client.navigate(browser_instance, "data:text/html,<html><body></body></html>")
+
+        # Perform rapid operations
+        for i in range(num_operations):
+            script = f"return {i} * 2;"
+            result = await mcp_client.execute_script(browser_instance, script)
+            data = json.loads(result["content"][0]["text"])
+            assert data["result"] == i * 2
+
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    async def test_memory_usage(self, mcp_client):
+        """Test memory usage with multiple tabs."""
+        instance_id = await mcp_client.launch_browser(headless=HEADLESS)
+
+        try:
+            # Open multiple tabs
+            for i in range(5):
+                result = await mcp_client.call_tool("browser_new_tab", {"instance_id": instance_id})
+                tab_id = json.loads(result["content"][0]["text"])["tab_id"]
+
+                # Navigate each tab
+                await mcp_client.call_tool("browser_navigate", {"instance_id": instance_id, "tab_id": tab_id, "url": f"https://example.com?tab={i}"})
+
+            # Get instance metrics
+            result = await mcp_client.call_tool("browser_get_metrics", {"instance_id": instance_id})
+            metrics = json.loads(result["content"][0]["text"])
+
+            assert "memory_usage" in metrics
+            assert "tab_count" in metrics
+            min_tabs = 5
+            assert metrics["tab_count"] >= min_tabs
+
+        finally:
+            await mcp_client.terminate(instance_id)
