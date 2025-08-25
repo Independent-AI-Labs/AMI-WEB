@@ -124,10 +124,14 @@ class MCPTestServer:
                 logger.error(f"Error closing loop: {e}")
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
 async def mcp_server():
-    """Start MCP test server once for the entire test session."""
-    server = MCPTestServer(port=8766)
+    """Start MCP test server for each test."""
+    import random
+
+    # Use a random port to avoid conflicts
+    port = random.randint(9000, 9999)  # noqa: S311
+    server = MCPTestServer(port=port)
     server.start()
 
     yield server
