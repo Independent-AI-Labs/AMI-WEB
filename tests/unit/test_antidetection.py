@@ -1,5 +1,6 @@
 """Test suite for antidetection scripts."""
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -119,8 +120,6 @@ class TestAntidetectionScripts:
         ), "Script should start with comment or IIFE"
 
         # Remove comments for analysis
-        import re
-
         content_no_comments = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
         content_no_comments = re.sub(r"//.*$", "", content_no_comments, flags=re.MULTILINE)
 
@@ -156,8 +155,6 @@ class TestAntidetectionScripts:
             content = f.read()
 
         # Remove comments to check structure
-        import re
-
         content_no_comments = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
         content_no_comments = re.sub(r"//.*$", "", content_no_comments, flags=re.MULTILINE)
         content_stripped = content_no_comments.strip()

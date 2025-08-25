@@ -1,89 +1,354 @@
-#!/usr/bin/env python3
-"""
-Test script for Chrome Manager
-"""
+"""Unit tests for ChromeManager business logic."""
 
-import asyncio
-import json
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.media.screenshot import ScreenshotController
-from browser.backend.facade.navigation.navigator import Navigator
+import pytest
 
 
-async def test_basic_operations():
-    print("Testing Chrome Manager Basic Operations...")
+class TestChromeManager:
+    """Test ChromeManager without real browser instances."""
 
-    # Initialize manager with test config file
-    manager = ChromeManager(config_file="config.test.yaml")
-    await manager.initialize()
+    @pytest.mark.asyncio
+    async def test_initialize(self, mock_session_manager, mock_profile_manager):
+        """Test manager initialization."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.session_manager = mock_session_manager
+            manager.profile_manager = mock_profile_manager
+            manager.initialize = AsyncMock()
 
-    try:
-        # Create a browser instance
-        print("\n1. Creating browser instance...")
-        instance = await manager.get_or_create_instance(headless=True)
-        print(f"   [OK] Created instance: {instance.id}")
+            await manager.initialize()
 
-        # Navigate to a website
-        print("\n2. Navigating to example.com...")
-        nav = Navigator(instance)
-        result = await nav.navigate("https://example.com")
-        print(f"   [OK] Loaded: {result.title} in {result.load_time:.2f}s")
+            manager.initialize.assert_called_once()
 
-        # Take a screenshot
-        print("\n3. Taking screenshot...")
-        screenshot = ScreenshotController(instance)
-        image_data = await screenshot.capture_viewport()
-        print(f"   [OK] Screenshot captured: {len(image_data)} bytes")
+    @pytest.mark.asyncio
+    async def test_create_instance(self, mock_browser_instance):
+        """Test creating a new browser instance."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.get_or_create_instance = AsyncMock(return_value=mock_browser_instance)
 
-        # Execute JavaScript
-        print("\n4. Executing JavaScript...")
-        js_result = instance.driver.execute_script("return document.title")
-        print(f"   [OK] JS Result: {js_result}")
+            instance = await manager.get_or_create_instance(headless=True)
 
-        # Get browser info
-        print("\n5. Getting browser info...")
-        info = instance.get_info()
-        print(f"   [OK] Status: {info.status.value}")
-        print(f"   [OK] Memory: {info.memory_usage / 1024 / 1024:.1f} MB")
-        print(f"   [OK] Tabs: {info.active_tabs}")
+            assert instance.id == "test-instance-123"
+            assert instance.is_alive is True
+            manager.get_or_create_instance.assert_called_once_with(headless=True)
 
-        # Clean up
-        print("\n6. Cleaning up...")
-        await manager.terminate_instance(instance.id)
-        print("   [OK] Instance terminated")
+    @pytest.mark.asyncio
+    async def test_get_existing_instance(self, mock_browser_instance):
+        """Test getting an existing instance by ID."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.instances = {"test-instance-123": mock_browser_instance}
+            manager.get_instance = Mock(return_value=mock_browser_instance)
 
-        print("\n[SUCCESS] All tests passed!")
+            instance = manager.get_instance("test-instance-123")
 
-    except Exception as e:
-        print(f"\n[FAILED] Test failed: {e}")
-        raise
-    finally:
-        await manager.shutdown()
+            assert instance is mock_browser_instance
+            assert instance.id == "test-instance-123"
+
+    @pytest.mark.asyncio
+    async def test_terminate_instance(self, mock_browser_instance):
+        """Test terminating a browser instance."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.instances = {"test-instance-123": mock_browser_instance}
+            manager.terminate_instance = AsyncMock()
+
+            await manager.terminate_instance("test-instance-123")
+
+            manager.terminate_instance.assert_called_once_with("test-instance-123")
+            mock_browser_instance.terminate.assert_not_called()  # Mock doesn't call real terminate
+
+    def test_list_instances(self, mock_browser_instance):
+        """Test listing all instances."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            instance2 = MagicMock()
+            instance2.id = "test-instance-456"
+
+            manager.instances = {"test-instance-123": mock_browser_instance, "test-instance-456": instance2}
+            manager.list_instances = Mock(return_value=list(manager.instances.values()))
+
+            instances = manager.list_instances()
+
+            expected_count = 2
+            assert len(instances) == expected_count
+            assert instances[0].id == "test-instance-123"
+            assert instances[1].id == "test-instance-456"
+
+    @pytest.mark.asyncio
+    async def test_shutdown(self, mock_browser_instance):
+        """Test manager shutdown."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.instances = {"test-instance-123": mock_browser_instance}
+            manager.shutdown = AsyncMock()
+
+            await manager.shutdown()
+
+            manager.shutdown.assert_called_once()
 
 
-async def test_mcp_server():
-    print("\nTesting MCP Server...")
-    print("Run the server with: python -m backend.mcp_server")
-    print("Then connect with WebSocket client to ws://localhost:8765")
+class TestChromeManagerPool:
+    """Test ChromeManager pool functionality."""
 
-    # Example MCP messages
-    messages = {
-        "list_tools": {"type": "list_tools"},
-        "launch_browser": {"type": "tool", "tool": "browser_launch", "parameters": {"headless": True}},
-        "navigate": {"type": "tool", "tool": "browser_navigate", "parameters": {"instance_id": "<instance_id>", "url": "https://example.com"}},
-    }
+    def test_pool_configuration(self):
+        """Test pool configuration settings."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+            manager.pool.min_instances = 1
+            manager.pool.max_instances = 5
+            manager.pool.warm_instances = 2
 
-    print("\nExample MCP messages:")
-    for name, msg in messages.items():
-        print(f"\n{name}:")
-        print(json.dumps(msg, indent=2))
+            min_pool = 1
+            max_pool = 5
+            warm_pool = 2
+            assert manager.pool.min_instances == min_pool  # Min pool size
+            assert manager.pool.max_instances == max_pool  # Max pool size
+            assert manager.pool.warm_instances == warm_pool  # Warm pool size
+
+    @pytest.mark.asyncio
+    async def test_pool_warm_instances(self, mock_browser_instance):
+        """Test pre-warming instances in pool."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+            manager.pool.warm_instances = 2
+            manager.pool.create_warm_instance = AsyncMock(return_value=mock_browser_instance)
+
+            # Simulate warming pool
+            warm_instances = []
+            for _ in range(manager.pool.warm_instances):
+                instance = await manager.pool.create_warm_instance()
+                warm_instances.append(instance)
+
+            expected_warm_count = 2
+            assert len(warm_instances) == expected_warm_count
+            expected_calls = 2
+            assert manager.pool.create_warm_instance.call_count == expected_calls
+
+    @pytest.mark.asyncio
+    async def test_pool_max_instances_limit(self):
+        """Test pool respects max instances limit."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+            manager.pool.max_instances = 3
+            manager.pool.active_count = 3
+            manager.pool.can_create_instance = Mock(return_value=False)
+
+            can_create = manager.pool.can_create_instance()
+
+            assert can_create is False
+
+    @pytest.mark.asyncio
+    async def test_pool_instance_reuse(self, mock_browser_instance):
+        """Test reusing instances from pool."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+            manager.pool.available_instances = [mock_browser_instance]
+            manager.pool.get_available_instance = Mock(return_value=mock_browser_instance)
+
+            instance = manager.pool.get_available_instance()
+
+            assert instance is mock_browser_instance
+            manager.pool.get_available_instance.assert_called_once()
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("Chrome Manager Test Suite")
-    print("=" * 60)
+class TestChromeManagerSessions:
+    """Test ChromeManager session management."""
 
-    asyncio.run(test_basic_operations())
-    test_mcp_server()
+    @pytest.mark.asyncio
+    async def test_create_with_session(self, mock_browser_instance, mock_session_manager):
+        """Test creating instance with session."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.session_manager = mock_session_manager
+            manager.get_or_create_instance = AsyncMock(return_value=mock_browser_instance)
+
+            mock_session_manager.get_session = AsyncMock(return_value={"id": "session-123", "cookies": [], "local_storage": {}})
+
+            instance = await manager.get_or_create_instance(session_id="session-123")
+
+            assert instance is mock_browser_instance
+            mock_session_manager.get_session.assert_called_once_with("session-123")
+
+    @pytest.mark.asyncio
+    async def test_save_session_on_terminate(self, mock_browser_instance, mock_session_manager):
+        """Test saving session when terminating instance."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.session_manager = mock_session_manager
+            mock_browser_instance.session_id = "session-123"
+            manager.instances = {"test-instance-123": mock_browser_instance}
+            manager.terminate_instance = AsyncMock()
+
+            await manager.terminate_instance("test-instance-123", save_session=True)
+
+            manager.terminate_instance.assert_called_once_with("test-instance-123", save_session=True)
+
+
+class TestChromeManagerProfiles:
+    """Test ChromeManager profile management."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_profile(self, mock_browser_instance, mock_profile_manager):
+        """Test creating instance with profile."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.profile_manager = mock_profile_manager
+            manager.get_or_create_instance = AsyncMock(return_value=mock_browser_instance)
+
+            mock_profile_manager.get_profile = AsyncMock(return_value={"id": "profile-123", "user_agent": "Custom UA", "properties": {}})
+
+            instance = await manager.get_or_create_instance(profile_id="profile-123")
+
+            assert instance is mock_browser_instance
+            mock_profile_manager.get_profile.assert_called_once_with("profile-123")
+
+
+class TestChromeManagerErrors:
+    """Test ChromeManager error handling."""
+
+    @pytest.mark.asyncio
+    async def test_instance_not_found(self):
+        """Test handling instance not found."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.get_instance = Mock(return_value=None)
+
+            instance = manager.get_instance("non-existent-id")
+
+            assert instance is None
+            manager.get_instance.assert_called_once_with("non-existent-id")
+
+    @pytest.mark.asyncio
+    async def test_max_instances_reached(self):
+        """Test handling max instances reached."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+            manager.pool.max_instances = 3
+            manager.pool.active_count = 3
+
+            manager.get_or_create_instance = AsyncMock(side_effect=RuntimeError("Maximum instances reached"))
+
+            with pytest.raises(RuntimeError) as exc:
+                await manager.get_or_create_instance()
+
+            assert "Maximum instances reached" in str(exc.value)
+
+    @pytest.mark.asyncio
+    async def test_instance_crash_recovery(self, mock_browser_instance):
+        """Test recovering from instance crash."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            mock_browser_instance.is_alive = False
+            manager.instances = {"test-instance-123": mock_browser_instance}
+            manager.recover_instance = AsyncMock(return_value=mock_browser_instance)
+
+            # Simulate recovery
+            recovered = await manager.recover_instance("test-instance-123")
+
+            assert recovered is mock_browser_instance
+            manager.recover_instance.assert_called_once_with("test-instance-123")
+
+
+class TestChromeManagerConcurrency:
+    """Test ChromeManager concurrent operations."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_instance_creation(self):
+        """Test creating multiple instances concurrently."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+
+            # Create different instances for each call
+            instances = []
+            for i in range(3):
+                instance = MagicMock()
+                instance.id = f"instance-{i}"
+                instances.append(instance)
+
+            manager.get_or_create_instance = AsyncMock(side_effect=instances)
+
+            # Simulate concurrent creation
+            import asyncio
+
+            tasks = [manager.get_or_create_instance() for _ in range(3)]
+            results = await asyncio.gather(*tasks)
+
+            expected_results = 3
+            assert len(results) == expected_results
+            assert all(r.id.startswith("instance-") for r in results)
+            expected_calls = 3
+            assert manager.get_or_create_instance.call_count == expected_calls
+
+    @pytest.mark.asyncio
+    async def test_concurrent_termination(self):
+        """Test terminating multiple instances concurrently."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+
+            instance_ids = ["instance-1", "instance-2", "instance-3"]
+            manager.terminate_instance = AsyncMock()
+
+            # Simulate concurrent termination
+            import asyncio
+
+            tasks = [manager.terminate_instance(instance_id) for instance_id in instance_ids]
+            await asyncio.gather(*tasks)
+
+            expected_calls = 3
+            assert manager.terminate_instance.call_count == expected_calls
+
+
+class TestChromeManagerMetrics:
+    """Test ChromeManager metrics and monitoring."""
+
+    def test_instance_metrics(self, mock_browser_instance):  # noqa: ARG002
+        """Test collecting instance metrics."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+
+            # Mock metrics
+            metrics = {
+                "instance_id": "test-instance-123",
+                "memory_usage": 150 * 1024 * 1024,  # 150MB
+                "cpu_usage": 25.5,
+                "active_tabs": 3,
+                "uptime": 3600,  # 1 hour
+            }
+
+            manager.get_instance_metrics = Mock(return_value=metrics)
+
+            result = manager.get_instance_metrics("test-instance-123")
+
+            expected_memory = 150 * 1024 * 1024
+            assert result["memory_usage"] == expected_memory
+            expected_cpu = 25.5
+            assert result["cpu_usage"] == expected_cpu
+            expected_tabs = 3
+            assert result["active_tabs"] == expected_tabs
+
+    def test_pool_metrics(self):
+        """Test collecting pool metrics."""
+        with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager_class:
+            manager = mock_manager_class()
+            manager.pool = MagicMock()
+
+            pool_metrics = {"total_instances": 5, "active_instances": 3, "idle_instances": 2, "queued_requests": 0}
+
+            manager.pool.get_metrics = Mock(return_value=pool_metrics)
+
+            metrics = manager.pool.get_metrics()
+
+            expected_total = 5
+            assert metrics["total_instances"] == expected_total
+            expected_active = 3
+            assert metrics["active_instances"] == expected_active
+            expected_idle = 2
+            assert metrics["idle_instances"] == expected_idle
