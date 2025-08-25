@@ -143,27 +143,3 @@ def get_safe_filename(filename: str, max_length: int = 255) -> str:
         filename = "unnamed"
 
     return filename
-
-
-def find_project_root(marker_files: list[str] = None) -> Path | None:
-    """Find project root directory by looking for marker files.
-
-    Args:
-        marker_files: List of files that indicate project root
-                     (default: [".git", "pyproject.toml", "setup.py"])
-
-    Returns:
-        Project root Path or None if not found
-    """
-    if marker_files is None:
-        marker_files = [".git", "pyproject.toml", "setup.py", "package.json"]
-
-    current = Path.cwd()
-
-    while current != current.parent:
-        for marker in marker_files:
-            if (current / marker).exists():
-                return current
-        current = current.parent
-
-    return None
