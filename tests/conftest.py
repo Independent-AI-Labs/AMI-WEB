@@ -41,9 +41,9 @@ pytest_plugins = ("pytest_asyncio",)
 # NO GLOBAL STATE - Each test gets its own manager instance
 
 
-@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
+@pytest_asyncio.fixture(scope="session")
 async def session_manager():
-    """Create a Chrome manager instance for each test."""
+    """Create a Chrome manager instance for the test session."""
     # Use test config for testing
     test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
     manager = ChromeManager(config_file=test_config)
@@ -62,9 +62,9 @@ async def session_manager():
         logger.warning(f"Error stopping manager: {e}")
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="module")
 async def browser_instance(session_manager):
-    """Get a browser instance from the pool for each test."""
+    """Get a browser instance from the pool - reused per module."""
     # Get instance from pool
     logger.info(f"Requesting browser instance (headless={HEADLESS})")
     instance = await session_manager.get_or_create_instance(headless=HEADLESS, use_pool=True)
