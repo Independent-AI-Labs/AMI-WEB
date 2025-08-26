@@ -207,6 +207,27 @@ class TestMCPServerIntegration:
             await mcp_client.call_tool("non_existent_tool", {})
         assert "unknown tool" in str(exc_info.value).lower()
 
+    @pytest.mark.slow
+    async def test_html_extraction_with_token_limit(self, mcp_client, mcp_browser_id):
+        """Test HTML extraction with token limits."""
+        # Navigate to a large page
+        await mcp_client.navigate(mcp_browser_id, "https://en.wikipedia.org/wiki/Python_(programming_language)")
+
+        # Test browser_get_html tool with token limits
+        result = await mcp_client.call_tool("browser_get_html", {"instance_id": mcp_browser_id, "max_tokens": 5000})
+
+        assert result is not None
+        assert "content" in result
+        content = result["content"]
+        assert len(content) > 0
+
+        # Verify HTML was truncated to token limit
+        text = content[0]["text"] if isinstance(content, list) else content
+        # Rough token estimate (4 chars per token)
+        estimated_tokens = len(text) // 4
+        max_expected_tokens = 5500
+        assert estimated_tokens <= max_expected_tokens, f"HTML exceeds token limit: ~{estimated_tokens} tokens"
+
 
 @pytest.mark.asyncio(loop_scope="session")
 class TestMCPServerResilience:
