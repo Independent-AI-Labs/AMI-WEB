@@ -2,32 +2,62 @@
 """Run Browser MCP server."""
 
 import asyncio
+import sys
 from pathlib import Path
 
-# Use standard import setup
-from base.backend.utils.standard_imports import setup_imports
+# STANDARD IMPORT SETUP - DO NOT MODIFY
+current_file = Path(__file__).resolve()
+orchestrator_root = current_file
+while orchestrator_root != orchestrator_root.parent:
+    if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
+        break
+    orchestrator_root = orchestrator_root.parent
+else:
+    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
 
-ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+if str(orchestrator_root) not in sys.path:
+    sys.path.insert(0, str(orchestrator_root))
+
+module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
+module_root = current_file.parent
+while module_root != orchestrator_root:
+    if module_root.name in module_names:
+        if str(module_root) not in sys.path:
+            sys.path.insert(0, str(module_root))
+        break
+    module_root = module_root.parent
 
 from base.backend.utils.module_setup import ModuleSetup  # noqa: E402
 
 ModuleSetup.ensure_running_in_venv(Path(__file__))
 
+MODULE_ROOT = module_root
+
 # Now import the server components
-from base.scripts.run_mcp_server import run_stdio  # noqa: E402
+import argparse  # noqa: E402
+
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
 
 
 async def main():
     """Run the Browser MCP server."""
-    # Get config file if exists
-    config_file = None
-    for name in ["config.yaml", "config.test.yaml"]:
-        path = MODULE_ROOT / name
-        if path.exists():
-            config_file = str(path)
-            break
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Chrome MCP Server")
+    parser.add_argument("--transport", choices=["stdio", "websocket"], default="stdio", help="Transport mode (default: stdio)")
+    parser.add_argument("--host", default="localhost", help="Host for websocket server (default: localhost)")
+    parser.add_argument("--port", type=int, default=8765, help="Port for websocket server (default: 8765)")
+    parser.add_argument("--config", help="Path to configuration file")
+    args = parser.parse_args()
+
+    # Get config file
+    config_file = args.config
+    if not config_file:
+        for name in ["config.yaml", "config.test.yaml"]:
+            path = MODULE_ROOT / name
+            if path.exists():
+                config_file = str(path)
+                break
 
     # Create manager
     manager = ChromeManager(config_file=config_file) if config_file else ChromeManager()
@@ -45,7 +75,12 @@ async def main():
             return await super().__aexit__(*args) if hasattr(super(), "__aexit__") else None
 
     # Run the server
-    await run_stdio(ManagedBrowserServer, {})
+    server = ManagedBrowserServer()
+
+    if args.transport == "websocket":
+        await server.run_websocket(args.host, args.port)
+    else:
+        await server.run_stdio()
 
 
 if __name__ == "__main__":
