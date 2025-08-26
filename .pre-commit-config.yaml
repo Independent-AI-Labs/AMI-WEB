@@ -22,17 +22,17 @@ repos:
         require_serial: true
         stages: [ pre-commit ]
 
-  # Run unit tests before push (integration tests need fixing)
+  # Run tests before push (skip known failures with xfail)
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: python scripts/run_tests.py -m "not slow" --timeout 600
+        entry: python scripts/run_tests.py --timeout 600 -q
         language: system
         pass_filenames: false
         always_run: true
         stages: [ pre-push ]
-        verbose: true  # Show output immediately
+        verbose: false  # Quieter output
         require_serial: true  # Run before any network operations
 
   # Additional useful hooks
