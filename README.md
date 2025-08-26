@@ -1,19 +1,19 @@
-# AMI-WEB: Browser Automation Platform
+# AMI-WEB: Compliant Browser Automation Platform
 
 ## Business Value
 
-Transform how your organization interacts with web applications. AMI-WEB provides undetectable browser automation that works with any website, including those with aggressive bot protection. Perfect for enterprise RPA, testing, and data extraction.
+AMI-WEB enables enterprises to automate web interactions while maintaining complete compliance with data protection regulations. Every browser action is auditable, sandboxed, and traceable, ensuring your automation meets EU AI Act transparency requirements and GDPR data handling standards.
 
 ## Core Capabilities
 
-### 🌐 Universal Web Automation
-Control browsers like a human would - click, type, scroll, and navigate with intelligent wait conditions and error recovery.
+### 🌐 Auditable Web Automation
+Every browser interaction is logged, sandboxed, and compliant with enterprise security requirements.
 
-**Key Features:**
-- **Undetectable Operation** - Bypasses bot detection with real browser fingerprints
-- **Multi-Profile Management** - Run hundreds of isolated browser sessions simultaneously  
-- **Session Persistence** - Save and restore complete browser state including cookies
-- **AI-Ready** - Native MCP support for Claude, GPT, and custom agents
+**Compliance Features:**
+- **Complete Audit Trail** - Every click, type, and navigation logged with timestamps
+- **Profile Isolation** - Sandboxed sessions prevent data leakage between automations
+- **Session Recording** - Full replay capability for compliance reviews and audits
+- **AI Transparency** - MCP protocol ensures explainable automation decisions
 
 ### 🔌 Chrome MCP Server
 
@@ -45,16 +45,16 @@ python scripts/run_chrome.py
 python scripts/run_chrome.py --transport websocket --port 9000
 ```
 
-### 🛡️ Anti-Detection Technology
+### 🛡️ Privacy-Preserving Automation
 
-Stay undetected with comprehensive fingerprint management:
+Maintain data sovereignty while automating web interactions:
 
-- **Canvas & WebGL** - Unique rendering signatures
-- **Audio Context** - Sound fingerprint variation
-- **WebRTC** - IP leak prevention
-- **Navigator** - Hardware spec spoofing
-- **Timezone & Language** - Locale matching
-- **Plugin Detection** - Extension masking
+- **Data Localization** - All browser data stays on your infrastructure
+- **Cookie Isolation** - Separate cookie stores per profile
+- **Network Control** - Route traffic through your proxies
+- **Credential Security** - Never logs passwords or sensitive data
+- **GDPR Compliance** - Respect consent banners and privacy settings
+- **Session Encryption** - All stored sessions encrypted at rest
 
 ## Quick Start
 
@@ -78,23 +78,23 @@ await browser.navigate("https://amazon.com")
 
 ## Use Cases
 
-### Enterprise RPA
-- Automate SAP, Oracle, Salesforce workflows
-- Handle complex multi-step authentication
-- Process invoices through vendor portals
-- Maintain compliance with full audit trails
+### Compliant Enterprise Automation
+- **Regulatory Reporting** - Automate submissions with full audit trails
+- **Vendor Portal Management** - Process invoices with compliance tracking
+- **HR System Integration** - Automate workflows with data protection
+- **Compliance Monitoring** - Track website changes for regulatory updates
 
-### Quality Assurance  
-- Test behind CloudFlare, reCAPTCHA
-- Validate user journeys end-to-end
-- Monitor production application health
-- Cross-browser compatibility testing
+### Secure Testing & Validation
+- **GDPR Testing** - Validate consent flows and data handling
+- **Security Testing** - Sandboxed penetration testing
+- **Compliance Validation** - Verify regulatory requirements
+- **Audit Trail Generation** - Document testing for compliance
 
-### Data Intelligence
-- Extract from JavaScript-heavy SPAs
-- Navigate paywalls and auth systems
-- Monitor competitor pricing/inventory
-- Aggregate data from multiple sources
+### Privacy-Preserving Data Collection
+- **Consent-Aware Scraping** - Respect user privacy settings
+- **Data Minimization** - Collect only necessary information
+- **Purpose Limitation** - Track data usage and retention
+- **Right to Erasure** - Support GDPR deletion requirements
 
 ## Architecture
 
