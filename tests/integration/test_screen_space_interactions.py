@@ -21,11 +21,11 @@ class TestScreenSpaceClicks:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_click_at_coordinates(self, browser_instance, test_html_server):
+    async def test_click_at_coordinates(self, mcp_browser_id, test_html_server):
         """Test clicking at specific coordinates."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
@@ -53,11 +53,11 @@ class TestScreenSpaceClicks:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_double_click_at_coordinates(self, browser_instance, test_html_server):
+    async def test_double_click_at_coordinates(self, mcp_browser_id, test_html_server):
         """Test double-clicking at coordinates."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
@@ -92,11 +92,11 @@ class TestScreenSpaceClicks:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_right_click_at_coordinates(self, browser_instance, test_html_server):
+    async def test_right_click_at_coordinates(self, mcp_browser_id, test_html_server):
         """Test right-clicking at coordinates."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
@@ -134,11 +134,11 @@ class TestScreenSpaceDrag:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_drag_from_to_coordinates(self, browser_instance, test_html_server):
+    async def test_drag_from_to_coordinates(self, mcp_browser_id, test_html_server):
         """Test dragging from one coordinate to another."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
@@ -212,11 +212,11 @@ class TestScreenSpaceDrag:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_puzzle_captcha_drag(self, browser_instance, test_html_server):
+    async def test_puzzle_captcha_drag(self, mcp_browser_id, test_html_server):
         """Test solving a puzzle CAPTCHA using drag."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/captcha_form.html")
 
@@ -315,11 +315,11 @@ class TestZoomInteractions:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_zoom_scale(self, browser_instance, test_html_server):
+    async def test_zoom_scale(self, mcp_browser_id, test_html_server):
         """Test zooming the page."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
@@ -355,10 +355,10 @@ class TestZoomInteractions:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_zoom_at_center(self, browser_instance, test_html_server):
+    async def test_zoom_at_center(self, mcp_browser_id, test_html_server):
         """Test zooming at specific center point."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
@@ -395,11 +395,11 @@ class TestSwipeGestures:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_swipe_horizontal(self, browser_instance, test_html_server):
+    async def test_swipe_horizontal(self, mcp_browser_id, test_html_server):
         """Test horizontal swipe gesture."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
@@ -458,11 +458,11 @@ class TestSwipeGestures:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_swipe_vertical(self, browser_instance, test_html_server):
+    async def test_swipe_vertical(self, mcp_browser_id, test_html_server):
         """Test vertical swipe gesture."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
-        mouse = MouseController(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
+        mouse = MouseController(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/dynamic_content.html")
 
@@ -524,10 +524,10 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_text_from_page(self, browser_instance, test_html_server):
+    async def test_extract_text_from_page(self, mcp_browser_id, test_html_server):
         """Test extracting human-readable text from a page."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
@@ -547,10 +547,10 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_links(self, browser_instance, test_html_server):
+    async def test_extract_links(self, mcp_browser_id, test_html_server):
         """Test extracting links from a page."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
@@ -581,10 +581,10 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_forms(self, browser_instance, test_html_server):
+    async def test_extract_forms(self, mcp_browser_id, test_html_server):
         """Test extracting form information."""
-        nav = Navigator(browser_instance)
-        extractor = ContentExtractor(browser_instance)
+        nav = Navigator(mcp_browser_id)
+        extractor = ContentExtractor(mcp_browser_id)
 
         await nav.navigate(f"{test_html_server}/login_form.html")
 
