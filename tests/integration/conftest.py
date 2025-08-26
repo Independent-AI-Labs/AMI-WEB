@@ -3,8 +3,6 @@
 import asyncio
 import json
 import os
-import threading
-import time
 from typing import Any
 
 import pytest
@@ -23,34 +21,10 @@ class MCPTestServer:
         self.port = port
         self.server = None
         self.manager = None
-        self.loop = None
-        self.thread = None
-        self.ready_event = threading.Event()
-        self.stop_event = threading.Event()
+        self._server_task = None
 
-    def _run_server(self):
-        """Run server with its own event loop."""
-        # Create new event loop for this thread
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-
-        try:
-            # Initialize manager and server synchronously in the thread
-            self.loop.run_until_complete(self._setup_server())
-            self.ready_event.set()
-
-            # Keep the server running
-            self.loop.run_until_complete(self._serve_forever())
-
-        except Exception as e:
-            logger.error(f"Server error: {e}")
-            self.ready_event.set()  # Signal even on error
-        finally:
-            self.loop.run_until_complete(self._cleanup())
-            self.loop.close()
-
-    async def _setup_server(self):
-        """Set up the server components."""
+    async def start(self):
+        """Start the server asynchronously."""
         # Import here to avoid import issues
         from pathlib import Path
 
@@ -78,60 +52,31 @@ class MCPTestServer:
 
         logger.info(f"Test MCP server started on port {self.port}")
 
-    async def _serve_forever(self):
-        """Keep server running until stop is signaled."""
-        while not self.stop_event.is_set():
-            await asyncio.sleep(0.1)
+        # Give the server time to fully initialize
+        await asyncio.sleep(0.1)
 
-    async def _cleanup(self):
-        """Clean up server resources."""
+    async def stop(self):
+        """Stop the server."""
         if self.server:
             await self.server.stop()
         if self.manager:
             # Force shutdown of all browser instances and pool
             await self.manager.shutdown()
 
-    def start(self):
-        """Start the server in a thread."""
-        self.thread = threading.Thread(target=self._run_server, daemon=True)
-        self.thread.start()
 
-        # Wait for server to be ready
-        if not self.ready_event.wait(timeout=10):
-            raise TimeoutError("Server failed to start")
-
-        # Extra wait for socket binding
-        time.sleep(0.5)
-
-    def stop(self):
-        """Stop the server."""
-        self.stop_event.set()
-        if self.thread:
-            self.thread.join(timeout=2)
-            if self.thread.is_alive():
-                logger.warning("Server thread did not stop gracefully")
-        # Force cleanup the event loop if it exists
-        if self.loop and not self.loop.is_closed():
-            try:
-                self.loop.stop()
-                self.loop.close()
-            except Exception as e:
-                logger.error(f"Error closing loop: {e}")
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def mcp_server():
-    """Start MCP test server for each test."""
+    """Start MCP test server for the session."""
     import random
 
     # Use a random port to avoid conflicts
     port = random.randint(9000, 9999)  # noqa: S311
     server = MCPTestServer(port=port)
-    server.start()
+    await server.start()  # Start asynchronously in same event loop
 
     yield server
 
-    server.stop()
+    await server.stop()  # Stop asynchronously
 
 
 class MCPClient:
@@ -207,7 +152,7 @@ class MCPClient:
         return await self.call_tool("browser_terminate", {"instance_id": instance_id})
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def mcp_client(mcp_server):
     """Create MCP client connected to test server - new connection per test."""
     async with websockets.connect(f"ws://localhost:{mcp_server.port}", ping_interval=None, open_timeout=5) as websocket:
@@ -217,7 +162,7 @@ async def mcp_client(mcp_server):
         yield client
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def mcp_browser_id(mcp_client):
     """Create a browser instance ID via MCP for testing."""
     # Use headless mode from environment
