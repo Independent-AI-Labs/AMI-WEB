@@ -67,9 +67,9 @@ class MCPTestServer:
 
         self.manager = ChromeManager(config_file=config_file)
         # Override pool settings for efficient test reuse
-        self.manager.pool.min_instances = 1  # Keep 1 instance ready
-        self.manager.pool.warm_instances = 1  # Keep 1 warm for reuse
-        self.manager.pool.max_instances = 3  # Limit max instances (for concurrent tests)
+        self.manager.pool.min_instances = 2  # Keep 2 instances ready
+        self.manager.pool.warm_instances = 2  # Keep 2 warm for reuse
+        self.manager.pool.max_instances = 5  # Allow more for concurrent tests
         await self.manager.start()
 
         config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10, "response_format": "json"}
@@ -119,7 +119,7 @@ class MCPTestServer:
                 logger.error(f"Error closing loop: {e}")
 
 
-@pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
+@pytest_asyncio.fixture(scope="session")
 async def mcp_server():
     """Start MCP test server for each test."""
     import random
@@ -207,9 +207,9 @@ class MCPClient:
         return await self.call_tool("browser_terminate", {"instance_id": instance_id})
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function")
 async def mcp_client(mcp_server):
-    """Create MCP client connected to test server."""
+    """Create MCP client connected to test server - new connection per test."""
     async with websockets.connect(f"ws://localhost:{mcp_server.port}", ping_interval=None, open_timeout=5) as websocket:
         client = MCPClient(websocket)
         # Initialize connection
@@ -217,7 +217,7 @@ async def mcp_client(mcp_server):
         yield client
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(scope="function")
 async def mcp_browser_id(mcp_client):
     """Create a browser instance ID via MCP for testing."""
     # Use headless mode from environment
