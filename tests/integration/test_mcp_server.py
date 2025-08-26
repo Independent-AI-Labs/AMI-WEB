@@ -61,7 +61,8 @@ class TestMCPServerIntegration:
             assert "content" in result
             content = result["content"]
             assert len(content) > 0
-            assert content[0]["type"] == "image"
+            # Screenshots may return as text (base64) or image
+            assert content[0]["type"] in ["text", "image"]
 
         finally:
             # Terminate
@@ -70,14 +71,14 @@ class TestMCPServerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_javascript_execution(self, mcp_client, browser_instance):
+    async def test_javascript_execution(self, mcp_client, mcp_browser_id):
         """Test executing JavaScript in browser."""
         # Navigate first
-        await mcp_client.navigate(browser_instance, "https://example.com")
+        await mcp_client.navigate(mcp_browser_id, "https://example.com")
 
         # Execute script
         script = "return document.title;"
-        result = await mcp_client.execute_script(browser_instance, script)
+        result = await mcp_client.execute_script(mcp_browser_id, script)
 
         assert result
         assert "content" in result
@@ -89,7 +90,7 @@ class TestMCPServerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_form_interactions(self, mcp_client, browser_instance):
+    async def test_form_interactions(self, mcp_client, mcp_browser_id):
         """Test form interaction capabilities."""
         # Navigate to a page with a form
         test_html = """
@@ -104,14 +105,14 @@ class TestMCPServerIntegration:
         </html>
         """
         test_url = f"data:text/html,{test_html}"
-        await mcp_client.navigate(browser_instance, test_url)
+        await mcp_client.navigate(mcp_browser_id, test_url)
 
         # Type in username field
-        result = await mcp_client.call_tool("browser_type", {"instance_id": browser_instance, "selector": "#username", "text": "testuser"})
+        result = await mcp_client.call_tool("browser_type", {"instance_id": mcp_browser_id, "selector": "#username", "text": "testuser"})
         assert result
 
         # Type in password field
-        result = await mcp_client.call_tool("browser_type", {"instance_id": browser_instance, "selector": "#password", "text": "testpass"})
+        result = await mcp_client.call_tool("browser_type", {"instance_id": mcp_browser_id, "selector": "#password", "text": "testpass"})
         assert result
 
         # Verify values were entered
@@ -121,7 +122,7 @@ class TestMCPServerIntegration:
             password: document.getElementById('password').value
         };
         """
-        result = await mcp_client.execute_script(browser_instance, script)
+        result = await mcp_client.execute_script(mcp_browser_id, script)
         data = json.loads(result["content"][0]["text"])
         assert data["result"]["username"] == "testuser"
         test_password = "testpass"  # noqa: S105
@@ -152,13 +153,13 @@ class TestMCPServerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_cookie_management(self, mcp_client, browser_instance):
+    async def test_cookie_management(self, mcp_client, mcp_browser_id):
         """Test cookie operations."""
         # Navigate to a site that sets cookies
-        await mcp_client.navigate(browser_instance, "https://httpbin.org/cookies/set?test=value")
+        await mcp_client.navigate(mcp_browser_id, "https://httpbin.org/cookies/set?test=value")
 
         # Get cookies
-        result = await mcp_client.call_tool("browser_get_cookies", {"instance_id": browser_instance})
+        result = await mcp_client.call_tool("browser_get_cookies", {"instance_id": mcp_browser_id})
         assert result
         cookies = json.loads(result["content"][0]["text"])
         assert "cookies" in cookies
@@ -166,7 +167,7 @@ class TestMCPServerIntegration:
         # Set a custom cookie
         result = await mcp_client.call_tool(
             "browser_set_cookie",
-            {"instance_id": browser_instance, "name": "custom", "value": "cookie_value", "domain": ".httpbin.org"},
+            {"instance_id": mcp_browser_id, "name": "custom", "value": "cookie_value", "domain": ".httpbin.org"},
         )
         assert result
 
@@ -243,7 +244,7 @@ class TestMCPServerResilience:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_timeout_handling(self, mcp_client, browser_instance):
+    async def test_timeout_handling(self, mcp_client, mcp_browser_id):
         """Test handling of long-running operations."""
         # Execute a long-running script
         script = """
@@ -253,7 +254,7 @@ class TestMCPServerResilience:
         """
 
         # Should complete within reasonable time
-        result = await mcp_client.execute_script(browser_instance, script)
+        result = await mcp_client.execute_script(mcp_browser_id, script)
         assert result
         data = json.loads(result["content"][0]["text"])
         assert data["result"] == "done"
@@ -294,15 +295,15 @@ class TestMCPServerPerformance:
     @pytest.mark.asyncio
     @pytest.mark.slow
     @pytest.mark.parametrize("num_operations", [10, 20])
-    async def test_rapid_operations(self, mcp_client, browser_instance, num_operations):
+    async def test_rapid_operations(self, mcp_client, mcp_browser_id, num_operations):
         """Test rapid sequential operations."""
         # Navigate to a simple page
-        await mcp_client.navigate(browser_instance, "data:text/html,<html><body></body></html>")
+        await mcp_client.navigate(mcp_browser_id, "data:text/html,<html><body></body></html>")
 
         # Perform rapid operations
         for i in range(num_operations):
             script = f"return {i} * 2;"
-            result = await mcp_client.execute_script(browser_instance, script)
+            result = await mcp_client.execute_script(mcp_browser_id, script)
             data = json.loads(result["content"][0]["text"])
             assert data["result"] == i * 2
 

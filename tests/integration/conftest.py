@@ -218,8 +218,8 @@ async def mcp_client(mcp_server):
 
 
 @pytest.fixture
-async def browser_instance(mcp_client):
-    """Create a browser instance for testing."""
+async def mcp_browser_id(mcp_client):
+    """Create a browser instance ID via MCP for testing."""
     # Use headless mode from environment
     instance_id = await mcp_client.launch_browser(headless=HEADLESS)
     try:
@@ -233,10 +233,10 @@ async def browser_instance(mcp_client):
 
 
 @pytest.fixture
-async def browser_with_page(mcp_client, browser_instance):
+async def browser_with_page(mcp_client, mcp_browser_id):
     """Create a browser instance navigated to a test page."""
     # Navigate to a simple test page
     test_url = "data:text/html,<html><body><h1>Test Page</h1></body></html>"
-    await mcp_client.navigate(browser_instance, test_url)
+    await mcp_client.navigate(mcp_browser_id, test_url)
 
-    yield browser_instance, test_url
+    yield mcp_browser_id, test_url
