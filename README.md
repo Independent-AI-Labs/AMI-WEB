@@ -1,167 +1,169 @@
-# 🛡️ AMI-WEB: Enterprise Browser Automation Platform
+# AMI-WEB: Browser Automation Platform
 
-**Complete control over every browser parameter with undetectable automation for enterprise applications**
+## Business Value
 
-![](res/notbot.png)
+Transform how your organization interacts with web applications. AMI-WEB provides undetectable browser automation that works with any website, including those with aggressive bot protection. Perfect for enterprise RPA, testing, and data extraction.
 
-AMI-WEB provides organizations with comprehensive browser automation that offers full control over WebGL, Canvas, Audio, WebRTC, and all browser fingerprinting parameters. Built for enterprises requiring compliant web automation, security testing, and AI-powered browser interactions.
+## Core Capabilities
 
-## 🎯 Key Differentiators
+### 🌐 Universal Web Automation
+Control browsers like a human would - click, type, scroll, and navigate with intelligent wait conditions and error recovery.
 
-### Enterprise-Grade Capabilities
+**Key Features:**
+- **Undetectable Operation** - Bypasses bot detection with real browser fingerprints
+- **Multi-Profile Management** - Run hundreds of isolated browser sessions simultaneously  
+- **Session Persistence** - Save and restore complete browser state including cookies
+- **AI-Ready** - Native MCP support for Claude, GPT, and custom agents
 
-**🔐 Complete Browser Control** - Full manipulation of every browser parameter including user agents, fingerprints, viewport settings, timezone, language, plugins, and hardware specifications.
+### 🔌 Chrome MCP Server
 
-**🏢 Multi-Profile Management** - Create, manage, and isolate browser profiles with persistent cookies, localStorage, and session data. Run multiple identities simultaneously with complete isolation.
+Production-ready browser control via Model Context Protocol for AI agents and automation tools.
 
-**📊 Real-Time Monitoring** - Hook into console logs, network requests, performance metrics, and browser events through Chrome DevTools Protocol integration.
+**Available Tools:**
 
-**🤖 AI-Native Architecture** - Native Model Context Protocol (MCP) support enables Claude, GPT, and custom AI agents to control browsers through natural language.
+| Tool | Purpose | Example Use |
+|------|---------|-------------|
+| `browser_launch` | Start browser instance | Launch with custom profile |
+| `browser_navigate` | Navigate to URL | Go to login page |
+| `browser_click` | Click elements | Submit forms |
+| `browser_type` | Enter text | Fill username/password |
+| `browser_screenshot` | Capture screenshots | Document state |
+| `browser_execute_script` | Run JavaScript | Extract data |
+| `browser_get_cookies` | Retrieve cookies | Session management |
+| `browser_set_cookies` | Set cookies | Restore sessions |
+| `browser_get_html` | Get page HTML | Content extraction |
+| `browser_wait_for` | Wait for elements | Handle dynamic content |
+| `browser_get_network_logs` | Monitor requests | Debug APIs |
+| `browser_terminate` | Close browser | Cleanup |
 
-**✅ Compliance & Auditability** - Full activity logging, session recording, and audit trails for regulatory compliance and security reviews.
+**Transport Modes:**
+```bash
+# CLI integration (stdio)
+python scripts/run_chrome.py
 
-## 💼 Enterprise Use Cases
+# Network access (websocket)  
+python scripts/run_chrome.py --transport websocket --port 9000
+```
 
-### Business Process Automation
-- Automate complex workflows on legacy web applications
-- Handle multi-step authentication flows with MFA support
-- Process invoices, orders, and documents through web portals
-- Maintain session state across long-running operations
+### 🛡️ Anti-Detection Technology
 
-### Quality Assurance & Testing
-- Test applications behind aggressive bot protection
-- Validate user journeys with realistic browser behavior
-- Monitor performance metrics and error rates
-- Cross-browser compatibility testing with profile management
+Stay undetected with comprehensive fingerprint management:
 
-### Data Intelligence
-- Extract data from JavaScript-heavy applications
-- Navigate complex authentication systems
-- Handle CAPTCHAs and anti-bot challenges
-- Maintain persistent sessions for continuous monitoring
+- **Canvas & WebGL** - Unique rendering signatures
+- **Audio Context** - Sound fingerprint variation
+- **WebRTC** - IP leak prevention
+- **Navigator** - Hardware spec spoofing
+- **Timezone & Language** - Locale matching
+- **Plugin Detection** - Extension masking
 
-### Security & Compliance
-- Penetration testing with full browser control
-- Audit authentication and session management
-- Test against bot detection systems
-- Compliance monitoring and reporting
+## Quick Start
 
-## 🛠️ Comprehensive Toolset
+```bash
+# Clone and setup
+git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
+cd AMI-WEB
+uv venv .venv && uv pip install -r requirements.txt
 
-### Browser Lifecycle Management
-- Launch instances with custom profiles
-- Terminate and manage browser pools
-- Anti-detection mode with fingerprint control
-- Headless and headed operation modes
+# Run MCP server for AI agents
+python scripts/run_chrome.py
 
-### Navigation & Interaction
-- Navigate with intelligent wait conditions
-- Execute custom JavaScript in page context
-- Handle popups, alerts, and new windows
-- Manage browser history and refresh cycles
-
-### Content Extraction & Analysis
-- Extract text, HTML, and structured data
-- Identify and interact with forms
-- Harvest links with URL normalization
-- Screenshot capture (viewport, full-page, element)
-
-### Session & State Management
-- Save and restore complete browser sessions
-- Cookie management with domain isolation
-- localStorage and sessionStorage control
-- Profile persistence across restarts
-
-### Monitoring & Debugging
-- Real-time console log streaming
-- Network request/response monitoring
-- Performance metrics collection
-- Error tracking and alerting
-
-### Input Simulation
-- Human-like typing with configurable delays
-- Mouse movements with trajectory control
-- Scroll physics and touch gestures
-- Dropdown and form field interaction
-
-## 🏗️ Architecture & Integration
-
-### Technology Stack
-- **Selenium WebDriver** - Industry-standard browser automation
-- **Chrome DevTools Protocol** - Deep browser integration
-- **Model Context Protocol** - AI agent communication standard
-- **Event-Driven Core** - Reactive architecture with no polling
-
-### Integration Options
-
-```python
-# Python SDK
-from services.core.management.manager import ChromeManager
+# Or use directly in Python
+from browser.backend.core.management.manager import ChromeManager
 
 manager = ChromeManager()
 await manager.initialize()
-
-# Launch with full control
-browser = await manager.get_or_create_instance(
-    profile="production_profile",
-    anti_detect=True
-)
+browser = await manager.get_or_create_instance(profile_name="shopping")
+await browser.navigate("https://amazon.com")
 ```
 
-```json
-// AI Agent Configuration (Claude Desktop)
-{
-  "mcpServers": {
-    "ami-web": {
-      "command": "python",
-      "args": ["scripts/start_mcp_server.py"],
-      "cwd": "/path/to/AMI-WEB"
-    }
-  }
-}
+## Use Cases
+
+### Enterprise RPA
+- Automate SAP, Oracle, Salesforce workflows
+- Handle complex multi-step authentication
+- Process invoices through vendor portals
+- Maintain compliance with full audit trails
+
+### Quality Assurance  
+- Test behind CloudFlare, reCAPTCHA
+- Validate user journeys end-to-end
+- Monitor production application health
+- Cross-browser compatibility testing
+
+### Data Intelligence
+- Extract from JavaScript-heavy SPAs
+- Navigate paywalls and auth systems
+- Monitor competitor pricing/inventory
+- Aggregate data from multiple sources
+
+## Architecture
+
+```
+browser/
+├── backend/
+│   ├── core/
+│   │   ├── browser/          # Browser control layer
+│   │   │   ├── instance.py      # Individual browser
+│   │   │   ├── lifecycle.py    # Launch/terminate
+│   │   │   └── options.py      # Chrome options
+│   │   ├── management/       # Resource management
+│   │   │   ├── manager.py      # Browser pool
+│   │   │   ├── profile_manager.py  # Profile isolation
+│   │   │   └── session_manager.py  # State persistence
+│   │   └── tools/           # Browser operations
+│   └── mcp/
+│       └── chrome/          # MCP server implementation
+│           ├── server.py       # ChromeMCPServer
+│           └── tools/          # Tool definitions
+├── scripts/
+│   └── run_chrome.py        # MCP server launcher
+└── tests/
+    └── integration/         # End-to-end tests
 ```
 
-## 🚀 Running
+## Testing
 
-### Docker
-Coming soon
-
-### Local MCP Server
-Simply run:
 ```bash
-python scripts/start_mcp_server.py
+# Run all browser tests
+python scripts/run_tests.py
+
+# Test MCP server modes
+python scripts/run_tests.py tests/integration/test_mcp_server.py
 ```
 
-The script automatically handles:
-- Virtual environment creation
-- Dependency installation
-- Server startup
+## Security & Compliance
 
-For detailed setup instructions, see [Extended Documentation](docs/README_EXTENDED.md#installation--setup).
+- **Audit Trails** - Every action logged with timestamp
+- **Session Recording** - Replay browser sessions
+- **Data Isolation** - Profiles never share data
+- **Credential Safety** - Never logs passwords
+- **Network Control** - Proxy and header management
 
-## 🔒 Security & Compliance
+## Performance
 
-- **Isolated Profiles** - Complete separation between browser instances
-- **Audit Logging** - Comprehensive activity tracking
-- **Credential Management** - Secure storage of authentication data
-- **Network Control** - Request/response modification capabilities
-- **Compliance Ready** - Built for regulated industries
+- **Concurrent Browsers** - 100+ simultaneous sessions
+- **Fast Launch** - <2 second cold start
+- **Low Memory** - Efficient resource pooling
+- **Auto-Scaling** - Grows with demand
+- **Hibernation** - Suspend idle browsers
 
-## 📚 Documentation
+## Recent Updates
 
-- [Technical Documentation](docs/README_EXTENDED.md) - Complete API reference
-- [Architecture Guide](docs/ARCHITECTURE.md) - System design and patterns
-- [MCP Integration](docs/MCP.md) - (WIP) AI agent setup guide
-- [Contributing](CONTRIBUTING.md) - Development guidelines
+### Latest - MCP Transport Unification
+- All tools now support stdio and websocket modes
+- Consolidated transport implementation in base module
+- Proper environment handling for wrapper scripts
+- Fixed test tool name assertions
 
-## 📄 License
+## Contributing
 
-MIT License - see [LICENSE](LICENSE) for details
+See `CLAUDE.md` for development guidelines.
 
----
+## License
 
-**AMI-WEB - Enterprise Browser Automation with Complete Control**
+MIT License - See LICENSE file
 
-Built for organizations that need reliable, compliant, and undetectable browser automation at scale.
+## Support
 
-[Get Started](https://github.com/Independent-AI-Labs/AMI-WEB) | [Extended Readme](docs/README_EXTENDED.md) | [Support](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
+- GitHub Issues: [AMI-WEB Issues](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
+- Main Project: [AMI-ORCHESTRATOR](https://github.com/Independent-AI-Labs/AMI-ORCHESTRATOR)
