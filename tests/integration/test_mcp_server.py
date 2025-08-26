@@ -1,15 +1,148 @@
 """Integration tests for MCP server with real browser instances."""
 
+import asyncio
 import json
 import logging
 import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
+import websockets
 
 logger = logging.getLogger(__name__)
 
 # Use headless mode by default in CI
 HEADLESS = os.environ.get("HEADLESS", "true").lower() == "true"
+
+# Add browser to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+
+class TestChromeMCPServerModes:
+    """Test Chrome MCP server in both stdio and websocket modes."""
+
+    # Request IDs for JSONRPC calls
+    INIT_REQUEST_ID = 1
+    TOOLS_REQUEST_ID = 2
+
+    @pytest.mark.asyncio
+    async def test_chrome_stdio_mode(self):
+        """Test Chrome MCP server in stdio mode."""
+        # Start the server
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+        proc = subprocess.Popen(
+            [sys.executable, str(server_script)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        try:
+            # Send initialize request
+            init_request = {
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test_client", "version": "1.0.0"}},
+                "id": self.INIT_REQUEST_ID,
+            }
+
+            proc.stdin.write(json.dumps(init_request) + "\n")
+            proc.stdin.flush()
+
+            # Read response with timeout
+            response_line = await asyncio.wait_for(asyncio.get_event_loop().run_in_executor(None, proc.stdout.readline), timeout=5.0)
+            response = json.loads(response_line)
+
+            assert response["jsonrpc"] == "2.0"
+            assert response["id"] == self.INIT_REQUEST_ID
+            assert "result" in response
+            assert response["result"]["protocolVersion"] == "2024-11-05"
+            assert "serverInfo" in response["result"]
+            assert response["result"]["serverInfo"]["name"] == "ChromeMCPServer"
+
+            # Send list tools request
+            tools_request = {"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": self.TOOLS_REQUEST_ID}
+
+            proc.stdin.write(json.dumps(tools_request) + "\n")
+            proc.stdin.flush()
+
+            response_line = await asyncio.wait_for(asyncio.get_event_loop().run_in_executor(None, proc.stdout.readline), timeout=5.0)
+            response = json.loads(response_line)
+
+            assert response["jsonrpc"] == "2.0"
+            assert response["id"] == self.TOOLS_REQUEST_ID
+            assert "result" in response
+            assert "tools" in response["result"]
+
+            # Verify some expected tools exist
+            tool_names = [tool["name"] for tool in response["result"]["tools"]]
+            assert "navigate_to" in tool_names or "browser_navigate" in tool_names
+            assert "click_element" in tool_names or "browser_click" in tool_names
+            assert "take_screenshot" in tool_names or "browser_screenshot" in tool_names
+
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
+
+    @pytest.mark.asyncio
+    async def test_chrome_websocket_mode(self):
+        """Test Chrome MCP server in websocket mode."""
+        # Start the server in websocket mode
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+        proc = subprocess.Popen(
+            [sys.executable, str(server_script), "--transport", "websocket", "--port", "9003"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Give server time to start
+        await asyncio.sleep(2)
+
+        try:
+            # Connect to websocket
+            async with websockets.connect("ws://localhost:9003") as websocket:
+                # Send initialize request
+                init_request = {
+                    "jsonrpc": "2.0",
+                    "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test_client", "version": "1.0.0"}},
+                    "id": self.INIT_REQUEST_ID,
+                }
+
+                await websocket.send(json.dumps(init_request))
+                response = json.loads(await websocket.recv())
+
+                assert response["jsonrpc"] == "2.0"
+                assert response["id"] == self.INIT_REQUEST_ID
+                assert "result" in response
+                assert response["result"]["protocolVersion"] == "2024-11-05"
+                assert "serverInfo" in response["result"]
+                assert response["result"]["serverInfo"]["name"] == "ChromeMCPServer"
+
+                # Send list tools request
+                tools_request = {"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": self.TOOLS_REQUEST_ID}
+
+                await websocket.send(json.dumps(tools_request))
+                response = json.loads(await websocket.recv())
+
+                assert response["jsonrpc"] == "2.0"
+                assert response["id"] == self.TOOLS_REQUEST_ID
+                assert "result" in response
+                assert "tools" in response["result"]
+
+                # Verify some expected tools exist
+                tool_names = [tool["name"] for tool in response["result"]["tools"]]
+                assert "navigate_to" in tool_names or "browser_navigate" in tool_names
+                assert "click_element" in tool_names or "browser_click" in tool_names
+                assert "take_screenshot" in tool_names or "browser_screenshot" in tool_names
+
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
 
 
 @pytest.mark.asyncio(loop_scope="session")
