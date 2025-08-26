@@ -161,8 +161,10 @@ class ToolExecutor:
 
     async def _handle_browser_list(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser list."""
-        instances = self.manager.list_instances()
-        return {"instances": instances}
+        instances = await self.manager.list_instances()
+        # Convert InstanceInfo objects to dicts for JSON serialization
+        # Use mode='json' to convert enums and datetimes properly
+        return {"instances": [inst.model_dump(mode="json") for inst in instances]}
 
     async def _handle_browser_get_active(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle get active browser."""
