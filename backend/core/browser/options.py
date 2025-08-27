@@ -2,6 +2,7 @@
 
 import shutil
 import tempfile
+import threading
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -23,8 +24,13 @@ if TYPE_CHECKING:
 class BrowserOptionsBuilder:
     """Builds Chrome options for different configurations."""
 
+    # Port range constants
+    MIN_DEBUG_PORT = 29000
+    MAX_DEBUG_PORT = 65000
+
     # Class variable to track used ports
     _used_ports: set[int] = set()
+    _port_lock: threading.Lock = threading.Lock()
 
     def __init__(self, config: Config | None = None, profile_manager: "ProfileManager | None" = None):
         self._config = config or Config()
@@ -36,14 +42,25 @@ class BrowserOptionsBuilder:
     @classmethod
     def _get_free_port(cls) -> int:
         """Get a free port for remote debugging."""
-        # Start from a high port range to avoid conflicts
-        base_port = 29000
-        for port in range(base_port, base_port + 1000):
-            if port not in cls._used_ports:
+        import socket
+
+        with cls._port_lock:
+            # Use socket to find a truly free port
+            # This works across processes unlike class variables
+            for _ in range(100):  # Try up to 100 times
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(("", 0))  # Bind to any available port
+                    port = s.getsockname()[1]
+                    # Make sure it's in our preferred range
+                    if cls.MIN_DEBUG_PORT <= port <= cls.MAX_DEBUG_PORT:
+                        cls._used_ports.add(port)
+                        return port
+            # Fallback: just get any available port
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("", 0))
+                port = s.getsockname()[1]
                 cls._used_ports.add(port)
                 return port
-        # Fallback to incrementing port if all are used
-        return base_port + 1000 + len(cls._used_ports)
 
     def get_temp_profile_dir(self) -> Path | None:
         """Get the temporary profile directory if one was created."""
@@ -63,8 +80,10 @@ class BrowserOptionsBuilder:
                 logger.debug(f"Failed to cleanup temp profile directory: {e}")
 
         # Release the debug port
-        if self._debug_port and self._debug_port in self._used_ports:
-            self._used_ports.discard(self._debug_port)
+        if self._debug_port:
+            with self._port_lock:
+                if self._debug_port in self._used_ports:
+                    self._used_ports.discard(self._debug_port)
             self._debug_port = None
 
     def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
