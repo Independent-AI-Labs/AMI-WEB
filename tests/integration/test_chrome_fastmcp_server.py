@@ -66,7 +66,7 @@ class TestChromeFastMCPServer:
             await session.initialize()
 
             # Launch a browser
-            launch_result = await session.call_tool("browser_launch", arguments={"headless": True, "anti_detect": False})
+            launch_result = await session.call_tool("browser_launch", arguments={"headless": True, "anti_detect": True, "use_pool": False})
 
             assert launch_result is not None
             assert len(launch_result.content) > 0

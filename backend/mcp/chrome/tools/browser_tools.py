@@ -11,8 +11,12 @@ async def browser_launch_tool(
 ) -> dict[str, Any]:
     """Launch a new browser instance."""
     logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}, use_pool={use_pool}")
+    logger.debug("Browser launch initiated")
 
     try:
+        # Ensure manager is started
+        if not manager._initialized:
+            await manager.start()
         instance = await manager.get_or_create_instance(
             headless=headless,
             profile=profile,
