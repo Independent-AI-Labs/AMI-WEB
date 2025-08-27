@@ -10,14 +10,18 @@ async def browser_launch_tool(manager: ChromeManager, headless: bool = False, pr
     """Launch a new browser instance."""
     logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}")
 
-    instance = await manager.get_or_create_instance(
-        headless=headless,
-        profile=profile,
-        anti_detect=anti_detect,
-        use_pool=False,
-    )
+    try:
+        instance = await manager.get_or_create_instance(
+            headless=headless,
+            profile=profile,
+            anti_detect=anti_detect,
+            use_pool=False,
+        )
 
-    return {"success": True, "instance_id": instance.id, "status": "launched"}
+        return {"success": True, "instance_id": instance.id, "status": "launched"}
+    except Exception as e:
+        logger.error(f"Failed to launch browser: {e}")
+        return {"success": False, "error": str(e), "status": "failed"}
 
 
 async def browser_terminate_tool(manager: ChromeManager, instance_id: str) -> dict[str, Any]:
