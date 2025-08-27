@@ -127,14 +127,14 @@ def setup_chrome_if_needed():
 
 
 def main():
-    """Run setup for browser module by calling base setup.py directly."""
-    # Find base setup.py
-    base_setup = MODULE_ROOT.parent / "base" / "setup.py"
+    """Run setup for browser module by calling base module_setup.py directly."""
+    # Find base module_setup.py
+    base_setup = MODULE_ROOT.parent / "base" / "module_setup.py"
     if not base_setup.exists():
-        print("ERROR: Cannot find base/setup.py")
+        print("ERROR: Cannot find base/module_setup.py")
         sys.exit(1)
 
-    # Call base setup.py with appropriate arguments
+    # Call base module_setup.py with appropriate arguments
     cmd = [sys.executable, str(base_setup), "--project-dir", str(MODULE_ROOT), "--project-name", "Browser Module"]
 
     result = subprocess.run(cmd, check=False)
