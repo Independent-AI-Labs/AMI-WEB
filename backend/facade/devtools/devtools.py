@@ -74,7 +74,7 @@ class DevToolsController(BaseController):
                                 type=response.get("mimeType"),
                                 size=response.get("encodedDataLength"),
                                 headers=response.get("headers", {}),
-                            )
+                            ),
                         )
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse performance log entry: {e}")
@@ -112,7 +112,7 @@ class DevToolsController(BaseController):
             "Network.emulateNetworkConditions",
             {"offline": False, "downloadThroughput": download_throughput, "uploadThroughput": upload_throughput, "latency": latency},
         )
-        logger.info(f"Enabled network throttling: {download_throughput / 1024}KB/s down, " f"{upload_throughput / 1024}KB/s up, {latency}ms latency")
+        logger.info(f"Enabled network throttling: {download_throughput / 1024}KB/s down, {upload_throughput / 1024}KB/s up, {latency}ms latency")
 
     async def disable_network_throttling(self) -> None:
         """Disable network throttling."""

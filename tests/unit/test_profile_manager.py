@@ -48,7 +48,7 @@ class TestProfileManager:
                     "id": "profile-123",
                     "name": "Test Profile",
                     "properties": {"userAgent": "Custom UA", "webdriver": False},
-                }
+                },
             }
             manager.get_profile = AsyncMock(side_effect=lambda pid: manager.profiles.get(pid))
 
@@ -68,7 +68,7 @@ class TestProfileManager:
                 "profile-123": {
                     "id": "profile-123",
                     "properties": {"userAgent": "Old UA", "platform": "Win32"},
-                }
+                },
             }
             manager.update_profile = AsyncMock(side_effect=lambda pid, props: manager.profiles[pid]["properties"].update(props))
 
@@ -274,7 +274,7 @@ class TestProfileValidation:
             }
 
             manager.validate_profile = Mock(
-                side_effect=lambda p: bool("properties" in p and p["properties"].get("userAgent") and isinstance(p["properties"].get("languages"), list))
+                side_effect=lambda p: bool("properties" in p and p["properties"].get("userAgent") and isinstance(p["properties"].get("languages"), list)),
             )
 
             assert manager.validate_profile(valid_profile) is True
@@ -330,7 +330,7 @@ class TestProfilePersistence:
                     "id": "profile-123",
                     "name": "Export Test",
                     "properties": {"userAgent": "Export UA"},
-                }
+                },
             }
             manager.export_profile = AsyncMock(side_effect=lambda pid: json.dumps(manager.profiles.get(pid)))
 

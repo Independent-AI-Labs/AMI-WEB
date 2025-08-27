@@ -29,7 +29,7 @@ class ChromeManagerError(Exception):
 
     def __repr__(self) -> str:
         """Return detailed representation for debugging."""
-        return f"{self.__class__.__name__}(" f"message={self.message!r}, " f"error_code={self.error_code!r}, " f"retryable={self.retryable})"
+        return f"{self.__class__.__name__}(message={self.message!r}, error_code={self.error_code!r}, retryable={self.retryable})"
 
 
 @dataclass

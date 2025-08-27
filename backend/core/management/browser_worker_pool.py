@@ -11,10 +11,11 @@ from loguru import logger
 from ...models.browser import ChromeOptions
 from ...utils.config import Config
 from ..browser.instance import BrowserInstance
+from ..browser.properties_manager import PropertiesManager
+from .profile_manager import ProfileManager
 
 if TYPE_CHECKING:
-    from ..browser.properties_manager import PropertiesManager
-    from .profile_manager import ProfileManager
+    pass
 
 
 class BrowserWorker:
@@ -177,7 +178,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             id=worker.id,
             state=worker.state,
             created_at=worker.created_at,
-            last_used=worker.last_used,
+            last_activity=worker.last_used,
             task_count=worker.task_count,
             error_count=worker.error_count,
             memory_usage=None,  # Could get from browser if needed

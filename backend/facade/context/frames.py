@@ -39,7 +39,7 @@ class FrameController(BaseController):
                 # Validate index is within range
                 frames = await self.count_frames()
                 if frame >= frames:
-                    raise NavigationError(f"Frame index {frame} out of range (0-{frames-1})")
+                    raise NavigationError(f"Frame index {frame} out of range (0-{frames - 1})")
 
             await loop.run_in_executor(None, self.driver.switch_to.frame, frame)
 

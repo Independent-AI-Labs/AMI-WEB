@@ -70,8 +70,8 @@ class Waiter(BaseController):
                     """
                     return performance.getEntriesByType('resource')
                         .filter(r => !r.responseEnd).length === 0
-                """
-                )
+                """,
+                ),
             )
 
         elif condition.type == "element" and condition.target:
@@ -107,7 +107,7 @@ class Waiter(BaseController):
                     """
                     return performance.getEntriesByType('resource')
                         .filter(r => !r.responseEnd).length === 0
-                """
+                """,
                 ),
             )
 

@@ -1,5 +1,6 @@
 """Browser storage management - cookies, localStorage, downloads."""
 
+import json
 import time
 from pathlib import Path
 from typing import Any
@@ -107,7 +108,6 @@ class BrowserStorage:
             return
 
         # Save cookies to a JSON file in the profile directory
-        import json
 
         # Use configured profiles directory or default
         profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
@@ -126,7 +126,6 @@ class BrowserStorage:
             return None
 
         # Load cookies from JSON file in the profile directory
-        import json
 
         # Use configured profiles directory or default
         profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
@@ -215,7 +214,7 @@ class BrowserStorage:
                     items[key] = localStorage.getItem(key);
                 }
                 return items;
-            """
+            """,
             )
         except Exception as e:
             logger.debug(f"Failed to get localStorage: {e}")

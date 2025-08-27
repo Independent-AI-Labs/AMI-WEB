@@ -1,6 +1,7 @@
 """Touch gesture controls for mobile emulation."""
 
 import asyncio
+import time
 
 from loguru import logger
 
@@ -371,8 +372,6 @@ class TouchController(BaseController):
             )
 
             if self._is_in_thread_context():
-                import time
-
                 self.driver.execute_script(script)
                 time.sleep(duration)
             else:

@@ -1,6 +1,7 @@
 """Browser session management for saving and restoring browser state."""
 
 import json
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -9,9 +10,9 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from ...utils.exceptions import SessionError
+from ..browser.instance import BrowserInstance
 
 if TYPE_CHECKING:
-    from ..browser.instance import BrowserInstance
     from .manager import ChromeManager
 
 
@@ -158,7 +159,7 @@ class SessionManager:
                     "url": metadata.get("url"),
                     "title": metadata.get("title"),
                     "exists": session_dir.exists(),
-                }
+                },
             )
         return sorted(result, key=lambda x: x["created_at"] or "", reverse=True)
 
@@ -177,8 +178,6 @@ class SessionManager:
         # Delete session directory
         session_dir = self.session_dir / session_id
         if session_dir.exists():
-            import shutil
-
             shutil.rmtree(session_dir)
 
         # Remove from metadata

@@ -276,7 +276,7 @@ def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C90
     return driver_path
 
 
-def download_chromedriver(version: str) -> Path:  # noqa: C901, PLR0912
+def download_chromedriver(version: str) -> Path:  # noqa: C901
     """Download ChromeDriver matching the Chrome version."""
     system = platform.system()
     _, arch = get_platform_info()

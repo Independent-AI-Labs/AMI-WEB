@@ -195,7 +195,7 @@ class TabController(BaseController):
             handles = self.driver.window_handles
 
             if index >= len(handles):
-                raise NavigationError(f"Tab index {index} out of range (0-{len(handles)-1})")
+                raise NavigationError(f"Tab index {index} out of range (0-{len(handles) - 1})")
 
             await self.switch_tab(handles[index])
 
@@ -220,7 +220,7 @@ class TabController(BaseController):
             tabs = await self.list_tabs()
 
             for tab in tabs:
-                if partial and title.lower() in tab.title.lower() or not partial and tab.title.lower() == title.lower():
+                if (partial and title.lower() in tab.title.lower()) or (not partial and tab.title.lower() == title.lower()):
                     await self.switch_tab(tab.id)
                     return
 

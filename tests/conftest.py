@@ -3,6 +3,7 @@
 import atexit
 import contextlib
 import os
+import random
 import subprocess
 import sys
 from pathlib import Path
@@ -133,7 +134,6 @@ def test_html_server():
 @pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
 async def test_server():
     """Start test HTTP server for each test."""
-    import random
 
     # Use a random port to avoid conflicts
     port = random.randint(9000, 9999)  # noqa: S311

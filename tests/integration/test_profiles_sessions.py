@@ -1,24 +1,22 @@
 """Tests for browser profiles, sessions, downloads, and security features."""
 
+
 import tempfile
 from contextlib import suppress
 from pathlib import Path
 
 import pytest
+import yaml
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.models.security import SecurityConfig, SecurityLevel
+from browser.backend.utils.config import Config
 from selenium.webdriver.common.by import By
 
 
 @pytest.fixture
 async def backend():
     """Create a Chrome manager instance with test configuration."""
-    import tempfile
-    from pathlib import Path
-
-    import yaml
-    from browser.backend.utils.config import Config
 
     # Try to use existing config.yaml or config.test.yaml first
     config_file = None
@@ -43,7 +41,7 @@ async def backend():
                 "profiles_dir": "./data/test_profiles",
                 "download_dir": "./data/test_downloads",
                 "session_dir": "./data/test_sessions",
-            }
+            },
         )
 
         # Create temporary config with correct paths
@@ -65,7 +63,7 @@ async def backend():
                         "download_dir": "./data/test_downloads",
                         "session_dir": "./data/test_sessions",
                     },
-                }
+                },
             }
             yaml.dump(config, f)
             temp_config_file = f.name
@@ -511,7 +509,7 @@ class TestPersistentSessions:
                     "value": "test_auth_12345",
                     "domain": "httpbin.org",
                     "path": "/",
-                }
+                },
             )
 
             # Save the session
