@@ -103,7 +103,7 @@ class TestAntiDetection:
                     'type': typeof navigator.webdriver,
                     'truthy': !!navigator.webdriver
                 };
-            """
+            """,
             )
             # Skip 'in' check as it may error with proxy
             plugin_count = driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
@@ -124,7 +124,7 @@ class TestAntiDetection:
                     count++;
                 }
                 return count;
-            """
+            """,
             )
             print(f"Old plugin test (for loop): {old_plugin_test}")
 
@@ -144,7 +144,7 @@ class TestAntiDetection:
                     'toString': Object.prototype.toString.call(navigator.plugins),
                     'valueOf': typeof navigator.plugins.valueOf()
                 };
-            """
+            """,
             )
             print(f"instanceof tests: {instanceof_test}")
 
@@ -177,7 +177,7 @@ class TestAntiDetection:
                     methods.array_from = 'error: ' + e;
                 }
                 return methods;
-            """
+            """,
             )
             print(f"Bot test methods: {bot_test}")
             print("========================\n")
@@ -302,7 +302,7 @@ class TestH264Codec:
                 """
                 const video = document.createElement('video');
                 return video.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '';
-                """
+                """,
             )
 
             assert h264_support, "H.264 codec is not supported"

@@ -32,7 +32,7 @@ class PerformanceController(BaseController):
                     firstPaint: 0,
                     firstContentfulPaint: 0
                 };
-            """
+            """,
             )
 
             # Get paint timing
@@ -48,7 +48,7 @@ class PerformanceController(BaseController):
                     }
                 }
                 return result;
-            """
+            """,
             )
 
             # Get memory info (if available)
@@ -62,7 +62,7 @@ class PerformanceController(BaseController):
                     };
                 }
                 return null;
-            """
+            """,
             )
 
             # Combine metrics
@@ -101,7 +101,7 @@ class PerformanceController(BaseController):
                     decodedBodySize: entry.decodedBodySize || 0,
                     initiatorType: entry.initiatorType
                 }));
-            """
+            """,
             )
             return resources or []
         except Exception as e:
@@ -124,7 +124,7 @@ class PerformanceController(BaseController):
                     duration: entry.duration,
                     attribution: entry.attribution ? entry.attribution[0].name : null
                 }));
-            """
+            """,
             )
             return tasks or []
         except Exception as e:
@@ -160,7 +160,7 @@ class PerformanceController(BaseController):
             f"""
             const entries = performance.getEntriesByName('{name}', 'measure');
             return entries.length > 0 ? entries[entries.length - 1].duration : 0;
-        """
+        """,
         )
 
         logger.debug(f"Measured '{name}': {duration}ms")

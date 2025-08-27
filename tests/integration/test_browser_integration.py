@@ -60,7 +60,7 @@ def start_test_server():
 
 def setup_module():
     """Set up test server once for all tests."""
-    global _server_thread  # noqa: PLW0603, PLW0602
+    global _server_thread  # noqa: PLW0602
 
     # Start test server
     start_test_server()
@@ -399,7 +399,7 @@ class TestDynamicContent:
                 // Manually trigger the scroll event
                 scrollContainer.dispatchEvent(new Event('scroll'));
             }
-        """
+        """,
         )
         await asyncio.sleep(1)  # Give time for the scroll event to process
 
@@ -603,7 +603,7 @@ class TestScriptInjection:
                 data: 'test-data',
                 function: function() { return 'injected-function-result'; }
             };
-        """
+        """,
         )
 
         # Verify injection
@@ -634,7 +634,7 @@ class TestScriptInjection:
             newDiv.style.padding = '20px';
             newDiv.style.background = 'yellow';
             document.getElementById('content-area').appendChild(newDiv);
-        """
+        """,
         )
 
         # Verify element exists
@@ -667,7 +667,7 @@ class TestScriptInjection:
                 });
                 return originalFetch.apply(this, args);
             };
-        """
+        """,
         )
 
         # Trigger AJAX request

@@ -1,12 +1,14 @@
 """Service for generating browser property injection scripts."""
 
 import json
+import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from ..models.browser_properties import BrowserProperties
+if TYPE_CHECKING:
+    from ..models.browser_properties import BrowserProperties
 
 
 class PropertyInjectionService:
@@ -22,7 +24,7 @@ class PropertyInjectionService:
             lstrip_blocks=True,
         )
 
-    def generate_injection_script(self, properties: BrowserProperties) -> str:
+    def generate_injection_script(self, properties: "BrowserProperties") -> str:
         """
         Generate JavaScript injection script from browser properties.
 
@@ -37,7 +39,7 @@ class PropertyInjectionService:
         # Render template with context
         return template.render(**self._prepare_context(properties))
 
-    def _prepare_context(self, properties: BrowserProperties) -> dict[str, Any]:
+    def _prepare_context(self, properties: "BrowserProperties") -> dict[str, Any]:
         """
         Prepare template context from browser properties.
 
@@ -120,7 +122,7 @@ class PropertyInjectionService:
         }
         return timezone_offsets.get(timezone, 0)
 
-    def _prepare_client_hints_brands(self, properties: BrowserProperties) -> str:
+    def _prepare_client_hints_brands(self, properties: "BrowserProperties") -> str:
         """
         Prepare client hints brands array.
 
@@ -139,8 +141,6 @@ class PropertyInjectionService:
 
         # Generate default brands based on user agent
         if properties.user_agent and "Chrome" in properties.user_agent:
-            import re
-
             chrome_match = re.search(r"Chrome/(\d+)", properties.user_agent)
             if chrome_match:
                 version = chrome_match.group(1)
@@ -149,12 +149,12 @@ class PropertyInjectionService:
                         {"brand": "Not/A)Brand", "version": "99"},
                         {"brand": "Google Chrome", "version": version},
                         {"brand": "Chromium", "version": version},
-                    ]
+                    ],
                 )
 
         return "[]"
 
-    def _get_video_codecs(self, properties: BrowserProperties) -> str:
+    def _get_video_codecs(self, properties: "BrowserProperties") -> str:
         """Get video codecs JSON based on codec support."""
         codecs = []
         if properties.codec_support.h264:
@@ -169,7 +169,7 @@ class PropertyInjectionService:
             codecs.append("av01")
         return json.dumps(codecs)
 
-    def _get_audio_codecs(self, properties: BrowserProperties) -> str:
+    def _get_audio_codecs(self, properties: "BrowserProperties") -> str:
         """Get audio codecs JSON based on codec support."""
         codecs = []
         if properties.codec_support.opus:
@@ -184,7 +184,7 @@ class PropertyInjectionService:
             codecs.append("flac")
         return json.dumps(codecs)
 
-    def _get_permissions_json(self, properties: BrowserProperties) -> str:
+    def _get_permissions_json(self, properties: "BrowserProperties") -> str:
         """Get permissions JSON from individual permission properties."""
         permissions = {}
         if properties.notification_permission != "default":

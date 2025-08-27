@@ -103,7 +103,7 @@ class Config:
                 [
                     project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
                     project_root / "build" / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
-                ]
+                ],
             )
             driver_paths = [
                 project_root / "build" / "chromedriver",
@@ -197,5 +197,5 @@ class Config:
                         "profile.default_content_setting_values.notifications": 2,
                     },
                 },
-            }
+            },
         }

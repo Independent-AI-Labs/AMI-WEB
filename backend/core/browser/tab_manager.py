@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from ...models.browser_properties import BrowserProperties
+from .properties_manager import PropertiesManager
+
 if TYPE_CHECKING:
-    from ...models.browser_properties import BrowserProperties
-    from .properties_manager import PropertiesManager
+    pass
 
 
 class TabManager:

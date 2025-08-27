@@ -8,6 +8,7 @@ from loguru import logger
 from ...models.browser import PageResult, WaitCondition
 from ...utils.exceptions import NavigationError
 from ..base import BaseController
+from .waiter import Waiter
 
 
 class Navigator(BaseController):
@@ -47,13 +48,9 @@ class Navigator(BaseController):
             logger.debug(f"driver.get completed for {url}")
 
             if wait_for:
-                from .waiter import Waiter
-
                 waiter = Waiter(self.instance)
                 waiter._wait_for_condition_sync(wait_for, timeout)
             else:
-                from .waiter import Waiter
-
                 waiter = Waiter(self.instance)
                 waiter._wait_for_load_sync(timeout)
 
@@ -82,13 +79,9 @@ class Navigator(BaseController):
             await loop.run_in_executor(None, self.driver.get, url)
 
             if wait_for:
-                from .waiter import Waiter
-
                 waiter = Waiter(self.instance)
                 await waiter._wait_for_condition(wait_for, timeout)
             else:
-                from .waiter import Waiter
-
                 waiter = Waiter(self.instance)
                 await waiter._wait_for_load(timeout)
 
@@ -115,14 +108,12 @@ class Navigator(BaseController):
         try:
             if self._is_in_thread_context():
                 self.driver.back()
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 waiter._wait_for_load_sync()
             else:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self.driver.back)
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 await waiter._wait_for_load()
@@ -137,14 +128,12 @@ class Navigator(BaseController):
         try:
             if self._is_in_thread_context():
                 self.driver.forward()
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 waiter._wait_for_load_sync()
             else:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self.driver.forward)
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 await waiter._wait_for_load()
@@ -166,7 +155,6 @@ class Navigator(BaseController):
                     self.driver.execute_script("location.reload(true)")
                 else:
                     self.driver.refresh()
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 waiter._wait_for_load_sync()
@@ -176,7 +164,6 @@ class Navigator(BaseController):
                     await loop.run_in_executor(None, self.driver.execute_script, "location.reload(true)")
                 else:
                     await loop.run_in_executor(None, self.driver.refresh)
-                from .waiter import Waiter
 
                 waiter = Waiter(self.instance)
                 await waiter._wait_for_load()

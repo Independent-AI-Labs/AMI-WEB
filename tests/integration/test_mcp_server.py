@@ -4,12 +4,14 @@ import asyncio
 import json
 import logging
 import os
+import random
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 import websockets
+from base.backend.utils.environment_setup import EnvironmentSetup
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,6 @@ class TestChromeMCPServerModes:
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
 
         # Use the module's venv python
-        from base.backend.utils.environment_setup import EnvironmentSetup
 
         venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
 
@@ -105,7 +106,6 @@ class TestChromeMCPServerModes:
         proc = None
         try:
             # Use a random port to avoid conflicts
-            import random
 
             port = random.randint(9100, 9200)  # noqa: S311
 
@@ -113,7 +113,6 @@ class TestChromeMCPServerModes:
             server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
 
             # Use the module's venv python
-            from base.backend.utils.environment_setup import EnvironmentSetup
 
             venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
 

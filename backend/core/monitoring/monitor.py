@@ -43,7 +43,10 @@ class BrowserMonitor:
             logs = driver.get_log("browser")  # type: ignore[attr-defined]
             for log in logs:
                 entry = ConsoleEntry(
-                    level=log.get("level", "INFO"), message=log.get("message", ""), timestamp=log.get("timestamp", 0), source=log.get("source", "console")
+                    level=log.get("level", "INFO"),
+                    message=log.get("message", ""),
+                    timestamp=log.get("timestamp", 0),
+                    source=log.get("source", "console"),
                 )
                 self._console_logs.append(entry)
         except Exception as e:
@@ -87,7 +90,7 @@ class BrowserMonitor:
                     firstPaint: 0,
                     firstContentfulPaint: 0
                 };
-            """
+            """,
             )
 
             # Get paint timing
@@ -103,7 +106,7 @@ class BrowserMonitor:
                     }
                 });
                 return result;
-            """
+            """,
             )
 
             # Memory usage tracking removed - not currently used

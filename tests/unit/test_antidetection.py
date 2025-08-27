@@ -1,4 +1,5 @@
 """Test suite for antidetection scripts."""
+
 import json
 import re
 from pathlib import Path
@@ -192,7 +193,7 @@ class TestAntidetectionIntegration:
                 type: typeof navigator.webdriver,
                 isUndefined: navigator.webdriver === undefined
             };
-        """
+        """,
         )
 
         # The script should make webdriver return undefined

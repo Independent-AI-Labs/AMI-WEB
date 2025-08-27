@@ -1,5 +1,6 @@
 """Unit tests for ChromeManager business logic."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -291,7 +292,6 @@ class TestChromeManagerConcurrency:
             manager.get_or_create_instance = AsyncMock(side_effect=instances)
 
             # Simulate concurrent creation
-            import asyncio
 
             tasks = [manager.get_or_create_instance() for _ in range(3)]
             results = await asyncio.gather(*tasks)
@@ -312,7 +312,6 @@ class TestChromeManagerConcurrency:
             manager.terminate_instance = AsyncMock()
 
             # Simulate concurrent termination
-            import asyncio
 
             tasks = [manager.terminate_instance(instance_id) for instance_id in instance_ids]
             await asyncio.gather(*tasks)

@@ -188,7 +188,7 @@ def get_anti_detection_arguments(user_agent: str | None = None, window_size: tup
             # Additional GPU flags for better WebGL support
             "--enable-gpu",
             "--enable-features=VaapiVideoDecoder",
-        ]
+        ],
     )
 
     return args
