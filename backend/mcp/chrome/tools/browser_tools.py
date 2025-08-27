@@ -6,16 +6,18 @@ from browser.backend.core.management.manager import ChromeManager
 from loguru import logger
 
 
-async def browser_launch_tool(manager: ChromeManager, headless: bool = False, profile: str | None = None, anti_detect: bool = False) -> dict[str, Any]:
+async def browser_launch_tool(
+    manager: ChromeManager, headless: bool = False, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True
+) -> dict[str, Any]:
     """Launch a new browser instance."""
-    logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}")
+    logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}, use_pool={use_pool}")
 
     try:
         instance = await manager.get_or_create_instance(
             headless=headless,
             profile=profile,
             anti_detect=anti_detect,
-            use_pool=False,
+            use_pool=use_pool,  # Allow flexibility for testing
         )
 
         return {"success": True, "instance_id": instance.id, "status": "launched"}
