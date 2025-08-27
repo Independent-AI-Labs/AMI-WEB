@@ -12,6 +12,7 @@ MODULE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(MODULE_ROOT))
 sys.path.insert(0, str(MODULE_ROOT.parent))
 
+from base.backend.mcp.mcp_runner import MCPRunner  # noqa: E402
 from base.backend.utils.path_utils import ModuleSetup  # noqa: E402
 
 from backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
@@ -22,41 +23,12 @@ ModuleSetup.ensure_running_in_venv(Path(__file__))
 
 async def main():
     """Run the Chrome MCP server."""
-    # BrowserMCPServer needs special handling - it requires a ChromeManager instance
-    import argparse
-
-    from browser.backend.core.management.manager import ChromeManager
-    from loguru import logger
-
-    # Parse arguments ourselves since we need to create manager first
-    parser = argparse.ArgumentParser(description="Chrome MCP Server")
-    parser.add_argument("--transport", choices=["stdio", "websocket"], default="stdio", help="Transport mode")
-    parser.add_argument("--host", default="localhost", help="Host for websocket mode")
-    parser.add_argument("--port", type=int, default=8765, help="Port for websocket mode")
-    parser.add_argument("--config", help="Configuration file")
-    args = parser.parse_args()
-
-    # Configure logger for stdio mode - MUST redirect to stderr to avoid breaking JSON protocol
-    if args.transport == "stdio":
-        logger.remove()  # Remove default handler
-        logger.add(sys.stderr, level="WARNING")  # Only log warnings and errors to stderr
-
-    # Create Chrome manager
-    manager = ChromeManager(config_file=args.config)
-
-    # Create and run server
-    config = {}
-    if args.config:
-        from base.backend.utils.config import Config
-
-        config = Config.load(args.config).to_dict()
-
-    server = BrowserMCPServer(manager=manager, config=config)
-
-    if args.transport == "websocket":
-        await server.run_websocket(args.host, args.port)
-    else:
-        await server.run_stdio()
+    runner = MCPRunner(
+        server_class=BrowserMCPServer,
+        server_name="Chrome",
+        config_files=["chrome_config.yaml", "config.yaml"],
+    )
+    await runner.run()
 
 
 if __name__ == "__main__":
