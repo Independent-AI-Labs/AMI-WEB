@@ -32,8 +32,14 @@ class TestChromeMCPServerModes:
         """Test Chrome MCP server in stdio mode."""
         # Start the server
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+
+        # Use the module's venv python
+        from base.backend.utils.environment_setup import EnvironmentSetup
+
+        venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+
         proc = subprocess.Popen(
-            ["python", str(server_script)],
+            [str(venv_python), str(server_script)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -84,33 +90,50 @@ class TestChromeMCPServerModes:
             assert "take_screenshot" in tool_names or "browser_screenshot" in tool_names
 
         finally:
-            proc.terminate()
-            proc.wait(timeout=5)
+            # Ensure proper cleanup
+            if proc:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
 
     @pytest.mark.asyncio
     async def test_chrome_websocket_mode(self):
         """Test Chrome MCP server in websocket mode."""
-        # Start the server in websocket mode
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
-        proc = subprocess.Popen(
-            ["python", str(server_script), "--transport", "websocket", "--port", "9003"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-        # Give server time to start and check for errors
-        await asyncio.sleep(2)
-
-        # Check if process is still running
-        if proc.poll() is not None:
-            # Process died, get error output
-            stdout, stderr = proc.communicate()
-            raise RuntimeError(f"Server failed to start. Stdout: {stdout}\nStderr: {stderr}")
-
+        proc = None
         try:
-            # Connect to websocket
-            async with websockets.connect("ws://localhost:9003") as websocket:
+            # Use a random port to avoid conflicts
+            import random
+
+            port = random.randint(9100, 9200)  # noqa: S311
+
+            # Start the server in websocket mode
+            server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+
+            # Use the module's venv python
+            from base.backend.utils.environment_setup import EnvironmentSetup
+
+            venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+
+            # Start server without capturing output to avoid blocking
+            proc = subprocess.Popen(
+                [str(venv_python), str(server_script), "--transport", "websocket", "--port", str(port)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            # Wait for server to fully start and listen on port
+            await asyncio.sleep(2)
+
+            # Check if process is still running
+            if proc.poll() is not None:
+                # Process died
+                raise RuntimeError(f"Server process died with exit code: {proc.returncode}")
+
+            # Connect to the websocket
+            async with websockets.connect(f"ws://localhost:{port}") as websocket:
                 # Send initialize request
                 init_request = {
                     "jsonrpc": "2.0",
@@ -147,8 +170,14 @@ class TestChromeMCPServerModes:
                 assert "take_screenshot" in tool_names or "browser_screenshot" in tool_names
 
         finally:
-            proc.terminate()
-            proc.wait(timeout=5)
+            # Ensure proper cleanup
+            if proc:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
 
 
 @pytest.mark.asyncio(loop_scope="session")
