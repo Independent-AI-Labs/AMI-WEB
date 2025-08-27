@@ -39,10 +39,10 @@ Production-ready browser control via Model Context Protocol for AI agents and au
 **Transport Modes:**
 ```bash
 # CLI integration (stdio)
-python scripts/run_chrome.py
+python backend/mcp/chrome/run_chrome.py
 
 # Network access (websocket)  
-python scripts/run_chrome.py --transport websocket --port 9000
+python backend/mcp/chrome/run_chrome.py --transport websocket --port 9000
 ```
 
 ### 🛡️ Privacy-Preserving Automation
@@ -65,7 +65,7 @@ cd AMI-WEB
 uv venv .venv && uv pip install -r requirements.txt
 
 # Run MCP server for AI agents
-python scripts/run_chrome.py
+python backend/mcp/chrome/run_chrome.py
 
 # Or use directly in Python
 from browser.backend.core.management.manager import ChromeManager
@@ -115,8 +115,6 @@ browser/
 │       └── chrome/          # MCP server implementation
 │           ├── server.py       # ChromeMCPServer
 │           └── tools/          # Tool definitions
-├── scripts/
-│   └── run_chrome.py        # MCP server launcher
 └── tests/
     └── integration/         # End-to-end tests
 ```
