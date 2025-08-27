@@ -6,8 +6,8 @@ backend:
     # Path to Chrome/Chromium executable
     chrome_binary_path: "./build/chromium-win/chrome.exe"
     
-    # Path to ChromeDriver executable
-    chromedriver_path: "./build/chromedriver.exe"
+    # Path to ChromeDriver executable  
+    chromedriver_path: "./build/chromedriver-win64/chromedriver.exe"
     
     # Default headless mode
     default_headless: true
