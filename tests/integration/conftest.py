@@ -47,7 +47,9 @@ class MCPTestServer:
         await self.manager.start()
 
         config = {"server_host": "localhost", "server_port": self.port, "max_connections": 10, "response_format": "json"}
-        self.server = BrowserMCPServer(self.manager, config)
+        self.server = BrowserMCPServer(config)
+        # Replace the server's manager with our test manager
+        self.server.manager = self.manager
         await self.server.start()
 
         logger.info(f"Test MCP server started on port {self.port}")
