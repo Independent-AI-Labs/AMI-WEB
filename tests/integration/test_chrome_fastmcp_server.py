@@ -51,6 +51,7 @@ class TestChromeFastMCPServer:
             assert "browser_screenshot" in tool_names
 
     @pytest.mark.asyncio
+    @pytest.mark.integration  # Mark as integration test that requires Chrome
     async def test_browser_launch_and_terminate(self):
         """Test launching and terminating a browser instance."""
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
