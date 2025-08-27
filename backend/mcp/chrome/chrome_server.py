@@ -62,6 +62,11 @@ class ChromeFastMCPServer:
         config_file = self.config.get("config_file") if self.config else None
         self.manager = ChromeManager(config_file=config_file)
 
+        # Start the manager synchronously during init
+        import asyncio
+
+        asyncio.run(self.manager.start())
+
         # Register tools
         self._register_tools()
 
