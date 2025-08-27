@@ -1,14 +1,9 @@
 """Shared fixtures for browser integration tests."""
 
 import asyncio
-import json
 import os
 from pathlib import Path
-from typing import Any
 
-import pytest
-import pytest_asyncio
-import websockets
 from browser.backend.core.management.manager import ChromeManager
 from loguru import logger
 
@@ -60,118 +55,3 @@ class MCPTestServer:
         if self.manager:
             # Force shutdown of all browser instances and pool
             await self.manager.shutdown()
-
-
-@pytest_asyncio.fixture(scope="session", loop_scope="session")
-async def mcp_server():
-    """MCP server fixture - disabled until FastMCP supports websocket."""
-    pytest.skip("MCP websocket server not available with FastMCP")
-    yield None
-
-
-class MCPClient:
-    """Helper class for MCP protocol communication in tests."""
-
-    def __init__(self, websocket):
-        """Initialize MCP client with WebSocket connection."""
-        self.websocket = websocket
-        self._request_id = 0
-
-    def _next_id(self) -> int:
-        """Get next request ID."""
-        self._request_id += 1
-        return self._request_id
-
-    async def send_request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Send MCP request and wait for response."""
-        request_id = self._next_id()
-        request = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": request_id}
-
-        await self.websocket.send(json.dumps(request))
-        response = await asyncio.wait_for(self.websocket.recv(), timeout=30)
-        data = json.loads(response)
-
-        # Verify response matches request
-        assert data.get("id") == request_id, f"Response ID mismatch: expected {request_id}, got {data.get('id')}"
-
-        if "error" in data:
-            raise Exception(f"MCP error: {data['error']}")
-
-        return data.get("result", {})
-
-    async def initialize(self) -> dict[str, Any]:
-        """Send initialize request."""
-        return await self.send_request("initialize")
-
-    async def list_tools(self) -> dict[str, Any]:
-        """List available tools."""
-        return await self.send_request("tools/list")
-
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Call a specific tool."""
-        return await self.send_request("tools/call", {"name": name, "arguments": arguments or {}})
-
-    async def launch_browser(self, headless: bool = True, **kwargs) -> str:
-        """Launch browser and return instance ID."""
-        result = await self.call_tool("browser_launch", {"headless": headless, **kwargs})
-
-        # Extract instance ID from response
-        if result and "content" in result:
-            content = result["content"]
-            if isinstance(content, list) and len(content) > 0:
-                text = content[0].get("text", "{}")
-                data = json.loads(text)
-                return data.get("instance_id")
-
-        raise Exception("Failed to get instance ID from browser_launch response")
-
-    async def navigate(self, instance_id: str, url: str) -> dict[str, Any]:
-        """Navigate browser to URL."""
-        return await self.call_tool("browser_navigate", {"instance_id": instance_id, "url": url})
-
-    async def screenshot(self, instance_id: str) -> dict[str, Any]:
-        """Take screenshot."""
-        return await self.call_tool("browser_screenshot", {"instance_id": instance_id})
-
-    async def execute_script(self, instance_id: str, script: str) -> dict[str, Any]:
-        """Execute JavaScript."""
-        return await self.call_tool("browser_execute_script", {"instance_id": instance_id, "script": script})
-
-    async def terminate(self, instance_id: str) -> dict[str, Any]:
-        """Terminate browser instance."""
-        return await self.call_tool("browser_terminate", {"instance_id": instance_id})
-
-
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
-async def mcp_client(mcp_server):
-    """Create MCP client connected to test server - new connection per test."""
-    async with websockets.connect(f"ws://localhost:{mcp_server.port}", ping_interval=None, open_timeout=5) as websocket:
-        client = MCPClient(websocket)
-        # Initialize connection
-        await client.initialize()
-        yield client
-
-
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
-async def mcp_browser_id(mcp_client):
-    """Create a browser instance ID via MCP for testing."""
-    # Use headless mode from environment
-    instance_id = await mcp_client.launch_browser(headless=HEADLESS)
-    try:
-        yield instance_id
-    finally:
-        # Cleanup
-        try:
-            await mcp_client.terminate(instance_id)
-        except Exception as e:
-            logger.debug(f"Cleanup error (expected): {e}")
-
-
-@pytest.fixture
-async def browser_with_page(mcp_client, mcp_browser_id):
-    """Create a browser instance navigated to a test page."""
-    # Navigate to a simple test page
-    test_url = "data:text/html,<html><body><h1>Test Page</h1></body></html>"
-    await mcp_client.navigate(mcp_browser_id, test_url)
-
-    return mcp_browser_id, test_url
