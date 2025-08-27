@@ -61,7 +61,7 @@ class TestChromeMCPServerModes:
             assert "result" in response
             assert response["result"]["protocolVersion"] == "2024-11-05"
             assert "serverInfo" in response["result"]
-            assert response["result"]["serverInfo"]["name"] == "ManagedBrowserServer"
+            assert response["result"]["serverInfo"]["name"] == "BrowserMCPServer"
 
             # Send list tools request
             tools_request = {"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": self.TOOLS_REQUEST_ID}
@@ -121,7 +121,7 @@ class TestChromeMCPServerModes:
                 assert "result" in response
                 assert response["result"]["protocolVersion"] == "2024-11-05"
                 assert "serverInfo" in response["result"]
-                assert response["result"]["serverInfo"]["name"] == "ManagedBrowserServer"
+                assert response["result"]["serverInfo"]["name"] == "BrowserMCPServer"
 
                 # Send list tools request
                 tools_request = {"jsonrpc": "2.0", "method": "tools/list", "params": {}, "id": self.TOOLS_REQUEST_ID}
