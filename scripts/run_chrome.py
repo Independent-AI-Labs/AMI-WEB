@@ -26,6 +26,7 @@ async def main():
     import argparse
 
     from browser.backend.core.management.manager import ChromeManager
+    from loguru import logger
 
     # Parse arguments ourselves since we need to create manager first
     parser = argparse.ArgumentParser(description="Chrome MCP Server")
@@ -34,6 +35,11 @@ async def main():
     parser.add_argument("--port", type=int, default=8765, help="Port for websocket mode")
     parser.add_argument("--config", help="Configuration file")
     args = parser.parse_args()
+
+    # Configure logger for stdio mode - MUST redirect to stderr to avoid breaking JSON protocol
+    if args.transport == "stdio":
+        logger.remove()  # Remove default handler
+        logger.add(sys.stderr, level="WARNING")  # Only log warnings and errors to stderr
 
     # Create Chrome manager
     manager = ChromeManager(config_file=args.config)
