@@ -31,7 +31,7 @@ class TestChromeMCPServerModes:
     async def test_chrome_stdio_mode(self):
         """Test Chrome MCP server in stdio mode."""
         # Start the server
-        server_script = Path(__file__).parent.parent.parent / "backend" / "mcp" / "chrome" / "run_chrome.py"
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
         proc = subprocess.Popen(
             [sys.executable, str(server_script)],
             stdin=subprocess.PIPE,
@@ -91,7 +91,7 @@ class TestChromeMCPServerModes:
     async def test_chrome_websocket_mode(self):
         """Test Chrome MCP server in websocket mode."""
         # Start the server in websocket mode
-        server_script = Path(__file__).parent.parent.parent / "backend" / "mcp" / "chrome" / "run_chrome.py"
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
         proc = subprocess.Popen(
             [sys.executable, str(server_script), "--transport", "websocket", "--port", "9003"],
             stdout=subprocess.PIPE,
