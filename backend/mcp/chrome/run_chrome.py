@@ -1,87 +1,23 @@
 #!/usr/bin/env python
-"""Run Browser MCP server."""
+"""Run Chrome MCP server."""
 
-import asyncio
+import subprocess
 import sys
 from pathlib import Path
 
-# STANDARD IMPORT SETUP - DO NOT MODIFY
-current_file = Path(__file__).resolve()
-orchestrator_root = current_file
+# Find base module's run_mcp.py
+orchestrator_root = Path(__file__).resolve()
 while orchestrator_root != orchestrator_root.parent:
     if (orchestrator_root / ".git").exists() and (orchestrator_root / "base").exists():
         break
     orchestrator_root = orchestrator_root.parent
-else:
-    raise RuntimeError(f"Could not find orchestrator root from {current_file}")
 
-if str(orchestrator_root) not in sys.path:
-    sys.path.insert(0, str(orchestrator_root))
+run_mcp = orchestrator_root / "base" / "scripts" / "run_mcp.py"
 
-module_names = {"base", "browser", "files", "compliance", "domains", "streams"}
-module_root = current_file.parent
-while module_root != orchestrator_root:
-    if module_root.name in module_names:
-        if str(module_root) not in sys.path:
-            sys.path.insert(0, str(module_root))
-        break
-    module_root = module_root.parent
+if not run_mcp.exists():
+    print(f"Error: Could not find run_mcp.py at {run_mcp}")
+    sys.exit(1)
 
-from base.backend.utils.module_setup import ModuleSetup  # noqa: E402
-
-ModuleSetup.ensure_running_in_venv(Path(__file__))
-
-MODULE_ROOT = module_root
-
-# Now import the server components
-import argparse  # noqa: E402
-
-from browser.backend.core.management.manager import ChromeManager  # noqa: E402
-from browser.backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
-
-
-async def main():
-    """Run the Browser MCP server."""
-    # Parse arguments
-    parser = argparse.ArgumentParser(description="Chrome MCP Server")
-    parser.add_argument("--transport", choices=["stdio", "websocket"], default="stdio", help="Transport mode (default: stdio)")
-    parser.add_argument("--host", default="localhost", help="Host for websocket server (default: localhost)")
-    parser.add_argument("--port", type=int, default=8765, help="Port for websocket server (default: 8765)")
-    parser.add_argument("--config", help="Path to configuration file")
-    args = parser.parse_args()
-
-    # Get config file
-    config_file = args.config
-    if not config_file:
-        for name in ["config.yaml", "config.test.yaml"]:
-            path = MODULE_ROOT / name
-            if path.exists():
-                config_file = str(path)
-                break
-
-    # Create manager
-    manager = ChromeManager(config_file=config_file) if config_file else ChromeManager()
-    await manager.initialize()
-    manager.pool.min_instances = 0
-    manager.pool.warm_instances = 0
-
-    # Custom server that handles cleanup
-    class ManagedBrowserServer(BrowserMCPServer):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, manager=manager, **kwargs)
-
-        async def __aexit__(self, *args):
-            await manager.shutdown()
-            return await super().__aexit__(*args) if hasattr(super(), "__aexit__") else None
-
-    # Run the server
-    server = ManagedBrowserServer()
-
-    if args.transport == "websocket":
-        await server.run_websocket(args.host, args.port)
-    else:
-        await server.run_stdio()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# Pass through all arguments to the generic runner
+result = subprocess.run([sys.executable, str(run_mcp), "chrome"] + sys.argv[1:], check=False)
+sys.exit(result.returncode)
