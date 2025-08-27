@@ -130,7 +130,7 @@ class TestMCPServerHandlers:
     @pytest.mark.asyncio
     async def test_initialize_handler(self):
         """Test initialize request handler."""
-        with patch("browser.backend.mcp.chrome.server.BrowserMCPServer") as mock_server_class:
+        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
             server = mock_server_class()
             server.handle_initialize = AsyncMock(return_value={"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}})
 
@@ -142,7 +142,7 @@ class TestMCPServerHandlers:
     @pytest.mark.asyncio
     async def test_tools_list_handler(self):
         """Test tools/list request handler."""
-        with patch("browser.backend.mcp.chrome.server.BrowserMCPServer") as mock_server_class:
+        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
             server = mock_server_class()
             server.handle_tools_list = AsyncMock(return_value={"tools": [{"name": "browser_launch"}, {"name": "browser_navigate"}]})
 
@@ -155,7 +155,7 @@ class TestMCPServerHandlers:
     @pytest.mark.asyncio
     async def test_tools_call_handler(self):
         """Test tools/call request handler."""
-        with patch("browser.backend.mcp.chrome.server.BrowserMCPServer") as mock_server_class:
+        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
             server = mock_server_class()
             server.handle_tools_call = AsyncMock(return_value={"content": [{"type": "text", "text": '{"instance_id": "test-123"}'}]})
 
@@ -168,7 +168,7 @@ class TestMCPServerHandlers:
     @pytest.mark.asyncio
     async def test_error_handler(self):
         """Test error handling in request processing."""
-        with patch("browser.backend.mcp.chrome.server.BrowserMCPServer") as mock_server_class:
+        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
             server = mock_server_class()
             server.handle_request = AsyncMock(side_effect=ValueError("Invalid request"))
 
