@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Run Chrome MCP server with stdio/websocket support."""
 
-import asyncio
 import sys
 from pathlib import Path
 
@@ -12,20 +11,11 @@ MODULE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(MODULE_ROOT))
 sys.path.insert(0, str(MODULE_ROOT.parent))
 
-from base.backend.mcp.mcp_runner import MCPRunner  # noqa: E402
+from base.backend.mcp.mcp_runner import run_mcp_server_with_env  # noqa: E402
 
 from backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
 
-
-async def main():
-    """Run the Chrome MCP server."""
-    runner = MCPRunner(
-        server_class=BrowserMCPServer,
-        server_name="Chrome",
-        config_files=["chrome_config.yaml", "config.yaml"],
-    )
-    await runner.run()
-
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    import asyncio
+
+    asyncio.run(run_mcp_server_with_env(server_class=BrowserMCPServer, server_name="Chrome", config_files=["chrome_config.yaml", "config.yaml"]))
