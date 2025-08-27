@@ -33,7 +33,7 @@ class TestChromeMCPServerModes:
         # Start the server
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
         proc = subprocess.Popen(
-            [sys.executable, str(server_script)],
+            ["python", str(server_script)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -93,14 +93,20 @@ class TestChromeMCPServerModes:
         # Start the server in websocket mode
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
         proc = subprocess.Popen(
-            [sys.executable, str(server_script), "--transport", "websocket", "--port", "9003"],
+            ["python", str(server_script), "--transport", "websocket", "--port", "9003"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
 
-        # Give server time to start
+        # Give server time to start and check for errors
         await asyncio.sleep(2)
+
+        # Check if process is still running
+        if proc.poll() is not None:
+            # Process died, get error output
+            stdout, stderr = proc.communicate()
+            raise RuntimeError(f"Server failed to start. Stdout: {stdout}\nStderr: {stderr}")
 
         try:
             # Connect to websocket
