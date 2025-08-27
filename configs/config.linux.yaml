@@ -1,0 +1,182 @@
+# Chrome Manager Configuration
+# Copy this file to config.yaml and adjust settings as needed
+
+backend:
+  browser:
+    # Path to Chrome/Chromium executable
+    chrome_binary_path: "./build/chrome-linux/chrome"
+    
+    # Path to ChromeDriver executable  
+    chromedriver_path: "./build/chromedriver"
+    
+    # Default headless mode
+    default_headless: true
+    
+    # Default window size [width, height]
+    default_window_size: [1920, 1080]
+    
+    # User agent string (null for default)
+    user_agent: null
+
+  pool:
+    # Minimum number of browser instances to keep ready
+    min_instances: 1
+    
+    # Maximum number of browser instances allowed
+    max_instances: 10
+    
+    # Number of warm (pre-launched) instances to maintain
+    warm_instances: 2
+    
+    # Time-to-live for instances in seconds
+    instance_ttl: 3600
+    
+    # Health check interval in seconds
+    health_check_interval: 30
+
+  performance:
+    # Maximum memory per instance in MB
+    max_memory_per_instance: 512
+    
+    # Maximum CPU percentage per instance
+    max_cpu_per_instance: 25
+    
+    # Page load timeout in seconds
+    page_load_timeout: 30
+    
+    # Script execution timeout in seconds
+    script_timeout: 10
+
+  storage:
+    # Base directory for browser profiles
+    profiles_dir: "./data/profiles"
+    
+    # Base directory for downloads
+    downloads_dir: "./data/downloads"
+    
+    # Base directory for screenshots
+    screenshots_dir: "./data/screenshots"
+    
+    # Enable persistent sessions
+    enable_persistent_sessions: true
+    
+    # Session timeout in seconds
+    session_timeout: 86400
+
+  security:
+    # Enable certificate validation
+    verify_certificates: true
+    
+    # Allow insecure localhost connections
+    allow_insecure_localhost: true
+    
+    # Enable safe browsing
+    enable_safe_browsing: false
+    
+    # Block mixed content
+    block_mixed_content: true
+    
+    # List of allowed domains for navigation
+    allowed_domains: []
+    
+    # List of blocked domains
+    blocked_domains: []
+
+  network:
+    # Proxy configuration (null for direct connection)
+    proxy: null
+    
+    # Custom DNS servers (null for system default)
+    dns_servers: null
+    
+    # Request timeout in seconds
+    request_timeout: 30
+    
+    # Enable request interception
+    enable_request_interception: false
+    
+    # User-defined headers to add to all requests
+    custom_headers: {}
+
+  logging:
+    # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    level: INFO
+    
+    # Log file path (null for stdout only)
+    file_path: "./logs/browser.log"
+    
+    # Maximum log file size in MB
+    max_file_size: 100
+    
+    # Number of backup files to keep
+    backup_count: 5
+    
+    # Log format
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  antidetect:
+    # Enable WebDriver property removal
+    remove_webdriver: true
+    
+    # Enable Chrome app object
+    add_chrome_app: true
+    
+    # Enable Chrome runtime object
+    add_chrome_runtime: true
+    
+    # Randomize canvas fingerprint
+    randomize_canvas: false
+    
+    # Randomize WebGL fingerprint
+    randomize_webgl: false
+    
+    # Randomize audio context fingerprint
+    randomize_audio_context: false
+    
+    # Override navigator properties
+    navigator_overrides: {}
+
+  extensions:
+    # List of Chrome extensions to load
+    # Each entry should be a path to an unpacked extension directory
+    load_extensions: []
+    
+    # Enable Chrome DevTools Protocol
+    enable_cdp: true
+    
+    # CDP port (0 for random)
+    cdp_port: 0
+
+# MCP Server Configuration
+mcp:
+  # Server transport type (stdio or websocket)
+  transport: stdio
+  
+  # WebSocket configuration (only used when transport is websocket)
+  websocket:
+    # Host to bind to
+    host: "127.0.0.1"
+    
+    # Port to bind to (0 for random)
+    port: 0
+    
+    # Enable SSL/TLS
+    use_ssl: false
+    
+    # SSL certificate path
+    cert_path: null
+    
+    # SSL key path
+    key_path: null
+  
+  # Maximum concurrent operations
+  max_concurrent_operations: 5
+  
+  # Operation timeout in seconds
+  operation_timeout: 60
+  
+  # Enable operation caching
+  enable_caching: true
+  
+  # Cache TTL in seconds
+  cache_ttl: 300
