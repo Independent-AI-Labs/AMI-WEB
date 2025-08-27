@@ -10,7 +10,7 @@ backend:
     chromedriver_path: "./build/chromedriver-win64/chromedriver.exe"
     
     # Default headless mode
-    default_headless: true
+    default_headless: true`
     
     # Default window size [width, height]
     default_window_size: [1920, 1080]
