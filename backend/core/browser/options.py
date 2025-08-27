@@ -1,5 +1,8 @@
 """Browser options builder - handles Chrome options configuration."""
 
+import shutil
+import tempfile
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -10,9 +13,11 @@ from ...models.browser import ChromeOptions
 from ...models.browser_properties import BrowserProperties
 from ...models.security import SecurityConfig
 from ...utils.config import Config
+from ..management.profile_manager import ProfileManager
+from ..security.antidetect import get_anti_detection_arguments, get_anti_detection_prefs
 
 if TYPE_CHECKING:
-    from ..management.profile_manager import ProfileManager
+    pass
 
 
 class BrowserOptionsBuilder:
@@ -47,8 +52,6 @@ class BrowserOptionsBuilder:
     def cleanup_temp_profile(self) -> None:
         """Clean up temporary profile directory and release port."""
         if self._temp_profile_dir and self._temp_profile_dir.exists():
-            import shutil
-
             # No need to sync back Chrome profile data since we handle persistence
             # through explicit save/load methods in BrowserStorage
 
@@ -66,9 +69,6 @@ class BrowserOptionsBuilder:
 
     def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
         """Set up temporary profile directory for Chrome instance."""
-        import shutil
-        import tempfile
-        import uuid
 
         if profile and self._profile_manager:
             profile_dir = self._profile_manager.get_profile_dir(profile)
@@ -184,7 +184,6 @@ class BrowserOptionsBuilder:
 
     def _configure_anti_detect_mode(self, chrome_options: Options, headless: bool) -> None:
         """Configure options for anti-detection mode."""
-        from ..security.antidetect import get_anti_detection_arguments
 
         # Get anti-detection arguments
         anti_args = get_anti_detection_arguments()
@@ -285,7 +284,10 @@ class BrowserOptionsBuilder:
                 chrome_options.add_experimental_option(key, value)
 
     def _build_preferences(
-        self, download_dir: Path | None, browser_properties: BrowserProperties | None, security_config: SecurityConfig | None
+        self,
+        download_dir: Path | None,
+        browser_properties: BrowserProperties | None,
+        security_config: SecurityConfig | None,
     ) -> dict[str, Any]:
         """Build Chrome preferences."""
         prefs: dict[str, Any] = {}
@@ -298,7 +300,7 @@ class BrowserOptionsBuilder:
                     "download.prompt_for_download": False,
                     "download.directory_upgrade": True,
                     "safebrowsing.enabled": True,
-                }
+                },
             )
 
         # Security preferences from SecurityConfig
@@ -309,8 +311,6 @@ class BrowserOptionsBuilder:
 
         # Anti-detection preferences
         if browser_properties:
-            from ..security.antidetect import get_anti_detection_prefs
-
             anti_prefs = get_anti_detection_prefs()
             prefs.update(anti_prefs)
 
@@ -344,7 +344,7 @@ class BrowserOptionsBuilder:
                 "extensions.ui.developer_mode": False,
                 "net.network_prediction_options": 2,  # Disable prediction
                 "safebrowsing.enhanced": False,  # Unless explicitly enabled
-            }
+            },
         )
 
         return prefs

@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -15,14 +16,15 @@ from ...models.browser_properties import BrowserProperties
 from ...models.security import SecurityConfig
 from ...utils.config import Config
 from ...utils.exceptions import InstanceError
+from ..management.profile_manager import ProfileManager
 from ..monitoring.monitor import BrowserMonitor
 from ..storage.storage import BrowserStorage
 from .lifecycle import BrowserLifecycle
 from .options import BrowserOptionsBuilder
+from .properties_manager import PropertiesManager
 
 if TYPE_CHECKING:
-    from ..management.profile_manager import ProfileManager
-    from .properties_manager import PropertiesManager
+    pass
 
 
 class BrowserInstance:
@@ -219,8 +221,6 @@ class BrowserInstance:
         """Get instance information."""
         tabs = []
         if self.driver:
-            from contextlib import suppress
-
             with suppress(Exception):
                 tabs = asyncio.run(self.get_tabs())
 

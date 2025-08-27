@@ -5,6 +5,12 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from browser.backend.core.management.manager import ChromeManager
+from browser.backend.facade.input.forms import FormsController
+from browser.backend.facade.input.keyboard import KeyboardController
+from browser.backend.facade.input.mouse import MouseController
+from browser.backend.facade.navigation.extractor import ContentExtractor
+from browser.backend.facade.navigation.navigator import Navigator
+from browser.backend.facade.navigation.scroller import Scroller
 from loguru import logger
 
 
@@ -173,7 +179,6 @@ class ToolExecutor:
     # Navigation handlers
     async def _handle_browser_navigate(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser navigation."""
-        from browser.backend.facade.navigation.navigator import Navigator
 
         nav = Navigator(self._current_instance)
         # Don't pass wait_for as a string - Navigator expects None or a WaitCondition object
@@ -186,7 +191,6 @@ class ToolExecutor:
 
     async def _handle_browser_back(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser back navigation."""
-        from browser.backend.facade.navigation.navigator import Navigator
 
         nav = Navigator(self._current_instance)
         await nav.back()
@@ -194,7 +198,6 @@ class ToolExecutor:
 
     async def _handle_browser_forward(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser forward navigation."""
-        from browser.backend.facade.navigation.navigator import Navigator
 
         nav = Navigator(self._current_instance)
         await nav.forward()
@@ -202,7 +205,6 @@ class ToolExecutor:
 
     async def _handle_browser_refresh(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser refresh."""
-        from browser.backend.facade.navigation.navigator import Navigator
 
         nav = Navigator(self._current_instance)
         await nav.refresh()
@@ -215,7 +217,6 @@ class ToolExecutor:
     # Input handlers
     async def _handle_browser_click(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser click."""
-        from browser.backend.facade.input.mouse import MouseController
 
         mouse = MouseController(self._current_instance)
         # MouseController.click doesn't take button/click_count params
@@ -225,7 +226,6 @@ class ToolExecutor:
 
     async def _handle_browser_type(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser typing."""
-        from browser.backend.facade.input.keyboard import KeyboardController
 
         input_ctrl = KeyboardController(self._current_instance)
         await input_ctrl.type_text(
@@ -237,7 +237,6 @@ class ToolExecutor:
 
     async def _handle_browser_select(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser select."""
-        from browser.backend.facade.input.forms import FormsController
 
         forms = FormsController(self._current_instance)
         await forms.select_option(arguments["selector"], arguments["value"])
@@ -245,23 +244,20 @@ class ToolExecutor:
 
     async def _handle_browser_scroll(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser scroll."""
-        from browser.backend.facade.input.mouse import MouseController
-
-        mouse = MouseController(self._current_instance)
+        scroller = Scroller(self._current_instance)
         if arguments.get("to") == "bottom":
-            await mouse.scroll_to_bottom()
+            await scroller.scroll_to_bottom()
         elif arguments.get("to") == "top":
-            await mouse.scroll_to_top()
+            await scroller.scroll_to_top()
         elif "x" in arguments or "y" in arguments:
-            await mouse.scroll_to(arguments.get("x", 0), arguments.get("y", 0))
+            await scroller.scroll_to(arguments.get("x", 0), arguments.get("y", 0))
         else:
             # Default scroll down by some amount
-            await mouse.scroll_by(0, 300)
+            await scroller.scroll_by(0, 300)
         return {"status": "scrolled"}
 
     async def _handle_browser_fill_form(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle browser form filling."""
-        from browser.backend.facade.input.forms import FormsController
 
         forms = FormsController(self._current_instance)
         await forms.fill_form(arguments["data"], submit=arguments.get("submit", False))
@@ -270,7 +266,6 @@ class ToolExecutor:
     # Content extraction handlers
     async def _handle_browser_get_html(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle get HTML."""
-        from browser.backend.facade.navigation.extractor import ContentExtractor
 
         extractor = ContentExtractor(self._current_instance)
         html = await extractor.get_parsed_html(max_tokens=arguments.get("max_tokens", 25000))
@@ -278,7 +273,6 @@ class ToolExecutor:
 
     async def _handle_browser_get_text(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle get text."""
-        from browser.backend.facade.navigation.extractor import ContentExtractor
 
         extractor = ContentExtractor(self._current_instance)
         text = await extractor.get_text()
@@ -291,7 +285,6 @@ class ToolExecutor:
 
     async def _handle_browser_extract_forms(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle form extraction."""
-        from browser.backend.facade.navigation.extractor import ContentExtractor
 
         extractor = ContentExtractor(self._current_instance)
         forms = await extractor.extract_forms()
@@ -299,7 +292,6 @@ class ToolExecutor:
 
     async def _handle_browser_extract_links(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         """Handle link extraction."""
-        from browser.backend.facade.navigation.extractor import ContentExtractor
 
         extractor = ContentExtractor(self._current_instance)
         links = await extractor.extract_links()

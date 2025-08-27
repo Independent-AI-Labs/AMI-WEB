@@ -3,11 +3,15 @@
 import asyncio
 import json
 import os
+import random
+from pathlib import Path
 from typing import Any
 
 import pytest
 import pytest_asyncio
 import websockets
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.mcp.chrome.server import BrowserMCPServer
 from loguru import logger
 
 # Test configuration
@@ -26,10 +30,6 @@ class MCPTestServer:
     async def start(self):
         """Start the server asynchronously."""
         # Import here to avoid import issues
-        from pathlib import Path
-
-        from browser.backend.core.management.manager import ChromeManager
-        from browser.backend.mcp.chrome.server import BrowserMCPServer
 
         # Use config.yaml if it exists, otherwise config.test.yaml, otherwise defaults
         config_file = "config.test.yaml"
@@ -69,7 +69,6 @@ class MCPTestServer:
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def mcp_server():
     """Start MCP test server for the session."""
-    import random
 
     # Use a random port to avoid conflicts
     port = random.randint(9000, 9999)  # noqa: S311
@@ -186,4 +185,4 @@ async def browser_with_page(mcp_client, mcp_browser_id):
     test_url = "data:text/html,<html><body><h1>Test Page</h1></body></html>"
     await mcp_client.navigate(mcp_browser_id, test_url)
 
-    yield mcp_browser_id, test_url
+    return mcp_browser_id, test_url

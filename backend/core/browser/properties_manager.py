@@ -159,7 +159,7 @@ class PropertiesManager:
                 options.add_argument(arg)
 
         # Apply preferences
-        if "prefs" in chrome_opts and chrome_opts["prefs"]:
+        if chrome_opts.get("prefs"):
             # Get existing prefs
             existing_prefs = options._experimental_options.get("prefs", {})
             # Merge with new prefs
@@ -202,7 +202,7 @@ class PropertiesManager:
         # Add plugin spoofing if needed
         if properties.plugins:
             plugins_json = json.dumps(
-                [{"name": p.name, "filename": p.filename, "description": p.description, "mimeTypes": p.mime_types} for p in properties.plugins]
+                [{"name": p.name, "filename": p.filename, "description": p.description, "mimeTypes": p.mime_types} for p in properties.plugins],
             )
             script += f"""
     // Plugin spoofing

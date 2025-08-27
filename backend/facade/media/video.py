@@ -44,7 +44,11 @@ class VideoRecorder(BaseController):
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         session = RecordingSession(  # type: ignore[call-arg]
-            session_id=session_id, output_path=str(output_file), fps=fps, codec=codec, start_time=datetime.now()
+            session_id=session_id,
+            output_path=str(output_file),
+            fps=fps,
+            codec=codec,
+            start_time=datetime.now(),
         )
 
         self.recording_sessions[session_id] = {

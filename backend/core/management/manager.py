@@ -1,5 +1,6 @@
 """Chrome Manager using the base worker pool system."""
 
+import json
 from datetime import datetime
 from typing import Any
 
@@ -9,6 +10,7 @@ from loguru import logger
 from ...facade.media.screenshot import ScreenshotController
 from ...facade.navigation.navigator import Navigator
 from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo
+from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
 from ...models.security import SecurityConfig
 from ...utils.config import Config
 from ..browser.instance import BrowserInstance
@@ -251,7 +253,7 @@ class ChromeManager:
                     active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
                     profile=None,
                     headless=True,
-                )
+                ),
             )
 
         # Get standalone instances
@@ -267,7 +269,7 @@ class ChromeManager:
                     active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
                     profile=None,
                     headless=True,
-                )
+                ),
             )
 
         return instances
@@ -464,7 +466,6 @@ class ChromeManager:
             return False
 
         # Convert to BrowserProperties
-        from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
 
         if preset:
             try:
@@ -481,7 +482,6 @@ class ChromeManager:
             browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
 
         # Prepare JSON for injection
-        import json
 
         props_json = json.dumps(properties)
 
@@ -561,7 +561,7 @@ class ChromeManager:
                 }
 
                 return props;
-            """
+            """,
             )
         except Exception as e:
             logger.error(f"Failed to get browser properties: {e}")

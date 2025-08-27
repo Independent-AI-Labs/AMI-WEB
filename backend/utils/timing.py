@@ -1,7 +1,11 @@
 """Timing constants and utilities."""
 
+import platform
+import signal
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from typing import Any
 
 
@@ -60,7 +64,7 @@ def wait_with_retry(
             last_exception = e
             time.sleep(poll_interval)
 
-    raise TimeoutError(f"Timed out after {timeout}s waiting for {func.__name__}. " f"Last error: {last_exception}")
+    raise TimeoutError(f"Timed out after {timeout}s waiting for {func.__name__}. Last error: {last_exception}")
 
 
 def with_timeout(timeout: float) -> Callable:
@@ -77,10 +81,6 @@ def with_timeout(timeout: float) -> Callable:
 
     def decorator(func: Callable) -> Callable:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            import platform
-            from concurrent.futures import ThreadPoolExecutor
-            from concurrent.futures import TimeoutError as FutureTimeoutError
-
             # Use threading on Windows since SIGALRM is not available
             if platform.system() == "Windows":
                 with ThreadPoolExecutor(max_workers=1) as executor:
@@ -91,7 +91,6 @@ def with_timeout(timeout: float) -> Callable:
                         raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s") from e
             else:
                 # Unix-based systems can use signal
-                import signal
 
                 def timeout_handler(_signum, _frame):
                     raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s")

@@ -10,6 +10,8 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from ...utils.exceptions import InputError
 from ..base import BaseController
+from .keyboard import KeyboardController
+from .mouse import MouseController
 
 
 class FormsController(BaseController):
@@ -266,7 +268,6 @@ class FormsController(BaseController):
 
     async def _fill_text_field(self, selector: str, value: str | bool) -> None:
         """Fill a text input field."""
-        from .keyboard import KeyboardController
 
         keyboard = KeyboardController(self.instance)
         await keyboard.type_text(selector, str(value), clear=True)
@@ -292,8 +293,6 @@ class FormsController(BaseController):
         """Submit the form."""
         submit_button = await self._find_element("button[type='submit'], input[type='submit']")
         if submit_button:
-            from .mouse import MouseController
-
             mouse = MouseController(self.instance)
             await mouse.click("button[type='submit'], input[type='submit']")
 

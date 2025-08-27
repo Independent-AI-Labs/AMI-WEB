@@ -35,7 +35,7 @@ class TestScreenSpaceClicks:
             const btn = document.querySelector('[data-testid="verify-text-btn"]');
             const rect = btn.getBoundingClientRect();
             return {x: rect.left + rect.width/2, y: rect.top + rect.height/2};
-        """
+        """,
         )
 
         # Click at the button's coordinates
@@ -47,7 +47,7 @@ class TestScreenSpaceClicks:
             """
             const status = document.querySelector('#status');
             return status ? status.textContent : null;
-        """
+        """,
         )
         assert status == "Incorrect text. Please try again."  # Should show error because no text entered
 
@@ -69,7 +69,7 @@ class TestScreenSpaceClicks:
                 window.doubleClickCount++;
                 console.log('Double click at', e.clientX, e.clientY);
             });
-        """
+        """,
         )
 
         # Get element position
@@ -78,7 +78,7 @@ class TestScreenSpaceClicks:
             const el = document.getElementById('content-area');
             const rect = el.getBoundingClientRect();
             return {x: rect.left + 50, y: rect.top + 50};
-        """
+        """,
         )
 
         # Double-click at coordinates
@@ -110,7 +110,7 @@ class TestScreenSpaceClicks:
                 window.rightClickX = e.clientX;
                 window.rightClickY = e.clientY;
             });
-        """
+        """,
         )
 
         # Right-click at specific coordinates
@@ -183,7 +183,7 @@ class TestScreenSpaceDrag:
                     window.dragEvents.push({type: 'end', x: e.clientX, y: e.clientY});
                 }
             });
-        """
+        """,
         )
 
         # Drag from (125, 125) to (300, 300) - center of draggable to new position
@@ -202,7 +202,7 @@ class TestScreenSpaceDrag:
             """
             const el = document.getElementById('test-draggable');
             return {left: parseInt(el.style.left), top: parseInt(el.style.top)};
-        """
+        """,
         )
 
         # Should have moved approximately to the target position
@@ -241,7 +241,7 @@ class TestScreenSpaceDrag:
                 piece: {x: pieceX, y: pieceY},
                 target: {x: targetX, y: targetY}
             };
-        """
+        """,
         )
 
         # Use a custom drag simulation that works with the puzzle's mouse event handlers
@@ -296,7 +296,7 @@ class TestScreenSpaceDrag:
                 clientY: endY
             }});
             document.dispatchEvent(mouseUpEvent);
-        """
+        """,
         )
 
         await asyncio.sleep(1.0)
@@ -333,7 +333,7 @@ class TestZoomInteractions:
             const transform = document.body.style.transform;
             const match = transform.match(/scale\\(([^)]+)\\)/);
             return match ? parseFloat(match[1]) : 1.0;
-        """
+        """,
         )
         assert scale == zoom_in
 
@@ -346,7 +346,7 @@ class TestZoomInteractions:
             const transform = document.body.style.transform;
             const match = transform.match(/scale\\(([^)]+)\\)/);
             return match ? parseFloat(match[1]) : 1.0;
-        """
+        """,
         )
         assert scale == zoom_out
 
@@ -368,12 +368,12 @@ class TestZoomInteractions:
             const btn = document.getElementById('submit-btn');
             const rect = btn.getBoundingClientRect();
             return {x: rect.left + rect.width/2, y: rect.top + rect.height/2};
-        """
+        """,
         )
 
         x_pos = int(button_pos["x"])
         y_pos = int(button_pos["y"])
-        await extractor.execute_script(f"document.body.style.transform = 'scale(2.0)'; " f"document.body.style.transformOrigin = '{x_pos}px {y_pos}px'")
+        await extractor.execute_script(f"document.body.style.transform = 'scale(2.0)'; document.body.style.transformOrigin = '{x_pos}px {y_pos}px'")
 
         # Check zoom and origin were set
         transform_data = await extractor.execute_script(
@@ -382,7 +382,7 @@ class TestZoomInteractions:
                 transform: document.body.style.transform,
                 origin: document.body.style.transformOrigin
             };
-        """
+        """,
         )
 
         assert "scale(2)" in transform_data["transform"]
@@ -433,7 +433,7 @@ class TestSwipeGestures:
                 }
                 isDragging = false;
             });
-        """
+        """,
         )
 
         # Perform horizontal swipe (left to right)
@@ -496,7 +496,7 @@ class TestSwipeGestures:
                 }
                 isDragging = false;
             });
-        """
+        """,
         )
 
         # Perform vertical swipe (top to bottom)
@@ -563,7 +563,7 @@ class TestTextExtraction:
                 form.innerHTML += '<a href="/register">Sign Up</a>';
                 form.innerHTML += '<a href="https://example.com">External Link</a>';
             }
-        """
+        """,
         )
 
         # Extract links

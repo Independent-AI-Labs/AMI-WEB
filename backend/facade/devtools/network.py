@@ -77,7 +77,7 @@ class NetworkController(BaseController):
                                 type=response.get("mimeType"),
                                 size=response.get("encodedDataLength"),
                                 headers=response.get("headers", {}),
-                            )
+                            ),
                         )
                 except (json.JSONDecodeError, KeyError) as e:
                     logger.debug(f"Failed to parse log entry: {e}")

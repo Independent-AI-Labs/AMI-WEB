@@ -18,7 +18,7 @@ from ..config import FACADE_CONFIG
 class ScreenshotController(BaseController):
     """Controller for screenshot and image capture operations."""
 
-    async def capture_viewport(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:  # noqa: ARG002
+    async def capture_viewport(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:
         """Capture a screenshot of the current viewport.
 
         Args:
@@ -52,7 +52,7 @@ class ScreenshotController(BaseController):
         except Exception as e:
             raise MediaError(f"Failed to capture viewport: {e}") from e
 
-    async def capture_element(self, selector: str, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:  # noqa: ARG002
+    async def capture_element(self, selector: str, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:
         """Capture a screenshot of a specific element.
 
         Args:
@@ -93,7 +93,7 @@ class ScreenshotController(BaseController):
         except Exception as e:
             raise MediaError(f"Failed to capture element {selector}: {e}") from e
 
-    async def capture_full_page(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:  # noqa: ARG002
+    async def capture_full_page(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:
         """Capture a screenshot of the entire page by scrolling and stitching.
 
         Args:

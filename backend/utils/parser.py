@@ -4,7 +4,7 @@ import re
 from typing import Any
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 from loguru import logger
 
 # Size limits to prevent DoS attacks
@@ -12,8 +12,8 @@ MAX_HTML_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_TEXT_LENGTH = 1024 * 1024  # 1MB
 
 # Pre-compiled regex patterns for performance
-HIDDEN_STYLE_PATTERN = re.compile(r"display:\s*none", re.I)
-HIDDEN_CLASS_PATTERN = re.compile(r"hidden|invisible", re.I)
+HIDDEN_STYLE_PATTERN = re.compile(r"display:\s*none", re.IGNORECASE)
+HIDDEN_CLASS_PATTERN = re.compile(r"hidden|invisible", re.IGNORECASE)
 WHITESPACE_PATTERN = re.compile(r" +")
 NEWLINE_CLEANUP_PATTERN = re.compile(r" *\n *")
 
@@ -32,7 +32,7 @@ class HTMLParser:
             ValueError: If HTML exceeds maximum size
         """
         if len(html) > max_size:
-            raise ValueError(f"HTML size ({len(html)} bytes) exceeds maximum " f"allowed size ({max_size} bytes)")
+            raise ValueError(f"HTML size ({len(html)} bytes) exceeds maximum allowed size ({max_size} bytes)")
 
         # Use html.parser for better security, lxml only if explicitly needed
         self.soup = BeautifulSoup(html, "html.parser")
@@ -93,7 +93,6 @@ class HTMLParser:
 
         if remove_comments:
             # More efficient comment removal using BS4's Comment type
-            from bs4 import Comment
 
             for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
                 comment.extract()
@@ -232,7 +231,7 @@ class HTMLParser:
                     "text": link.get_text(strip=True),
                     "href": href,
                     "title": str(link.get("title", "")),
-                }
+                },
             )
 
         return links
@@ -253,7 +252,7 @@ class HTMLParser:
                     "src": str(img.get("src", "")),
                     "alt": str(img.get("alt", "")),
                     "title": str(img.get("title", "")),
-                }
+                },
             )
 
         return images
@@ -372,7 +371,7 @@ class HTMLParser:
             text = text[:max_search_length]
 
         # Cache compiled pattern for this session
-        pattern = re.compile(re.escape(text), re.I)
+        pattern = re.compile(re.escape(text), re.IGNORECASE)
 
         if tag:
             return self.soup.find_all(tag, string=pattern, limit=limit)

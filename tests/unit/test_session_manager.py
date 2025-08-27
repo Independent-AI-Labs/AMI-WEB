@@ -1,6 +1,7 @@
 """Unit tests for SessionManager storage operations."""
 
 import json
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -66,7 +67,7 @@ class TestSessionManager:
                 "session-123": {
                     "cookies": [{"name": "test", "value": "val"}],
                     "url": "https://example.com",
-                }
+                },
             }
             manager.get_session = AsyncMock(side_effect=lambda sid: manager.sessions.get(sid))
 
@@ -213,7 +214,7 @@ class TestSessionMerging:
                 "session-123": {
                     "cookies": [{"name": "old", "value": "val"}],
                     "url": "https://old.com",
-                }
+                },
             }
             manager.update_session = AsyncMock(side_effect=lambda sid, data: manager.sessions[sid].update(data))
 
@@ -235,8 +236,6 @@ class TestSessionCleanup:
     async def test_cleanup_expired_sessions(self):
         """Test cleaning up expired sessions."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
-            import time
-
             current_time = time.time()
             manager = mock_manager_class()
             manager.sessions = {
@@ -248,7 +247,7 @@ class TestSessionCleanup:
                     manager,
                     "sessions",
                     {sid: data for sid, data in manager.sessions.items() if current_time - data["timestamp"] < max_age},
-                )
+                ),
             )
 
             max_age_seconds = 86400 * 7  # 7 days
@@ -272,7 +271,7 @@ class TestSessionCleanup:
                     manager,
                     "sessions",
                     {sid: data for sid, data in manager.sessions.items() if all(field in data for field in ["id", "cookies", "url"])},
-                )
+                ),
             )
 
             await manager.cleanup_invalid()

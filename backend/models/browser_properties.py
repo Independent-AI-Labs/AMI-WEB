@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from ..services.property_injection import PropertyInjectionService
+
 
 class WebGLVendor(str, Enum):
     """Common WebGL vendors for spoofing."""
@@ -97,7 +99,7 @@ class BrowserProperties(BaseModel):
             "WEBGL_debug_renderer_info",
             "WEBGL_debug_shaders",
             "WEBGL_lose_context",
-        ]
+        ],
     )
 
     # Media Codecs
@@ -133,7 +135,7 @@ class BrowserProperties(BaseModel):
                     {"type": "application/x-pnacl", "suffixes": "", "description": "Portable Native Client Executable"},
                 ],
             ),
-        ]
+        ],
     )
 
     # Browser Features
@@ -177,7 +179,7 @@ class BrowserProperties(BaseModel):
             "architecture": "x86",
             "bitness": "64",
             "wow64": False,
-        }
+        },
     )
 
     # Do Not Track
@@ -191,7 +193,6 @@ class BrowserProperties(BaseModel):
 
     def to_injection_script(self) -> str:
         """Generate JavaScript injection script from properties."""
-        from ..services.property_injection import PropertyInjectionService
 
         service = PropertyInjectionService()
         return service.generate_injection_script(self)
@@ -259,7 +260,8 @@ def get_preset_properties(preset: BrowserPropertiesPreset) -> BrowserProperties:
         preset_data = user_agents.get("presets", {}).get("windows_chrome", {})
         return BrowserProperties(
             user_agent=preset_data.get(
-                "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                "user_agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             ),
             platform=preset_data.get("platform", "Win32"),
             webgl_vendor=WebGLVendor.GOOGLE_INTEL,
@@ -271,7 +273,8 @@ def get_preset_properties(preset: BrowserPropertiesPreset) -> BrowserProperties:
         preset_data = user_agents.get("presets", {}).get("mac_safari", {})
         return BrowserProperties(
             user_agent=preset_data.get(
-                "user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+                "user_agent",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
             ),
             platform=preset_data.get("platform", "MacIntel"),
             vendor="Apple Computer, Inc.",
@@ -286,7 +289,8 @@ def get_preset_properties(preset: BrowserPropertiesPreset) -> BrowserProperties:
         preset_data = user_agents.get("presets", {}).get("stealth", {})
         return BrowserProperties(
             user_agent=preset_data.get(
-                "user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                "user_agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             ),
             webdriver_visible=False,
             automation_controlled=False,

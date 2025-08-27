@@ -100,7 +100,7 @@ class ProfileManager:
                     "created_at": metadata.get("created_at"),
                     "last_used": metadata.get("last_used"),
                     "exists": profile_dir.exists(),
-                }
+                },
             )
         return result
 
