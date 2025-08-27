@@ -8,9 +8,9 @@ from pathlib import Path
 # Get module root
 MODULE_ROOT = Path(__file__).resolve().parent.parent
 
-# Add both browser and base to path (base for utilities)
+# Add browser and parent (for base imports) to path
 sys.path.insert(0, str(MODULE_ROOT))
-sys.path.insert(0, str(MODULE_ROOT.parent / "base"))
+sys.path.insert(0, str(MODULE_ROOT.parent))
 
 from base.backend.mcp.mcp_runner import MCPRunner  # noqa: E402
 
