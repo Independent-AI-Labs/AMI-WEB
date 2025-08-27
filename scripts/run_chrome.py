@@ -13,12 +13,8 @@ sys.path.insert(0, str(MODULE_ROOT))
 sys.path.insert(0, str(MODULE_ROOT.parent))
 
 from base.backend.mcp.mcp_runner import MCPRunner  # noqa: E402
-from base.backend.utils.path_utils import ModuleSetup  # noqa: E402
 
 from backend.mcp.chrome.server import BrowserMCPServer  # noqa: E402
-
-# Ensure we're in the correct virtual environment
-ModuleSetup.ensure_running_in_venv(Path(__file__))
 
 
 async def main():
