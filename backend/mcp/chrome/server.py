@@ -22,16 +22,18 @@ from tools.registry import ToolRegistry  # noqa: E402
 class BrowserMCPServer(StandardMCPServer[ToolRegistry, ToolExecutor]):
     """MCP server for Chrome Manager - defines browser automation tools only."""
 
-    def __init__(self, manager: ChromeManager, config: dict | None = None):
+    def __init__(self, config: dict | None = None):
         """Initialize Chrome MCP server.
 
         Args:
-            manager: Chrome manager instance
             config: Server configuration
         """
-        self.manager = manager
+        # Create Chrome manager internally
+        config_file = config.get("config_file") if config else None
+        self.manager = ChromeManager(config_file=config_file)
+
         # Pass manager to parent for executor initialization
-        super().__init__(config, manager=manager)
+        super().__init__(config, manager=self.manager)
         logger.info(f"Browser MCP server initialized with {len(self.tools)} tools")
 
     def get_registry_class(self) -> type[ToolRegistry]:
