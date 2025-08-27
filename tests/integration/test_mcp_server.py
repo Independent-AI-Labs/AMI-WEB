@@ -319,19 +319,27 @@ class TestMCPServerIntegration:
     @pytest.mark.slow
     async def test_cookie_management(self, mcp_client, mcp_browser_id):
         """Test cookie operations."""
-        # Navigate to a site that sets cookies
-        await mcp_client.navigate(mcp_browser_id, "https://httpbin.org/cookies/set?test=value")
+        # Navigate to google.com first
+        await mcp_client.navigate(mcp_browser_id, "https://www.google.com/")
+
+        # Set a test cookie directly
+        result = await mcp_client.call_tool(
+            "browser_set_cookies",
+            {"instance_id": mcp_browser_id, "cookies": [{"name": "test", "value": "value", "domain": ".google.com"}]},
+        )
+        assert result
 
         # Get cookies
         result = await mcp_client.call_tool("browser_get_cookies", {"instance_id": mcp_browser_id})
         assert result
         cookies = json.loads(result["content"][0]["text"])
         assert "cookies" in cookies
+        assert len(cookies["cookies"]) > 0
 
-        # Set a custom cookie (using browser_set_cookies with array)
+        # Set another custom cookie
         result = await mcp_client.call_tool(
             "browser_set_cookies",
-            {"instance_id": mcp_browser_id, "cookies": [{"name": "custom", "value": "cookie_value", "domain": ".httpbin.org"}]},
+            {"instance_id": mcp_browser_id, "cookies": [{"name": "custom", "value": "cookie_value", "domain": ".google.com"}]},
         )
         assert result
 

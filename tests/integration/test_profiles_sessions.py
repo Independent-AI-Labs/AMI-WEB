@@ -173,8 +173,11 @@ class TestProfileManagement:
         )
 
         try:
-            # Navigate to a site that sets cookies
-            instance.driver.get("https://httpbin.org/cookies/set?test_cookie=test_value")
+            # Navigate to google.com first
+            instance.driver.get("https://www.google.com/")
+
+            # Manually add a test cookie
+            instance.driver.add_cookie({"name": "test_cookie", "value": "test_value", "domain": ".google.com", "path": "/"})
 
             # Save cookies
             cookies = instance.save_cookies()
@@ -183,17 +186,18 @@ class TestProfileManagement:
             # Clear cookies in browser
             instance.driver.delete_all_cookies()
 
-            # Verify cookies are gone
-            instance.driver.get("https://httpbin.org/cookies")
-            assert "test_cookie" not in instance.driver.page_source
+            # Verify cookies are gone by checking we can't find our test cookie
+            current_cookies = instance.driver.get_cookies()
+            assert not any(c["name"] == "test_cookie" for c in current_cookies)
 
             # Load cookies back
             count = instance.load_cookies(cookies)
             assert count > 0
 
             # Verify cookies are restored
-            instance.driver.get("https://httpbin.org/cookies")
-            assert "test_cookie" in instance.driver.page_source
+            instance.driver.get("https://www.google.com/")
+            current_cookies = instance.driver.get_cookies()
+            assert any(c["name"] == "test_cookie" and c["value"] == "test_value" for c in current_cookies)
 
         finally:
             await instance.terminate()
@@ -502,12 +506,12 @@ class TestPersistentSessions:
 
         try:
             # Simulate login by setting auth cookies
-            instance.driver.get("https://httpbin.org/")
+            instance.driver.get("https://www.google.com/")
             instance.driver.add_cookie(
                 {
                     "name": "auth_token",
                     "value": "test_auth_12345",
-                    "domain": "httpbin.org",
+                    "domain": ".google.com",
                     "path": "/",
                 },
             )
