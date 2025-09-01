@@ -1,19 +1,21 @@
 """Screenshot tools for Chrome MCP server."""
 
 import base64
-from typing import Any
 
-from browser.backend.core.management.manager import ChromeManager
 from loguru import logger
 
+from backend.core.management.manager import ChromeManager
 
-async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = False) -> dict[str, Any]:
+from ..response import BrowserResponse
+
+
+async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = False) -> BrowserResponse:
     """Take a screenshot of the page."""
     logger.debug(f"Taking screenshot: full_page={full_page}")
 
     instances = await manager.list_instances()
     if not instances:
-        return {"success": False, "error": "No browser instance available"}
+        return BrowserResponse(success=False, error="No browser instance available")
 
     instance = instances[0]
 
@@ -23,16 +25,16 @@ async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = Fals
 
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    return {"success": True, "screenshot": screenshot_base64, "format": "base64"}
+    return BrowserResponse(success=True, screenshot=screenshot_base64, data={"format": "base64"})
 
 
-async def browser_element_screenshot_tool(manager: ChromeManager, selector: str) -> dict[str, Any]:
+async def browser_element_screenshot_tool(manager: ChromeManager, selector: str) -> BrowserResponse:
     """Take a screenshot of an element."""
     logger.debug(f"Taking element screenshot: {selector}")
 
     instances = await manager.list_instances()
     if not instances:
-        return {"success": False, "error": "No browser instance available"}
+        return BrowserResponse(success=False, error="No browser instance available")
 
     instance = instances[0]
 
@@ -41,4 +43,4 @@ async def browser_element_screenshot_tool(manager: ChromeManager, selector: str)
     screenshot_bytes = element.screenshot_as_png
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    return {"success": True, "screenshot": screenshot_base64, "format": "base64"}
+    return BrowserResponse(success=True, screenshot=screenshot_base64, data={"format": "base64"})

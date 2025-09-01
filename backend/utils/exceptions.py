@@ -39,7 +39,7 @@ class InstanceError(ChromeManagerError):
     error_code: str = "INSTANCE_ERROR"
     instance_id: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add instance_id to context if provided."""
         if self.instance_id:
             self.context["instance_id"] = self.instance_id
@@ -53,7 +53,7 @@ class NavigationError(ChromeManagerError):
     url: str | None = None
     status_code: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add navigation details to context."""
         if self.url:
             self.context["url"] = self.url
@@ -69,7 +69,7 @@ class InputError(ChromeManagerError):
     element: str | None = None
     action: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add input details to context."""
         if self.element:
             self.context["element"] = self.element
@@ -84,7 +84,7 @@ class MediaError(ChromeManagerError):
     error_code: str = "MEDIA_ERROR"
     media_type: str | None = None  # "screenshot", "video", etc.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add media details to context."""
         if self.media_type:
             self.context["media_type"] = self.media_type
@@ -97,7 +97,7 @@ class ExtensionError(ChromeManagerError):
     error_code: str = "EXTENSION_ERROR"
     extension_path: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add extension details to context."""
         if self.extension_path:
             self.context["extension_path"] = self.extension_path
@@ -111,7 +111,7 @@ class ConfigError(ChromeManagerError):
     config_key: str | None = None
     config_file: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add config details to context."""
         if self.config_key:
             self.context["config_key"] = self.config_key
@@ -127,7 +127,7 @@ class MCPError(ChromeManagerError):
     tool_name: str | None = None
     request_id: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add MCP details to context."""
         if self.tool_name:
             self.context["tool_name"] = self.tool_name
@@ -144,7 +144,7 @@ class ChromeTimeoutError(ChromeManagerError):
     timeout_seconds: float | None = None
     operation: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add timeout details to context."""
         if self.timeout_seconds:
             self.context["timeout_seconds"] = self.timeout_seconds
@@ -160,7 +160,7 @@ class PoolError(ChromeManagerError):
     pool_size: int | None = None
     available_instances: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add pool details to context."""
         if self.pool_size is not None:
             self.context["pool_size"] = self.pool_size
@@ -176,7 +176,7 @@ class ProfileError(ChromeManagerError):
     profile_name: str | None = None
     profile_path: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add profile details to context."""
         if self.profile_name:
             self.context["profile_name"] = self.profile_name
@@ -192,7 +192,7 @@ class SessionError(ChromeManagerError):
     session_id: str | None = None
     session_file: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Add session details to context."""
         if self.session_id:
             self.context["session_id"] = self.session_id

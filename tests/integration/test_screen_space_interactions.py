@@ -11,7 +11,7 @@ from browser.backend.facade.navigation.extractor import ContentExtractor
 from browser.backend.facade.navigation.navigator import Navigator
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
 # Using test_html_server fixture from conftest.py instead of creating duplicate
 

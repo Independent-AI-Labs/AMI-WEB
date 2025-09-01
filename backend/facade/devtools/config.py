@@ -3,6 +3,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -16,12 +17,13 @@ class DeviceEmulation:
     userAgent: str  # noqa: N815 - CDP spec requires this name
 
 
-def _load_user_agents_config() -> dict:
+def _load_user_agents_config() -> dict[str, Any]:
     """Load user agents configuration from JSON file."""
     config_path = Path(__file__).parent.parent.parent / "config" / "user_agents.json"
     if config_path.exists():
         with config_path.open() as f:
-            return json.load(f)
+            data: dict[str, Any] = json.load(f)
+            return data
     return {"presets": {}, "device_emulation": {}}
 
 

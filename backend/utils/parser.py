@@ -1,11 +1,15 @@
 """HTML parsing and text extraction utilities."""
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, Comment, NavigableString, Tag
+from bs4 import BeautifulSoup, Comment, Tag
+from bs4.element import AttributeValueList, NavigableString, PageElement
 from loguru import logger
+
+if TYPE_CHECKING:
+    from selenium.webdriver.remote.webdriver import WebDriver
 
 # Size limits to prevent DoS attacks
 MAX_HTML_SIZE = 10 * 1024 * 1024  # 10MB
@@ -44,7 +48,7 @@ class HTMLParser:
         }
 
     @classmethod
-    def from_url(cls, driver, url: str | None = None) -> "HTMLParser":
+    def from_url(cls, driver: "WebDriver", url: str | None = None) -> "HTMLParser":
         """Create parser from browser's current page.
 
         Args:
@@ -116,7 +120,7 @@ class HTMLParser:
 
         return text.strip()
 
-    def _extract_with_structure(self, element) -> str:
+    def _extract_with_structure(self, element: Tag | NavigableString | PageElement) -> str:
         """Extract text while preserving document structure.
 
         Args:
@@ -129,19 +133,24 @@ class HTMLParser:
             return str(element)
 
         # Handle different element types
-        return self._handle_element(element)
+        if isinstance(element, Tag):
+            return self._handle_element(element)
+        return str(element)
 
-    def _handle_element(self, element) -> str:
+    def _handle_element(self, element: Tag | PageElement) -> str:
         """Handle specific element types for text extraction."""
+        if not isinstance(element, Tag):
+            return str(element)
+
         if element.name in ["br", "hr"]:
             return "\n"
 
         if element.name in ["p", "div", "section", "article", "header", "footer", "li", "tr"]:
-            content = "".join(self._extract_with_structure(child) for child in element.children)
+            content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
             return f"\n{content}\n"
 
         if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-            content = "".join(self._extract_with_structure(child) for child in element.children)
+            content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
             return f"\n\n{content}\n\n"
 
         if element.name == "a":
@@ -151,17 +160,19 @@ class HTMLParser:
             return self._handle_image(element)
 
         # Default: recursively extract from children
-        return "".join(self._extract_with_structure(child) for child in element.children)
+        return "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
 
-    def _handle_link(self, element) -> str:
+    def _handle_link(self, element: Tag) -> str:
         """Handle link element text extraction."""
-        text = "".join(self._extract_with_structure(child) for child in element.children)
+        text = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
         href = element.get("href", "")
-        if href and not href.startswith("#"):
+        if href and isinstance(href, str) and not href.startswith("#"):
             return f"{text} ({href})"
+        if href and isinstance(href, AttributeValueList) and len(href) > 0 and not str(href[0]).startswith("#"):
+            return f"{text} ({href[0]})"
         return text
 
-    def _handle_image(self, element) -> str:
+    def _handle_image(self, element: Tag) -> str:
         """Handle image element text extraction."""
         alt = element.get("alt", "")
         if alt:

@@ -41,7 +41,7 @@ class BrowserLifecycle:
         self._launch_options: dict[str, Any] = {}
         self.window_monitor: SimpleTabInjector | None = None
 
-    def set_security_config(self, config: SecurityConfig | None = None):
+    def set_security_config(self, config: SecurityConfig | None = None) -> None:
         """Set or update security configuration."""
         if config:
             self._security_config = config

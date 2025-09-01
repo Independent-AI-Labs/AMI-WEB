@@ -33,7 +33,7 @@ logger.remove()
 logger.add(sys.stderr, level="INFO")
 
 # Test configuration - can be overridden by environment variable
-HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless mode
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
 # Configure pytest-asyncio

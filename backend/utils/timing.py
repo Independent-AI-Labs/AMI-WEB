@@ -67,7 +67,7 @@ def wait_with_retry(
     raise TimeoutError(f"Timed out after {timeout}s waiting for {func.__name__}. Last error: {last_exception}")
 
 
-def with_timeout(timeout: float) -> Callable:
+def with_timeout(timeout: float) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator to add timeout to a function.
 
     Note: On Windows, this uses threading instead of signals.
@@ -79,7 +79,7 @@ def with_timeout(timeout: float) -> Callable:
         Decorated function
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Use threading on Windows since SIGALRM is not available
             if platform.system() == "Windows":
@@ -92,7 +92,7 @@ def with_timeout(timeout: float) -> Callable:
             else:
                 # Unix-based systems can use signal
 
-                def timeout_handler(_signum, _frame):
+                def timeout_handler(_signum: Any, _frame: Any) -> None:
                     raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s")
 
                 # Set timeout alarm

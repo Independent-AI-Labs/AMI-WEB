@@ -1,9 +1,11 @@
 """Unit tests for MCP protocol implementation."""
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
+
+# Import the fixtures needed for this test
 
 
 class TestMCPProtocol:
@@ -130,52 +132,52 @@ class TestMCPServerHandlers:
     @pytest.mark.asyncio
     async def test_initialize_handler(self):
         """Test initialize request handler."""
-        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
-            server = mock_server_class()
-            server.handle_initialize = AsyncMock(return_value={"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}})
+        # Mock the server directly
+        mock_server = AsyncMock()
+        mock_server.handle_initialize = AsyncMock(return_value={"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}})
 
-            result = await server.handle_initialize({})
+        result = await mock_server.handle_initialize({})
 
-            assert result["protocolVersion"] == "2024-11-05"
-            assert "capabilities" in result
+        assert result["protocolVersion"] == "2024-11-05"
+        assert "capabilities" in result
 
     @pytest.mark.asyncio
     async def test_tools_list_handler(self):
         """Test tools/list request handler."""
-        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
-            server = mock_server_class()
-            server.handle_tools_list = AsyncMock(return_value={"tools": [{"name": "browser_launch"}, {"name": "browser_navigate"}]})
+        # Mock the server directly
+        mock_server = AsyncMock()
+        mock_server.handle_tools_list = AsyncMock(return_value={"tools": [{"name": "browser_launch"}, {"name": "browser_navigate"}]})
 
-            result = await server.handle_tools_list({})
+        result = await mock_server.handle_tools_list({})
 
-            assert "tools" in result
-            expected_tool_count = 2
-            assert len(result["tools"]) == expected_tool_count
+        assert "tools" in result
+        expected_tool_count = 2
+        assert len(result["tools"]) == expected_tool_count
 
     @pytest.mark.asyncio
     async def test_tools_call_handler(self):
         """Test tools/call request handler."""
-        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
-            server = mock_server_class()
-            server.handle_tools_call = AsyncMock(return_value={"content": [{"type": "text", "text": '{"instance_id": "test-123"}'}]})
+        # Mock the server directly
+        mock_server = AsyncMock()
+        mock_server.handle_tools_call = AsyncMock(return_value={"content": [{"type": "text", "text": '{"instance_id": "test-123"}'}]})
 
-            params = {"name": "browser_launch", "arguments": {"headless": True}}
-            result = await server.handle_tools_call(params)
+        params = {"name": "browser_launch", "arguments": {"headless": True}}
+        result = await mock_server.handle_tools_call(params)
 
-            assert "content" in result
-            assert result["content"][0]["type"] == "text"
+        assert "content" in result
+        assert result["content"][0]["type"] == "text"
 
     @pytest.mark.asyncio
     async def test_error_handler(self):
         """Test error handling in request processing."""
-        with patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer") as mock_server_class:
-            server = mock_server_class()
-            server.handle_request = AsyncMock(side_effect=ValueError("Invalid request"))
+        # Mock the server directly
+        mock_server = AsyncMock()
+        mock_server.handle_request = AsyncMock(side_effect=ValueError("Invalid request"))
 
-            with pytest.raises(ValueError) as exc:
-                await server.handle_request({"method": "invalid"})
+        with pytest.raises(ValueError) as exc:
+            await mock_server.handle_request({"method": "invalid"})
 
-            assert str(exc.value) == "Invalid request"
+        assert str(exc.value) == "Invalid request"
 
 
 class TestMCPConnectionLifecycle:

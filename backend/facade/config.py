@@ -1,6 +1,7 @@
 """Configuration for facade controllers with customizable timing values."""
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -26,7 +27,7 @@ class FacadeConfig:
     poll_frequency: float = 0.5  # Default poll frequency for wait conditions (seconds)
 
     @classmethod
-    def from_dict(cls, config_dict: dict) -> "FacadeConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> "FacadeConfig":
         """Create config from dictionary."""
         return cls(**{k: v for k, v in config_dict.items() if hasattr(cls, k)})
 

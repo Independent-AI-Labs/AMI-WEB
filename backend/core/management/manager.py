@@ -13,6 +13,7 @@ from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo
 from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
 from ...models.security import SecurityConfig
 from ...utils.config import Config
+from ...utils.exceptions import InstanceError
 from ..browser.instance import BrowserInstance
 from ..browser.properties_manager import PropertiesManager
 from .browser_worker_pool import BrowserWorkerPool
@@ -55,7 +56,7 @@ class ChromeManager:
         self._standalone_instances: dict[str, BrowserInstance] = {}
         self._initialized = False
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize the Chrome Manager."""
         if self._initialized:
             return
@@ -66,11 +67,11 @@ class ChromeManager:
         self._initialized = True
         logger.info("Chrome Manager initialized successfully")
 
-    async def start(self):
+    async def start(self) -> None:
         """Alias for initialize() for backward compatibility."""
         await self.initialize()
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """Shutdown the Chrome Manager."""
         logger.info("Shutting down Chrome Manager")
 
@@ -88,7 +89,7 @@ class ChromeManager:
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Alias for shutdown() for backward compatibility."""
         await self.shutdown()
 
@@ -96,7 +97,7 @@ class ChromeManager:
         self,
         headless: bool = True,
         profile: str | None = None,
-        extensions: list[str] | None = None,
+        extensions: list[str | None] | None = None,
         options: ChromeOptions | None = None,
         use_pool: bool = True,
         anti_detect: bool = True,
@@ -123,7 +124,8 @@ class ChromeManager:
 
         if use_pool:
             # Get instance from pool
-            opts = options or ChromeOptions(headless=headless, extensions=extensions or [])
+            clean_extensions = [ext for ext in (extensions or []) if ext is not None]
+            opts = options or ChromeOptions(headless=headless, extensions=clean_extensions)
             # Note: anti_detect is configured at pool creation time via backend.pool.anti_detect_default
 
             # Acquire a browser from the pool
@@ -136,10 +138,14 @@ class ChromeManager:
             properties_manager=self.properties_manager,
             profile_manager=self.profile_manager,
         )
+        standalone_extensions: list[str] | None = None
+        if extensions:
+            clean_list = [ext for ext in extensions if ext is not None]
+            standalone_extensions = clean_list if clean_list else None
         await instance.launch(
             headless=headless,
             profile=profile,
-            extensions=extensions,
+            extensions=standalone_extensions,
             options=options,
             anti_detect=anti_detect,
             security_config=security_config,
@@ -382,7 +388,7 @@ class ChromeManager:
             return await screenshot_ctrl.capture_full_page()
         return await screenshot_ctrl.capture_viewport()
 
-    async def execute_script(self, instance_id: str, script: str, *args) -> Any:
+    async def execute_script(self, instance_id: str, script: str, *args: Any) -> Any:
         """Execute JavaScript.
 
         Args:
@@ -397,6 +403,8 @@ class ChromeManager:
         if not instance:
             raise ValueError(f"Instance {instance_id} not found")
 
+        if instance.driver is None:
+            raise InstanceError("Browser not initialized", instance_id=instance_id)
         return instance.driver.execute_script(script, *args)
 
     def _inject_properties_script(self, properties_json: str) -> str:
@@ -442,7 +450,7 @@ class ChromeManager:
     async def set_browser_properties(
         self,
         instance_id: str,
-        properties: dict[str, Any] | None = None,
+        properties: dict[str, Any | None] | None = None,
         preset: str | None = None,
         tab_id: str | None = None,
     ) -> bool:
@@ -523,8 +531,10 @@ class ChromeManager:
 
         # Get current properties from the page
         try:
+            if instance.driver is None:
+                raise InstanceError("Browser not initialized", instance_id=instance_id)
             # Get both standard and injected properties
-            return instance.driver.execute_script(
+            result: dict[str, Any] = instance.driver.execute_script(
                 """
                 var props = {
                     userAgent: navigator.userAgent,
@@ -563,6 +573,7 @@ class ChromeManager:
                 return props;
             """,
             )
+            return result
         except Exception as e:
             logger.error(f"Failed to get browser properties: {e}")
             return {}

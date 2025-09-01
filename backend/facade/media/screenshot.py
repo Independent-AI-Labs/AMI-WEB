@@ -116,6 +116,8 @@ class ScreenshotController(BaseController):
 
     def _capture_full_page_sync(self, image_format: ImageFormat, quality: int) -> bytes:
         """Synchronous version of full page capture."""
+        if not self.driver:
+            raise MediaError("Browser not initialized")
         # Get page dimensions
         total_height = self.driver.execute_script("return document.documentElement.scrollHeight")
         viewport_height = self.driver.execute_script("return window.innerHeight")
@@ -156,6 +158,8 @@ class ScreenshotController(BaseController):
 
     async def _capture_full_page_async(self, image_format: ImageFormat, quality: int) -> bytes:
         """Asynchronous version of full page capture."""
+        if not self.driver:
+            raise MediaError("Browser not initialized")
         loop = asyncio.get_event_loop()
 
         # Get page dimensions

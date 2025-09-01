@@ -4,8 +4,8 @@ import asyncio
 from typing import Any
 
 from loguru import logger
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from ...utils.exceptions import NavigationError
@@ -61,6 +61,9 @@ class FrameController(BaseController):
         """
         if not frame:
             raise ValueError("Frame identifier cannot be empty")
+
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
 
         # Check if it's a numeric string (frame index)
         if frame.isdigit():
@@ -153,7 +156,7 @@ class FrameController(BaseController):
             logger.error(f"Failed to count frames: {e}")
             return 0
 
-    async def list_frames(self) -> list[dict]:
+    async def list_frames(self) -> list[dict[str, Any]]:
         """Get list of all frames in current context.
 
         Returns:
@@ -170,8 +173,8 @@ class FrameController(BaseController):
                     const frame = window.frames[i];
                     frames.push({
                         index: i,
-                        name: frame.name || '',
-                        src: frame.location.href || 'about:blank',
+                        name: frame.name | , '',
+                        src: frame.location.href | , 'about:blank',
                         id: frame.frameElement ? frame.frameElement.id : ''
                     });
                 } catch (e) {
@@ -223,7 +226,7 @@ class FrameController(BaseController):
             logger.error(f"Failed to check frame context: {e}")
             return False
 
-    async def execute_in_frame(self, frame: int | str | WebElement, script: str, *args) -> Any:
+    async def execute_in_frame(self, frame: int | str | WebElement, script: str, *args: Any) -> Any:
         """Execute script in a specific frame and return to current context.
 
         Args:

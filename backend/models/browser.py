@@ -67,7 +67,7 @@ class ExtensionConfig(BaseModel):
 
 class ChromeOptions(BaseModel):
     headless: bool = True
-    window_size: tuple = (1920, 1080)
+    window_size: tuple[int, int] = (1920, 1080)
     user_agent: str | None = None
     proxy: str | None = None
     disable_gpu: bool = True
