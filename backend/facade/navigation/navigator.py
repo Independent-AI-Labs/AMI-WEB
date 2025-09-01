@@ -44,6 +44,8 @@ class Navigator(BaseController):
 
         try:
             logger.debug(f"Calling driver.get synchronously for {url}")
+            if self.driver is None:
+                raise RuntimeError("Driver not initialized")
             self.driver.get(url)
             logger.debug(f"driver.get completed for {url}")
 
@@ -56,9 +58,9 @@ class Navigator(BaseController):
 
             load_time = time.time() - start_time
 
-            title = self.driver.title
-            current_url = self.driver.current_url
-            content_length = self.driver.execute_script("return document.documentElement.innerHTML.length")
+            title = self.driver.title if self.driver else ""
+            current_url = self.driver.current_url if self.driver else ""
+            content_length = self.driver.execute_script("return document.documentElement.innerHTML.length") if self.driver else 0
 
             self.instance.update_activity()
 
@@ -75,6 +77,8 @@ class Navigator(BaseController):
         start_time = asyncio.get_event_loop().time()
 
         try:
+            if not self.driver:
+                raise NavigationError("Browser not initialized")
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self.driver.get, url)
 
@@ -87,10 +91,12 @@ class Navigator(BaseController):
 
             load_time = asyncio.get_event_loop().time() - start_time
 
-            title = self.driver.title
-            current_url = self.driver.current_url
+            title = self.driver.title if self.driver else ""
+            current_url = self.driver.current_url if self.driver else ""
 
-            content_length = await loop.run_in_executor(None, self.driver.execute_script, "return document.documentElement.innerHTML.length")
+            content_length = (
+                await loop.run_in_executor(None, self.driver.execute_script, "return document.documentElement.innerHTML.length") if self.driver else 0
+            )
 
             self.instance.update_activity()
 

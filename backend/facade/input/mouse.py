@@ -20,6 +20,8 @@ class MouseController(BaseController):
 
     def _perform_click_sync(self, element: WebElement, options: ClickOptions) -> None:
         """Synchronous version of click for thread context."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
         if options.offset_x is not None or options.offset_y is not None:
             actions = ActionChains(self.driver)
             actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
@@ -45,6 +47,8 @@ class MouseController(BaseController):
 
     async def _perform_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
         """Asynchronous click operation."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
         if options.offset_x is not None or options.offset_y is not None:
             actions = ActionChains(self.driver)
             actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
@@ -63,7 +67,7 @@ class MouseController(BaseController):
                 if options.button == "right":
                     actions = ActionChains(self.driver)
 
-                    def context_click_perform(act=actions, el=element):  # type: ignore[misc]
+                    def context_click_perform(act: ActionChains = actions, el: WebElement = element) -> None:
                         return act.context_click(el).perform()
 
                     await loop.run_in_executor(None, context_click_perform)
@@ -387,6 +391,8 @@ class MouseController(BaseController):
 
     async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
         """Find an element on the page."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
         try:
             by, value = self._parse_selector(selector)
 

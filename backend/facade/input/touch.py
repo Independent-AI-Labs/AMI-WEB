@@ -83,7 +83,7 @@ class TouchController(BaseController):
                 const createTouch = (x, y, id) => {{
                     return new Touch({{
                         identifier: id,
-                        target: document.elementFromPoint(x, y) || document.body,
+                        target: document.elementFromPoint(x | y), , document.body,
                         clientX: x,
                         clientY: y,
                         pageX: x,

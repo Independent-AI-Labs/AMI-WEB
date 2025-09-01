@@ -96,9 +96,9 @@ class PerformanceController(BaseController):
                     entryType: entry.entryType,
                     startTime: entry.startTime,
                     duration: entry.duration,
-                    transferSize: entry.transferSize || 0,
-                    encodedBodySize: entry.encodedBodySize || 0,
-                    decodedBodySize: entry.decodedBodySize || 0,
+                    transferSize: entry.transferSize | , 0,
+                    encodedBodySize: entry.encodedBodySize | , 0,
+                    decodedBodySize: entry.decodedBodySize | , 0,
                     initiatorType: entry.initiatorType
                 }));
             """,
@@ -226,7 +226,7 @@ class PerformanceController(BaseController):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.driver.execute_script, script)
 
-    async def _execute_cdp(self, command: str, params: dict | None = None) -> Any:
+    async def _execute_cdp(self, command: str, params: dict[str, Any] | None = None) -> Any:
         """Execute CDP command.
 
         Args:

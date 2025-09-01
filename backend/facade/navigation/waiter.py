@@ -51,6 +51,8 @@ class Waiter(BaseController):
 
     def _wait_for_load_sync(self, timeout: int = 30) -> None:
         """Synchronous version of _wait_for_load for thread context."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
         try:
             wait = WebDriverWait(self.driver, timeout)
             wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
@@ -59,6 +61,8 @@ class Waiter(BaseController):
 
     def _wait_for_condition_sync(self, condition: WaitCondition, timeout: int) -> None:
         """Synchronous version of _wait_for_condition for thread context."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
         wait = WebDriverWait(self.driver, timeout, poll_frequency=condition.poll_frequency)
 
         if condition.type == "load":
@@ -79,10 +83,14 @@ class Waiter(BaseController):
             wait.until(EC.presence_of_element_located((by, value)))
 
         elif condition.type == "function" and condition.target:
-            wait.until(lambda driver: driver.execute_script(condition.target))
+            target_script = condition.target
+            if target_script is not None:
+                wait.until(lambda driver: driver.execute_script(target_script))
 
     async def _wait_for_load(self, timeout: int = 30) -> None:
         """Wait for page to finish loading."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
         try:
             wait = WebDriverWait(self.driver, timeout)
             loop = asyncio.get_event_loop()
@@ -93,6 +101,8 @@ class Waiter(BaseController):
 
     async def _wait_for_condition(self, condition: WaitCondition, timeout: int) -> None:
         """Wait for a specific condition to be met."""
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
         wait = WebDriverWait(self.driver, timeout, poll_frequency=condition.poll_frequency)
         loop = asyncio.get_event_loop()
 
@@ -116,7 +126,9 @@ class Waiter(BaseController):
             await loop.run_in_executor(None, wait.until, EC.presence_of_element_located((by, value)))
 
         elif condition.type == "function" and condition.target:
-            await loop.run_in_executor(None, wait.until, lambda driver: driver.execute_script(condition.target))
+            target_script = condition.target
+            if target_script is not None:
+                await loop.run_in_executor(None, wait.until, lambda driver: driver.execute_script(target_script))
 
     async def wait_for_url_change(self, current_url: str, timeout: int = 30) -> str:
         """Wait for the URL to change from the current one.

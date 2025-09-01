@@ -20,7 +20,7 @@ MIN_KEYS_FOR_COMBINATION = 2
 class KeyboardController(BaseController):
     """Handles keyboard input and text entry operations."""
 
-    async def _type_text_sync(self, element, text: str, clear: bool, delay: int) -> None:
+    async def _type_text_sync(self, element: WebElement, text: str, clear: bool, delay: int) -> None:
         """Type text synchronously in thread context."""
         if clear:
             element.clear()
@@ -32,7 +32,7 @@ class KeyboardController(BaseController):
         else:
             element.send_keys(text)
 
-    async def _type_text_async(self, element, text: str, clear: bool, delay: int) -> None:
+    async def _type_text_async(self, element: WebElement, text: str, clear: bool, delay: int) -> None:
         """Type text asynchronously."""
         loop = asyncio.get_event_loop()
 
@@ -77,7 +77,7 @@ class KeyboardController(BaseController):
             logger.error(f"Type text failed for {selector}: {e}")
             raise InputError(f"Failed to type into {selector}: {e}") from e
 
-    async def keyboard_event(self, key: str, modifiers: list[str] | None = None, element: str | None = None) -> None:
+    async def keyboard_event(self, key: str, modifiers: list[str | None] | None = None, element: str | None = None) -> None:
         """Send a keyboard event.
 
         Args:
@@ -98,13 +98,15 @@ class KeyboardController(BaseController):
                     actions.move_to_element(target)
 
             if modifiers:
-                await self._apply_modifiers(actions, modifiers, key_down=True)
+                clean_modifiers = [mod for mod in modifiers if mod is not None]
+                await self._apply_modifiers(actions, clean_modifiers, key_down=True)
 
             key_value = getattr(Keys, key.upper(), key)
             actions.send_keys(key_value)
 
             if modifiers:
-                await self._apply_modifiers(actions, modifiers, key_down=False)
+                clean_modifiers = [mod for mod in modifiers if mod is not None]
+                await self._apply_modifiers(actions, clean_modifiers, key_down=False)
 
             await loop.run_in_executor(None, actions.perform)
 
@@ -132,7 +134,7 @@ class KeyboardController(BaseController):
         if len(keys) < MIN_KEYS_FOR_COMBINATION:
             raise InputError("Key combination requires at least 2 keys")
 
-        modifiers = list(keys[:-1])
+        modifiers: list[str | None] = list(keys[:-1])
         key = keys[-1]
         await self.keyboard_event(key, modifiers)
 
@@ -182,6 +184,8 @@ class KeyboardController(BaseController):
 
     async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
         """Find an element on the page."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
         try:
             by, value = self._parse_selector(selector)
 

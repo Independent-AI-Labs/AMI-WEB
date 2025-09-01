@@ -18,6 +18,8 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
+            if self.driver is None:
+                return ""
             if self._is_in_thread_context():
                 return self.driver.page_source
             loop = asyncio.get_event_loop()
@@ -65,7 +67,7 @@ class ContentExtractor(BaseController):
         except Exception as e:
             raise NavigationError(f"Failed to get element text: {e}") from e
 
-    async def execute_script(self, script: str, *args, async_script: bool = False) -> Any:
+    async def execute_script(self, script: str, *args: Any, async_script: bool = False) -> Any:
         """Execute JavaScript in the page context.
 
         Args:
@@ -229,7 +231,7 @@ class ContentExtractor(BaseController):
             return {
                 href: href,
                 text: link.textContent.trim(),
-                title: link.title || ''
+                title: link.title | , ''
             };
         });
         """
@@ -255,7 +257,7 @@ class ContentExtractor(BaseController):
             alt: img.alt,
             width: img.naturalWidth,
             height: img.naturalHeight,
-            title: img.title || ''
+            title: img.title | , ''
         }));
         """
 
@@ -277,18 +279,18 @@ class ContentExtractor(BaseController):
         const forms = Array.from(document.querySelectorAll('form'));
         return forms.map(form => {
             const fields = Array.from(form.elements).map(el => ({
-                name: el.name || '',
-                type: el.type || el.tagName.toLowerCase(),
-                id: el.id || '',
-                value: el.value || '',
-                required: el.required || false,
-                placeholder: el.placeholder || ''
+                name: el.name | , '',
+                type: el.type | , el.tagName.toLowerCase(),
+                id: el.id | , '',
+                value: el.value | , '',
+                required: el.required | , false,
+                placeholder: el.placeholder | , ''
             }));
             return {
-                id: form.id || '',
-                name: form.name || '',
-                action: form.action || '',
-                method: form.method || 'get',
+                id: form.id | , '',
+                name: form.name | , '',
+                action: form.action | , '',
+                method: form.method | , 'get',
                 fields: fields
             };
         });

@@ -16,7 +16,7 @@ class SimpleTabInjector:
         self._load_script()
         self._setup_cdp_injection()
 
-    def _load_script(self):
+    def _load_script(self) -> None:
         """Load the anti-detection script."""
         # Path: backend/core/security -> web/scripts
         script_path = Path(__file__).parent.parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
@@ -27,7 +27,7 @@ class SimpleTabInjector:
         else:
             logger.error(f"Anti-detect script not found at {script_path}")
 
-    def _setup_cdp_injection(self):
+    def _setup_cdp_injection(self) -> None:
         """Setup CDP to inject script on all new documents automatically."""
         if not self.antidetect_script:
             logger.error("Cannot setup CDP injection - no script loaded")
@@ -55,7 +55,7 @@ class SimpleTabInjector:
         except Exception as e:
             logger.error(f"Failed to setup CDP injection: {e}")
 
-    def inject_into_current_tab(self):
+    def inject_into_current_tab(self) -> bool:
         """Manually inject into current tab if needed."""
         if not self.antidetect_script:
             return False
@@ -85,7 +85,7 @@ class SimpleTabInjector:
             logger.error(f"Failed to inject into current tab: {e}")
             return False
 
-    def cleanup_closed_tabs(self):
+    def cleanup_closed_tabs(self) -> None:
         """Remove closed tabs from tracking."""
         try:
             current_handles = set(self.driver.window_handles)
@@ -94,10 +94,10 @@ class SimpleTabInjector:
             logger.debug(f"Error cleaning up closed tabs: {e}")
 
     # Compatibility methods - these do nothing now since we use CDP events
-    def start_monitoring(self):
+    def start_monitoring(self) -> None:
         """No-op for compatibility - CDP handles everything."""
         logger.debug("start_monitoring called but not needed - using CDP events")
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """No-op for compatibility - CDP handles everything."""
         logger.debug("stop_monitoring called but not needed - using CDP events")

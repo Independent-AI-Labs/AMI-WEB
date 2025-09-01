@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class PropertyInjectionService:
     """Service for generating browser property injection scripts from templates."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the service with Jinja2 template environment."""
         template_dir = Path(__file__).parent.parent.parent / "web" / "templates"
         self.env = Environment(

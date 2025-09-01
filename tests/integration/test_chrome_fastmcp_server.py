@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from base.backend.utils.environment_setup import EnvironmentSetup
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -23,7 +24,6 @@ class TestChromeFastMCPServer:
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
 
         # Use the module's venv python
-        from base.backend.utils.environment_setup import EnvironmentSetup
 
         venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
 
@@ -55,8 +55,6 @@ class TestChromeFastMCPServer:
     async def test_browser_launch_and_terminate(self):
         """Test launching and terminating a browser instance."""
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
-
-        from base.backend.utils.environment_setup import EnvironmentSetup
 
         venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)

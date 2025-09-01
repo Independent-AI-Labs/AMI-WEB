@@ -8,7 +8,7 @@ from browser.backend.core.management.manager import ChromeManager
 from loguru import logger
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
 
 class MCPTestServer:

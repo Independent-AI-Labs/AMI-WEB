@@ -19,17 +19,17 @@ class BrowserMonitor:
         self._network_logs: list[NetworkEntry] = []
         self.last_activity = datetime.now()
 
-    def update_activity(self):
+    def update_activity(self) -> None:
         """Update last activity timestamp."""
         self.last_activity = datetime.now()
 
-    async def setup_logging(self, driver: WebDriver):
+    async def setup_logging(self, driver: WebDriver) -> None:
         """Setup CDP logging for console and network."""
         try:
             # Enable console and network logging via CDP
-            driver.execute_cdp_cmd("Console.enable", {})  # type: ignore[attr-defined]
-            driver.execute_cdp_cmd("Network.enable", {})  # type: ignore[attr-defined]
-            driver.execute_cdp_cmd("Performance.enable", {})  # type: ignore[attr-defined]
+            driver.execute_cdp_cmd("Console.enable", {})
+            driver.execute_cdp_cmd("Network.enable", {})
+            driver.execute_cdp_cmd("Performance.enable", {})
             logger.debug(f"Logging enabled for instance {self.instance_id}")
         except Exception as e:
             logger.warning(f"Failed to setup logging: {e}")
@@ -169,7 +169,7 @@ class BrowserMonitor:
 
         return health
 
-    def clear_logs(self):
+    def clear_logs(self) -> None:
         """Clear all stored logs."""
         self._console_logs.clear()
         self._network_logs.clear()

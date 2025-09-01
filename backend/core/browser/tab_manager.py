@@ -23,18 +23,18 @@ class TabManager:
         self._load_antidetect_script()
         self._injected_tabs: set[str] = set()
 
-    def _load_antidetect_script(self):
+    def _load_antidetect_script(self) -> None:
         """Load the anti-detection script content."""
         # Path: backend/core/browser -> web/scripts
         script_path = Path(__file__).parent.parent.parent.parent / "web" / "scripts" / "complete-antidetect.js"
         if script_path.exists():
             with script_path.open("r", encoding="utf-8") as f:
-                self.antidetect_script = f.read()
+                self.antidetect_script: str | None = f.read()
         else:
             logger.error(f"Anti-detect script not found at {script_path}")
             self.antidetect_script = None
 
-    def ensure_antidetect_on_current_tab(self):
+    def ensure_antidetect_on_current_tab(self) -> None:
         """Ensure anti-detection is applied to the current tab."""
         # Cleanup closed tabs automatically to prevent memory leak
         self.cleanup_closed_tabs()
@@ -64,7 +64,7 @@ class TabManager:
             except Exception as e:
                 logger.error(f"Failed to inject anti-detect into tab {current_handle}: {e}")
 
-    def open_new_tab(self, url: str = None, properties: "BrowserProperties | None" = None):
+    def open_new_tab(self, url: str | None = None, properties: "BrowserProperties | None" = None) -> str:
         """Open a new tab with anti-detection and optionally custom properties."""
         # Open new tab
         self.driver.switch_to.new_window("tab")
@@ -83,19 +83,19 @@ class TabManager:
 
         return current_handle
 
-    def switch_to_tab(self, window_handle: str):
+    def switch_to_tab(self, window_handle: str) -> None:
         """Switch to a tab and ensure anti-detection is applied."""
         # Cleanup before switching
         self.cleanup_closed_tabs()
         self.driver.switch_to.window(window_handle)
         self.ensure_antidetect_on_current_tab()
 
-    def open_link_in_new_tab(self, url: str, properties: "BrowserProperties | None" = None):
+    def open_link_in_new_tab(self, url: str, properties: "BrowserProperties | None" = None) -> str:
         """Open a link in a new tab with anti-detection and optionally custom properties."""
         # Open new tab with properties
         return self.open_new_tab(url, properties)
 
-    def set_tab_properties(self, tab_id: str, properties: "BrowserProperties | dict[str, Any]"):
+    def set_tab_properties(self, tab_id: str, properties: "BrowserProperties" | dict[str, Any]) -> None:
         """Set properties for a specific tab."""
         if self.properties_manager and self.instance_id:
             self.properties_manager.set_tab_properties(self.instance_id, tab_id, properties)
@@ -103,7 +103,7 @@ class TabManager:
             if self.driver.current_window_handle == tab_id:
                 self.ensure_antidetect_on_current_tab()
 
-    def cleanup_closed_tabs(self):
+    def cleanup_closed_tabs(self) -> None:
         """Remove closed tabs from the injected tabs set to prevent memory leak."""
         try:
             current_handles = set(self.driver.window_handles)

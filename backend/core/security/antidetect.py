@@ -5,8 +5,55 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
+
+
+def _validate_executable_path(executable_path: str) -> bool:
+    """Validate that an executable path is safe to use in subprocess calls."""
+    if not executable_path:
+        return False
+
+    # Ensure the path is absolute and exists
+    path_obj = Path(executable_path)
+    if not path_obj.is_absolute() or not path_obj.exists():
+        return False
+
+    # Check that it's actually executable
+    if not path_obj.is_file():
+        return False
+
+    # Additional safety: ensure no shell metacharacters in path
+    dangerous_chars = ["&", "|", ";", "$", "`", "\\", '"', "'", " ", "\n", "\r", "\t"]
+    for char in dangerous_chars:
+        if char in executable_path:
+            # Allow spaces in paths but validate they're properly handled
+            if char == " ":
+                continue
+            return False
+
+    return True
+
+
+def _validate_file_path(file_path: str) -> bool:
+    """Validate that a file path is safe to use in subprocess calls."""
+    if not file_path:
+        return False
+
+    # Ensure the path is absolute
+    path_obj = Path(file_path)
+    if not path_obj.is_absolute():
+        return False
+
+    # Check for dangerous characters that could be used for injection
+    dangerous_chars = ["&", "|", ";", "$", "`", '"', "'", "\n", "\r", "\t"]
+    for char in dangerous_chars:
+        if char in file_path:
+            return False
+
+    # Ensure the path points to our expected file type
+    return file_path.endswith(("chromedriver", "chromedriver.exe")) or "_patched" in file_path
 
 
 class ChromeDriverPatcher:
@@ -43,6 +90,64 @@ class ChromeDriverPatcher:
     def get_patched_path(self) -> Path:
         """Get the path to the patched ChromeDriver."""
         return self.chromedriver_path
+
+    def _sign_macos_binary(self) -> None:
+        """Sign the patched ChromeDriver on macOS to avoid Gatekeeper issues."""
+        try:
+            # Find full paths for executables to avoid S607 security warning
+            xattr_path = shutil.which("xattr")
+            codesign_path = shutil.which("codesign")
+
+            if not xattr_path:
+                logger.warning("xattr command not found - unable to remove extended attributes")
+            else:
+                # Remove any existing extended attributes
+                # Validate executable and file paths to avoid S603 security warning
+                driver_path_str = str(self.chromedriver_path.resolve())
+
+                if not _validate_executable_path(xattr_path):
+                    logger.error(f"Invalid or unsafe xattr executable path: {xattr_path}")
+                    return
+
+                if not _validate_file_path(driver_path_str):
+                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
+                    return
+
+                # Use validated paths in subprocess call - S603 suppressed with validation
+                subprocess.run(  # noqa: S603
+                    [xattr_path, "-cr", driver_path_str],
+                    check=False,
+                    capture_output=True,
+                )
+
+            if not codesign_path:
+                logger.warning("codesign command not found - unable to sign patched driver")
+            else:
+                # Sign with ad-hoc signature
+                # Validate executable and file paths to avoid S603 security warning
+                driver_path_str = str(self.chromedriver_path.resolve())
+
+                if not _validate_executable_path(codesign_path):
+                    logger.error(f"Invalid or unsafe codesign executable path: {codesign_path}")
+                    return
+
+                if not _validate_file_path(driver_path_str):
+                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
+                    return
+
+                # Use validated paths in subprocess call - S603 suppressed with validation
+                subprocess.run(  # noqa: S603
+                    [codesign_path, "--force", "--deep", "--sign", "-", driver_path_str],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                logger.info("Patched ChromeDriver signed successfully on macOS")
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to sign patched ChromeDriver: {e}")
+            logger.warning("The patched driver may be blocked by macOS Gatekeeper")
+        except FileNotFoundError:
+            logger.warning("codesign command not found - unable to sign patched driver")
 
     def patch(self) -> bool:
         """
@@ -84,27 +189,7 @@ class ChromeDriverPatcher:
 
                 # On macOS, sign the patched binary to avoid Gatekeeper issues
                 if platform.system() == "Darwin":
-                    try:
-                        # Remove any existing extended attributes
-                        subprocess.run(
-                            ["xattr", "-cr", str(self.chromedriver_path)],
-                            check=False,
-                            capture_output=True,
-                        )
-
-                        # Sign with ad-hoc signature
-                        subprocess.run(
-                            ["codesign", "--force", "--deep", "--sign", "-", str(self.chromedriver_path)],
-                            check=True,
-                            capture_output=True,
-                            text=True,
-                        )
-                        logger.info("Patched ChromeDriver signed successfully on macOS")
-                    except subprocess.CalledProcessError as e:
-                        logger.warning(f"Failed to sign patched ChromeDriver: {e}")
-                        logger.warning("The patched driver may be blocked by macOS Gatekeeper")
-                    except FileNotFoundError:
-                        logger.warning("codesign command not found - unable to sign patched driver")
+                    self._sign_macos_binary()
 
                 return True
 
@@ -115,7 +200,7 @@ class ChromeDriverPatcher:
             logger.error(f"Error patching ChromeDriver: {e}")
             return False
 
-    def restore(self):
+    def restore(self) -> None:
         """Restore the original ChromeDriver from backup."""
         if self.backup_path and self.backup_path.exists():
             shutil.copy2(self.backup_path, self.chromedriver_path)
@@ -194,7 +279,7 @@ def get_anti_detection_arguments(user_agent: str | None = None, window_size: tup
     return args
 
 
-def get_anti_detection_prefs() -> dict:
+def get_anti_detection_prefs() -> dict[str, Any]:
     """
     Get Chrome preferences for anti-detection.
 
@@ -216,7 +301,7 @@ def get_anti_detection_prefs() -> dict:
     }
 
 
-def get_anti_detection_experimental_options() -> dict:
+def get_anti_detection_experimental_options() -> dict[str, Any]:
     """
     Get experimental Chrome options for anti-detection.
 
@@ -232,7 +317,7 @@ def get_anti_detection_experimental_options() -> dict:
     }
 
 
-def setup_anti_detection_capabilities() -> dict:
+def setup_anti_detection_capabilities() -> dict[str, Any]:
     """
     Get Chrome capabilities for anti-detection.
 
@@ -249,7 +334,7 @@ def setup_anti_detection_capabilities() -> dict:
     }
 
 
-def execute_anti_detection_scripts(driver) -> None:
+def execute_anti_detection_scripts(driver: Any) -> None:
     """
     Execute JavaScript to further mask automation.
 

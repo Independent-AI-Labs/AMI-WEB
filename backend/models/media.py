@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class ScreenshotOptions(BaseModel):
     format: ImageFormat = ImageFormat.PNG
     quality: int = 100
     full_page: bool = False
-    clip: dict | None = None
+    clip: dict[str, Any] | None = None
 
 
 class VideoOptions(BaseModel):

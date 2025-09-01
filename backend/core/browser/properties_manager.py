@@ -135,7 +135,7 @@ class PropertiesManager:
 
         # Inject via CDP for persistence across navigation
         try:
-            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script})  # type: ignore[attr-defined]
+            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script})
             logger.debug(f"Injected browser properties via CDP{f' for tab {tab_id}' if tab_id else ''}")
         except Exception as e:
             logger.warning(f"Failed to inject properties via CDP: {e}")

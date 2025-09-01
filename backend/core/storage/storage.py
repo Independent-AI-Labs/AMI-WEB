@@ -16,7 +16,7 @@ DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
 class BrowserStorage:
     """Manages browser storage - cookies, downloads, localStorage."""
 
-    def __init__(self, instance_id: str, config=None, download_dir: Path | None = None, profile_name: str | None = None):
+    def __init__(self, instance_id: str, config: Any = None, download_dir: Path | None = None, profile_name: str | None = None):
         self.instance_id = instance_id
         self._config = config
         self._download_dir = download_dir
@@ -26,7 +26,7 @@ class BrowserStorage:
         if self._download_dir:
             self._download_dir.mkdir(parents=True, exist_ok=True)
 
-    def set_download_directory(self, path: Path):
+    def set_download_directory(self, path: Path) -> None:
         """Set the download directory."""
         self._download_dir = path
         self._download_dir.mkdir(parents=True, exist_ok=True)
@@ -89,7 +89,7 @@ class BrowserStorage:
         logger.info(f"Cleared {count} downloads from {self._download_dir}")
         return count
 
-    def save_cookies(self, driver: WebDriver) -> list[dict]:
+    def save_cookies(self, driver: WebDriver) -> list[dict[str, Any]]:
         """Save cookies from the current session."""
         if not driver:
             raise InstanceError("Browser not initialized")
@@ -102,7 +102,7 @@ class BrowserStorage:
 
         return cookies
 
-    def _save_cookies_to_profile(self, cookies: list[dict]):
+    def _save_cookies_to_profile(self, cookies: list[dict[str, Any]]) -> None:
         """Save cookies to profile directory."""
         if not self._profile_name:
             return
@@ -120,7 +120,7 @@ class BrowserStorage:
 
         logger.debug(f"Saved {len(cookies)} cookies to profile {self._profile_name}")
 
-    def _load_cookies_from_profile(self) -> list[dict] | None:
+    def _load_cookies_from_profile(self) -> list[dict[str, Any]] | None:
         """Load cookies from profile directory."""
         if not self._profile_name:
             return None
@@ -139,12 +139,12 @@ class BrowserStorage:
             with cookies_file.open() as f:
                 cookies = json.load(f)
             logger.debug(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
-            return cookies
+            return cookies  # type: ignore[no-any-return]
         except Exception as e:
             logger.warning(f"Failed to load cookies from profile: {e}")
             return None
 
-    def load_cookies(self, driver: WebDriver, cookies: list[dict] | None = None, navigate_to_domain: bool = True) -> int:
+    def load_cookies(self, driver: WebDriver, cookies: list[dict[str, Any]] | None = None, navigate_to_domain: bool = True) -> int:
         """Load cookies into the browser."""
         if not driver:
             raise InstanceError("Browser not initialized")
@@ -157,7 +157,7 @@ class BrowserStorage:
             return 0
 
         # Group cookies by domain
-        cookies_by_domain: dict[str, list[dict]] = {}
+        cookies_by_domain: dict[str, list[dict[str, Any]]] = {}
         for cookie in cookies:
             domain = cookie.get("domain", "")
             if domain:
@@ -173,7 +173,7 @@ class BrowserStorage:
         logger.info(f"Loaded {total_added} cookies into browser")
         return total_added
 
-    def _add_cookies_for_domain(self, driver: WebDriver, domain: str, cookies: list[dict], navigate: bool) -> int:
+    def _add_cookies_for_domain(self, driver: WebDriver, domain: str, cookies: list[dict[str, Any]], navigate: bool) -> int:
         """Add cookies for a specific domain."""
         if navigate:
             # Navigate to domain to set cookies
@@ -200,13 +200,13 @@ class BrowserStorage:
 
         return count
 
-    def get_local_storage(self, driver: WebDriver) -> dict:
+    def get_local_storage(self, driver: WebDriver) -> dict[str, Any]:
         """Get localStorage data from current page."""
         if not driver:
             return {}
 
         try:
-            return driver.execute_script(
+            result: dict[str, Any] = driver.execute_script(
                 """
                 var items = {};
                 for (var i = 0; i < localStorage.length; i++) {
@@ -216,11 +216,12 @@ class BrowserStorage:
                 return items;
             """,
             )
+            return result
         except Exception as e:
             logger.debug(f"Failed to get localStorage: {e}")
             return {}
 
-    def set_local_storage(self, driver: WebDriver, data: dict):
+    def set_local_storage(self, driver: WebDriver, data: dict[str, Any]) -> None:
         """Set localStorage data on current page."""
         if not driver:
             return
@@ -231,7 +232,7 @@ class BrowserStorage:
         except Exception as e:
             logger.debug(f"Failed to set localStorage: {e}")
 
-    def clear_local_storage(self, driver: WebDriver):
+    def clear_local_storage(self, driver: WebDriver) -> None:
         """Clear localStorage on current page."""
         if not driver:
             return

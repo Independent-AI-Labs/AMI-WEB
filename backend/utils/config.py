@@ -36,7 +36,7 @@ class Config:
 
     def get(self, key: str, default: Any = None) -> Any:
         keys = key.split(".")
-        value = self._data
+        value: Any = self._data
 
         for k in keys:
             if isinstance(value, dict):

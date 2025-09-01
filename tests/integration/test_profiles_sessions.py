@@ -1,6 +1,5 @@
 """Tests for browser profiles, sessions, downloads, and security features."""
 
-
 import tempfile
 from contextlib import suppress
 from pathlib import Path

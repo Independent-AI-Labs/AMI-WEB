@@ -29,7 +29,8 @@ class SessionManager:
         """Load session metadata."""
         if self.metadata_file.exists():
             with self.metadata_file.open() as f:
-                return json.load(f)
+                data: dict[str, dict[str, Any]] = json.load(f)
+                return data
         return {}
 
     def _save_metadata(self) -> None:
