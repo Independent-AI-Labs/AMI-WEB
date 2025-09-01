@@ -1,15 +1,11 @@
 """Chrome MCP server using FastMCP."""
 
-import os
-
 # Use standard import setup
-import sys
-from typing import Any, Literal
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from typing import Any, Literal  # noqa: E402
 
 from mcp.server import FastMCP  # noqa: E402
 
@@ -148,9 +144,9 @@ class ChromeFastMCPServer:
             return await browser_hover_tool(self.manager, selector)
 
         @self.mcp.tool(description="Scroll page or element")
-        async def browser_scroll(direction: str = "down", amount: int = 100, selector: str | None = None) -> BrowserResponse:
+        async def browser_scroll(direction: str = "down", amount: int = 100) -> BrowserResponse:
             """Scroll page."""
-            return await browser_scroll_tool(self.manager, direction, amount, selector)
+            return await browser_scroll_tool(self.manager, direction, amount)
 
         @self.mcp.tool(description="Press keyboard keys")
         async def browser_press(key: str, modifiers: list[str | None] | None = None) -> BrowserResponse:

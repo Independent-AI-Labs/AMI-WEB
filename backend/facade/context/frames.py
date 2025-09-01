@@ -67,38 +67,95 @@ class FrameController(BaseController):
 
         # Check if it's a numeric string (frame index)
         if frame.isdigit():
-            index = int(frame)
-            if index < 0:
-                raise ValueError(f"Frame index cannot be negative: {index}")
-            return index
+            return self._validate_frame_index(int(frame))
 
-        # Try to find frame by name or ID first
-        try:
-            # Try by ID
-            element = self.driver.find_element(By.ID, frame)
-            if element.tag_name.lower() in ["iframe", "frame"]:
-                return element
-        except NoSuchElementException:
-            # Frame not found by ID, continue searching
-            logger.debug(f"Frame not found by ID: {frame}")
+        # Try to find frame by name or ID, then CSS selector
+        element = self._find_frame_element(frame)
+        if element:
+            return element
 
-        try:
-            # Try by name
-            element = self.driver.find_element(By.NAME, frame)
-            if element.tag_name.lower() in ["iframe", "frame"]:
-                return element
-        except NoSuchElementException:
-            # Frame not found by name, continue searching
-            logger.debug(f"Frame not found by name: {frame}")
+        raise NavigationError(f"Frame not found: {frame}")
+
+    def _validate_frame_index(self, index: int) -> int:
+        """Validate frame index value.
+
+        Args:
+            index: Frame index to validate
+
+        Returns:
+            Validated index
+
+        Raises:
+            ValueError: If index is negative
+        """
+        if index < 0:
+            raise ValueError(f"Frame index cannot be negative: {index}")
+        return index
+
+    def _find_frame_element(self, frame: str) -> WebElement | None:
+        """Find frame element by ID, name, or CSS selector.
+
+        Args:
+            frame: Frame identifier string
+
+        Returns:
+            WebElement if found, None otherwise
+        """
+        # Try by ID first
+        element = self._find_frame_by_locator(By.ID, frame)
+        if element:
+            return element
+
+        # Try by name
+        element = self._find_frame_by_locator(By.NAME, frame)
+        if element:
+            return element
 
         # Finally try as CSS selector
+        return self._find_frame_by_css_selector(frame)
+
+    def _find_frame_by_locator(self, by: str, value: str) -> WebElement | None:
+        """Find frame element using specific locator strategy.
+
+        Args:
+            by: Locator strategy (By.ID, By.NAME, etc.)
+            value: Locator value
+
+        Returns:
+            WebElement if found and is frame, None otherwise
+        """
+        if not self.driver:
+            return None
         try:
-            element = self.driver.find_element(By.CSS_SELECTOR, frame)
+            element = self.driver.find_element(by, value)
+            if element.tag_name.lower() in ["iframe", "frame"]:
+                return element
+            return None
+        except NoSuchElementException:
+            logger.debug(f"Frame not found by {by}: {value}")
+            return None
+
+    def _find_frame_by_css_selector(self, selector: str) -> WebElement | None:
+        """Find frame element using CSS selector.
+
+        Args:
+            selector: CSS selector
+
+        Returns:
+            WebElement if found and is frame
+
+        Raises:
+            NavigationError: If element found but not a frame
+        """
+        if not self.driver:
+            return None
+        try:
+            element = self.driver.find_element(By.CSS_SELECTOR, selector)
             if element.tag_name.lower() not in ["iframe", "frame"]:
-                raise NavigationError(f"Element '{frame}' is not a frame or iframe")
+                raise NavigationError(f"Element '{selector}' is not a frame or iframe")
             return element
-        except Exception as e:
-            raise NavigationError(f"Frame not found: {frame}") from e
+        except NoSuchElementException:
+            return None
 
     async def switch_to_default_content(self) -> None:
         """Switch back to the main document from any frame."""

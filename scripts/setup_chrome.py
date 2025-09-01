@@ -12,6 +12,8 @@ import zipfile
 from pathlib import Path
 from urllib.request import urlopen, urlretrieve
 
+from loguru import logger
+
 # Script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -29,7 +31,7 @@ else:
 
 def print_colored(message: str, color: str = "") -> None:
     """Print colored message."""
-    print(f"{color}{message}{NC}")
+    logger.info(f"{color}{message}{NC}")
 
 
 def get_platform_info() -> tuple[str, str]:
@@ -61,7 +63,8 @@ def get_latest_chromium_revision() -> str:
     print_colored(f"Fetching latest Chromium revision from {url}...", YELLOW)
 
     with urlopen(url) as response:  # noqa: S310
-        revision = response.read().decode("utf-8").strip()
+        revision_bytes = response.read()
+        revision: str = revision_bytes.decode("utf-8").strip()
 
     print_colored(f"Latest Chromium revision: {revision}", GREEN)
     return revision
@@ -119,8 +122,8 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
                 downloaded += len(block)
                 if total_size > 0:
                     percent = (downloaded / total_size) * 100
-                    print(f"\rDownloading: {percent:.1f}% ({downloaded}/{total_size} bytes)", end="")
-        print()  # New line after download
+                    logger.info(f"\rDownloading: {percent:.1f}% ({downloaded}/{total_size} bytes)")
+        logger.info("")  # New line after download
 
     download_with_progress(url, zip_path)
 
@@ -150,7 +153,7 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
     return chrome_dir
 
 
-def get_chrome_version(chrome_dir: Path, revision: str = None) -> str:
+def get_chrome_version(chrome_dir: Path, revision: str | None = None) -> str:
     """Get Chrome version from the binary or use known mapping."""
     system = platform.system()
 
@@ -432,7 +435,7 @@ def verify_installation(chrome_dir: Path, driver_path: Path) -> None:
         print_colored(f"[ERROR] ChromeDriver not found at {driver_path}", RED)
 
 
-def main():
+def main() -> None:
     """Main function."""
     print_colored("Chrome and ChromeDriver Setup", GREEN)
     print_colored(f"Platform: {platform.system()} {platform.machine()}", YELLOW)

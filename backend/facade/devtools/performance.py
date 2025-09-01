@@ -164,7 +164,7 @@ class PerformanceController(BaseController):
         )
 
         logger.debug(f"Measured '{name}': {duration}ms")
-        return float(duration) if isinstance(duration, (int, float)) else 0.0
+        return float(duration) if isinstance(duration, int | float) else 0.0
 
     async def clear_marks(self, name: str | None = None) -> None:
         """Clear performance marks.

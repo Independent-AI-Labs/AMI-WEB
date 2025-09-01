@@ -49,32 +49,56 @@ class MouseController(BaseController):
         """Asynchronous click operation."""
         if not self.driver:
             raise InputError("Browser not initialized")
+
         if options.offset_x is not None or options.offset_y is not None:
-            actions = ActionChains(self.driver)
-            actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
-            for _ in range(options.click_count):
-                if options.button == "right":
-                    actions.context_click()
-                elif options.button == "middle":
-                    actions.click(on_element=None)
-                else:
-                    actions.click()
-                if options.delay > 0:
-                    actions.pause(options.delay / 1000)
-            await loop.run_in_executor(None, actions.perform)
+            await self._perform_offset_click(element, options, loop)
         else:
-            for i in range(options.click_count):
-                if options.button == "right":
-                    actions = ActionChains(self.driver)
+            await self._perform_standard_click(element, options, loop)
 
-                    def context_click_perform(act: ActionChains = actions, el: WebElement = element) -> None:
-                        return act.context_click(el).perform()
+    async def _perform_offset_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
+        """Perform click with offset using ActionChains."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
+        actions = ActionChains(self.driver)
+        actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
 
-                    await loop.run_in_executor(None, context_click_perform)
-                else:
-                    await loop.run_in_executor(None, element.click)
-                if i < options.click_count - 1 and options.delay > 0:
-                    await asyncio.sleep(options.delay / 1000)
+        for _ in range(options.click_count):
+            self._add_click_action(actions, options.button)
+            if options.delay > 0:
+                actions.pause(options.delay / 1000)
+
+        await loop.run_in_executor(None, actions.perform)
+
+    async def _perform_standard_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
+        """Perform standard click without offset."""
+        for i in range(options.click_count):
+            if options.button == "right":
+                await self._perform_context_click(element, loop)
+            else:
+                await loop.run_in_executor(None, element.click)
+
+            if i < options.click_count - 1 and options.delay > 0:
+                await asyncio.sleep(options.delay / 1000)
+
+    def _add_click_action(self, actions: ActionChains, button: str) -> None:
+        """Add appropriate click action based on button type."""
+        if button == "right":
+            actions.context_click()
+        elif button == "middle":
+            actions.click(on_element=None)
+        else:
+            actions.click()
+
+    async def _perform_context_click(self, element: WebElement, loop: asyncio.AbstractEventLoop) -> None:
+        """Perform right-click (context click) on element."""
+        if not self.driver:
+            raise InputError("Browser not initialized")
+        actions = ActionChains(self.driver)
+
+        def context_click_perform(act: ActionChains = actions, el: WebElement = element) -> None:
+            return act.context_click(el).perform()
+
+        await loop.run_in_executor(None, context_click_perform)
 
     async def click(self, selector: str, options: ClickOptions | None = None, wait: bool = True, timeout: int = 10) -> None:
         """Click on an element.
