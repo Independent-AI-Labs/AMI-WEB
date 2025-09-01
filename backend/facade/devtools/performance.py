@@ -96,9 +96,9 @@ class PerformanceController(BaseController):
                     entryType: entry.entryType,
                     startTime: entry.startTime,
                     duration: entry.duration,
-                    transferSize: entry.transferSize | , 0,
-                    encodedBodySize: entry.encodedBodySize | , 0,
-                    decodedBodySize: entry.decodedBodySize | , 0,
+                    transferSize: entry.transferSize || 0,
+                    encodedBodySize: entry.encodedBodySize || 0,
+                    decodedBodySize: entry.decodedBodySize || 0,
                     initiatorType: entry.initiatorType
                 }));
             """,
@@ -164,7 +164,7 @@ class PerformanceController(BaseController):
         )
 
         logger.debug(f"Measured '{name}': {duration}ms")
-        return duration
+        return float(duration) if isinstance(duration, (int, float)) else 0.0
 
     async def clear_marks(self, name: str | None = None) -> None:
         """Clear performance marks.
@@ -207,7 +207,7 @@ class PerformanceController(BaseController):
         result = await self._execute_cdp("Profiler.stop")
         await self._execute_cdp("Profiler.disable")
         logger.info("CPU profiling stopped")
-        return result
+        return result if isinstance(result, dict) else {}
 
     async def _execute_js(self, script: str) -> Any:
         """Execute JavaScript and return result.
@@ -241,9 +241,9 @@ class PerformanceController(BaseController):
 
         try:
             if self._is_in_thread_context():
-                return self.driver.execute_cdp_cmd(command, params or {})  # type: ignore[attr-defined]
+                return self.driver.execute_cdp_cmd(command, params or {})
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self.driver.execute_cdp_cmd, command, params or {})  # type: ignore[attr-defined]
+            return await loop.run_in_executor(None, self.driver.execute_cdp_cmd, command, params or {})
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
             raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e

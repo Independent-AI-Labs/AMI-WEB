@@ -9,7 +9,7 @@ from backend.core.management.manager import ChromeManager
 from ..response import BrowserResponse
 
 
-async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] = None) -> BrowserResponse:
+async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None) -> BrowserResponse:
     """Execute JavaScript code."""
     logger.debug(f"Executing JavaScript: {script[:100]}...")
 
@@ -17,7 +17,10 @@ async def browser_execute_tool(manager: ChromeManager, script: str, args: list[A
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     # Execute script
     result = instance.driver.execute_script(script, *(args or []))
@@ -33,7 +36,10 @@ async def browser_evaluate_tool(manager: ChromeManager, expression: str) -> Brow
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     # Evaluate expression (wrap in return to get value)
     script = f"return {expression}"

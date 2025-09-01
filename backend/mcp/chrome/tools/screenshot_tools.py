@@ -17,7 +17,10 @@ async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = Fals
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     # Get screenshot as base64
     # Note: full_page support would require additional implementation
@@ -36,10 +39,15 @@ async def browser_element_screenshot_tool(manager: ChromeManager, selector: str)
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     # Find element and take screenshot
-    element = instance.driver.find_element_by_css_selector(selector)
+    from selenium.webdriver.common.by import By
+
+    element = instance.driver.find_element(By.CSS_SELECTOR, selector)
     screenshot_bytes = element.screenshot_as_png
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 

@@ -1,9 +1,12 @@
 """Browser-specific worker pool implementation using base worker system."""
 
 # Import from base module
+import os
+import sys
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from base.backend.workers.base import WorkerPool
 from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState
 from loguru import logger

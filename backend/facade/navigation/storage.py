@@ -1,7 +1,6 @@
 """Browser storage management (localStorage and sessionStorage)."""
 
 import asyncio
-import json
 from typing import Any
 
 from loguru import logger
@@ -13,14 +12,14 @@ from ..base import BaseController
 class StorageController(BaseController):
     """Controller for browser storage operations."""
 
-    async def get_local_storage(self, key: str | None = None) -> dict[str, Any] | str:
+    async def get_local_storage(self, key: str | None = None) -> dict[str, Any] | str | None:
         """Get localStorage data.
 
         Args:
             key: Specific key to retrieve, or None for all items
 
         Returns:
-            Value for the key, or dict of all items if key is None
+            Value for the key (str or None), or dict of all items if key is None
         """
         if not self.driver:
             raise NavigationError("Browser not initialized")
@@ -39,12 +38,15 @@ class StorageController(BaseController):
                 """
 
             if self._is_in_thread_context():
-                result = self.driver.execute_script(script)
+                raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
-            return result if result is not None else ({} if not key else None)
+            if raw_result is not None:
+                return raw_result  # type: ignore[no-any-return]
+            else:
+                return {} if key is None else None
 
         except Exception as e:
             logger.error(f"Failed to get localStorage: {e}")
@@ -61,10 +63,6 @@ class StorageController(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            # Ensure value is a string
-            if not isinstance(value, str):
-                value = json.dumps(value)
-
             script = f"localStorage.setItem('{key}', '{value}');"
 
             if self._is_in_thread_context():
@@ -126,14 +124,14 @@ class StorageController(BaseController):
             logger.error(f"Failed to clear localStorage: {e}")
             raise NavigationError(f"Failed to clear localStorage: {e}") from e
 
-    async def get_session_storage(self, key: str | None = None) -> dict[str, Any] | str:
+    async def get_session_storage(self, key: str | None = None) -> dict[str, Any] | str | None:
         """Get sessionStorage data.
 
         Args:
             key: Specific key to retrieve, or None for all items
 
         Returns:
-            Value for the key, or dict of all items if key is None
+            Value for the key (str or None), or dict of all items if key is None
         """
         if not self.driver:
             raise NavigationError("Browser not initialized")
@@ -152,12 +150,15 @@ class StorageController(BaseController):
                 """
 
             if self._is_in_thread_context():
-                result = self.driver.execute_script(script)
+                raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
-            return result if result is not None else ({} if not key else None)
+            if raw_result is not None:
+                return raw_result  # type: ignore[no-any-return]
+            else:
+                return {} if key is None else None
 
         except Exception as e:
             logger.error(f"Failed to get sessionStorage: {e}")
@@ -174,10 +175,6 @@ class StorageController(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            # Ensure value is a string
-            if not isinstance(value, str):
-                value = json.dumps(value)
-
             script = f"sessionStorage.setItem('{key}', '{value}');"
 
             if self._is_in_thread_context():

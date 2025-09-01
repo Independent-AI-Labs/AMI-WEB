@@ -36,9 +36,9 @@ class DevToolsController(BaseController):
 
         try:
             if self._is_in_thread_context():
-                return self.driver.execute_cdp_cmd(command, params or {})  # type: ignore[attr-defined]
+                return self.driver.execute_cdp_cmd(command, params or {})
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self.driver.execute_cdp_cmd, command, params or {})  # type: ignore[attr-defined]
+            return await loop.run_in_executor(None, lambda: self.driver.execute_cdp_cmd(command, params or {}) if self.driver else None)
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
             raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e
@@ -58,6 +58,8 @@ class DevToolsController(BaseController):
             List of network entries
         """
         try:
+            if not self.driver:
+                raise ChromeManagerError("Browser not initialized")
             logs = self.driver.get_log("performance")  # type: ignore[attr-defined]
             entries = []
 
@@ -221,7 +223,8 @@ class DevToolsController(BaseController):
         Returns:
             Evaluated metrics tree
         """
-        return self._evaluate_tree_recursive(metrics, 0, max_depth)
+        result = self._evaluate_tree_recursive(metrics, 0, max_depth)
+        return result if isinstance(result, dict) else {}
 
     def _evaluate_tree_recursive(self, obj: Any, current_depth: int, max_depth: int) -> Any:
         """Recursive helper for tree evaluation.

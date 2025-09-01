@@ -1,8 +1,12 @@
 """Chrome MCP server using FastMCP."""
 
-from typing import Any, Literal
+import os
 
 # Use standard import setup
+import sys
+from typing import Any, Literal
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
@@ -53,7 +57,7 @@ from .tools.screenshot_tools import (  # noqa: E402
 class ChromeFastMCPServer:
     """Chrome MCP server using FastMCP."""
 
-    def __init__(self, config: dict[str, Any | None] = None):
+    def __init__(self, config: dict[str, Any | None] | None = None):
         """Initialize Chrome FastMCP server."""
         self.config = config or {}
 
@@ -149,7 +153,7 @@ class ChromeFastMCPServer:
             return await browser_scroll_tool(self.manager, direction, amount, selector)
 
         @self.mcp.tool(description="Press keyboard keys")
-        async def browser_press(key: str, modifiers: list[str | None] = None) -> BrowserResponse:
+        async def browser_press(key: str, modifiers: list[str | None] | None = None) -> BrowserResponse:
             """Press keys."""
             return await browser_press_tool(self.manager, key, modifiers)
 
@@ -192,7 +196,7 @@ class ChromeFastMCPServer:
 
         # JavaScript tools
         @self.mcp.tool(description="Execute JavaScript code")
-        async def browser_execute(script: str, args: list[Any | None] = None) -> BrowserResponse:
+        async def browser_execute(script: str, args: list[Any | None] | None = None) -> BrowserResponse:
             """Execute JavaScript."""
             return await browser_execute_tool(self.manager, script, args)
 
