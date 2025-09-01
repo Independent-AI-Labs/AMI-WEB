@@ -88,6 +88,8 @@ class VideoRecorder(BaseController):
             recording["writer"].release()
 
         session = recording["session"]
+        if not isinstance(session, RecordingSession):
+            raise MediaError(f"Invalid session type for {session_id}")
         # Cleanup handled in _record_loop finally block
 
         logger.info(f"Stopped recording session {session_id}")
@@ -145,6 +147,8 @@ class VideoRecorder(BaseController):
 
             while recording["session"].status != "stopped":
                 if recording["session"].status == "recording":
+                    if self.driver is None:
+                        raise RuntimeError("Driver lost during recording")
                     screenshot_base64 = self.driver.get_screenshot_as_base64()
                     screenshot_bytes = base64.b64decode(screenshot_base64)
 
@@ -190,7 +194,8 @@ class VideoRecorder(BaseController):
             RecordingSession or None if not found
         """
         if session_id in self.recording_sessions:
-            return self.recording_sessions[session_id]["session"]
+            session = self.recording_sessions[session_id]["session"]
+            return session if isinstance(session, RecordingSession) else None
         return None
 
     async def record_action(self, action: str, duration: float = 5.0, output_path: str | None = None) -> str:
@@ -246,11 +251,13 @@ class VideoRecorder(BaseController):
 
         for _ in range(num_frames):
             # Capture frame
+            if self.driver is None:
+                raise RuntimeError("Driver not initialized for GIF capture")
             if self._is_in_thread_context():
                 screenshot_base64 = self.driver.get_screenshot_as_base64()
             else:
                 loop = asyncio.get_event_loop()
-                screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
+                screenshot_base64 = await loop.run_in_executor(None, lambda: self.driver.get_screenshot_as_base64() if self.driver else "")
 
             screenshot_bytes = base64.b64decode(screenshot_base64)
             img = Image.open(io.BytesIO(screenshot_bytes))

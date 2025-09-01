@@ -17,10 +17,13 @@ async def browser_navigate_tool(manager: ChromeManager, url: str, wait_for: str 
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]  # Use first available
-    nav = Navigator(instance)
+    instance_info = instances[0]  # Use first available
+    instance = await manager.get_instance(instance_info.id)
+    if not instance:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
-    await nav.navigate(url, wait_for=None, timeout=timeout)
+    nav = Navigator(instance)
+    await nav.navigate(url, wait_for=None, timeout=int(timeout))
 
     return BrowserResponse(success=True, url=url, data={"status": "navigated"})
 
@@ -33,7 +36,11 @@ async def browser_back_tool(manager: ChromeManager) -> BrowserResponse:
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
     nav = Navigator(instance)
     await nav.back()
 
@@ -48,7 +55,11 @@ async def browser_forward_tool(manager: ChromeManager) -> BrowserResponse:
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
     nav = Navigator(instance)
     await nav.forward()
 
@@ -63,7 +74,11 @@ async def browser_refresh_tool(manager: ChromeManager) -> BrowserResponse:
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
     nav = Navigator(instance)
     await nav.refresh()
 
@@ -78,7 +93,11 @@ async def browser_get_url_tool(manager: ChromeManager) -> BrowserResponse:
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
     url = instance.driver.current_url
 
     return BrowserResponse(success=True, url=url)

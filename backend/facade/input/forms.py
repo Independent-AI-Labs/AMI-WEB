@@ -211,9 +211,12 @@ class FormsController(BaseController):
 
         try:
             if self._is_in_thread_context():
-                return self.driver.execute_script(script)
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self.driver.execute_script, script)
+                result = self.driver.execute_script(script)
+            else:
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, lambda: self.driver.execute_script(script) if self.driver else None)
+
+            return result if isinstance(result, dict) else {}
 
         except Exception as e:
             logger.error(f"Get form values failed: {e}")
@@ -328,6 +331,8 @@ class FormsController(BaseController):
     async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
         """Find an element on the page."""
         try:
+            if not self.driver:
+                return None
             by, value = self._parse_selector(selector)
 
             if wait:
@@ -335,7 +340,7 @@ class FormsController(BaseController):
                 if self._is_in_thread_context():
                     return wait_obj.until(EC.presence_of_element_located((by, value)))
                 loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(None, wait_obj.until, EC.presence_of_element_located((by, value)))
+                return await loop.run_in_executor(None, lambda: wait_obj.until(EC.presence_of_element_located((by, value))) if self.driver else None)
             return self.driver.find_element(by, value)
 
         except Exception as e:

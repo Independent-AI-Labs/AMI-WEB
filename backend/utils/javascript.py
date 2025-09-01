@@ -19,8 +19,7 @@ def sanitize_js_string(value: str) -> str:
         >>> sanitize_js_string("alert('XSS')")
         "alert(\\'XSS\\')"
     """
-    if not isinstance(value, str):
-        value = str(value)
+    value = str(value)
 
     # Escape special characters
     replacements = {
