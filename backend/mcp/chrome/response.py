@@ -1,8 +1,12 @@
 """Browser MCP response models."""
 
-from typing import Any
+import os
 
 # Import base response
+import sys
+from typing import Any
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../.."))
 from base.backend.mcp.core.response import MCPResponse
 from pydantic import Field
 

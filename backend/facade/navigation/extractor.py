@@ -18,12 +18,10 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            if self.driver is None:
-                return ""
             if self._is_in_thread_context():
                 return self.driver.page_source
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: self.driver.page_source)
+            return await loop.run_in_executor(None, lambda: self.driver.page_source if self.driver else "")
         except Exception as e:
             raise NavigationError(f"Failed to get page source: {e}") from e
 
@@ -45,7 +43,8 @@ class ContentExtractor(BaseController):
 
         try:
             script = parameterized_js_execution("return document.querySelector({selector}).innerHTML", selector=selector)
-            return await self.execute_script(script)
+            result = await self.execute_script(script)
+            return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get element HTML: {e}") from e
 
@@ -63,7 +62,8 @@ class ContentExtractor(BaseController):
 
         try:
             script = parameterized_js_execution("return document.querySelector({selector}).textContent", selector=selector)
-            return await self.execute_script(script)
+            result = await self.execute_script(script)
+            return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get element text: {e}") from e
 
@@ -89,8 +89,8 @@ class ContentExtractor(BaseController):
 
             loop = asyncio.get_event_loop()
             if async_script:
-                return await loop.run_in_executor(None, self.driver.execute_async_script, script, *args)
-            return await loop.run_in_executor(None, self.driver.execute_script, script, *args)
+                return await loop.run_in_executor(None, lambda: self.driver.execute_async_script(script, *args) if self.driver else None)
+            return await loop.run_in_executor(None, lambda: self.driver.execute_script(script, *args) if self.driver else None)
         except Exception as e:
             raise NavigationError(f"Failed to execute script: {e}") from e
 
@@ -150,7 +150,8 @@ class ContentExtractor(BaseController):
         """
 
         try:
-            return await self.execute_script(script, max_depth, collapse_depth)
+            result = await self.execute_script(script, max_depth, collapse_depth)
+            return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get HTML with depth limit: {e}") from e
 
@@ -231,13 +232,14 @@ class ContentExtractor(BaseController):
             return {
                 href: href,
                 text: link.textContent.trim(),
-                title: link.title | , ''
+                title: link.title || ''
             };
         });
         """
 
         try:
-            return await self.execute_script(script, absolute)
+            result = await self.execute_script(script, absolute)
+            return result if isinstance(result, list) else []
         except Exception as e:
             raise NavigationError(f"Failed to extract links: {e}") from e
 
@@ -257,12 +259,13 @@ class ContentExtractor(BaseController):
             alt: img.alt,
             width: img.naturalWidth,
             height: img.naturalHeight,
-            title: img.title | , ''
+            title: img.title || ''
         }));
         """
 
         try:
-            return await self.execute_script(script)
+            result = await self.execute_script(script)
+            return result if isinstance(result, list) else []
         except Exception as e:
             raise NavigationError(f"Failed to extract images: {e}") from e
 
@@ -279,18 +282,18 @@ class ContentExtractor(BaseController):
         const forms = Array.from(document.querySelectorAll('form'));
         return forms.map(form => {
             const fields = Array.from(form.elements).map(el => ({
-                name: el.name | , '',
-                type: el.type | , el.tagName.toLowerCase(),
-                id: el.id | , '',
-                value: el.value | , '',
-                required: el.required | , false,
-                placeholder: el.placeholder | , ''
+                name: el.name || '',
+                type: el.type || el.tagName.toLowerCase(),
+                id: el.id || '',
+                value: el.value || '',
+                required: el.required || false,
+                placeholder: el.placeholder || ''
             }));
             return {
-                id: form.id | , '',
-                name: form.name | , '',
-                action: form.action | , '',
-                method: form.method | , 'get',
+                id: form.id || '',
+                name: form.name || '',
+                action: form.action || '',
+                method: form.method || 'get',
                 fields: fields
             };
         });

@@ -19,10 +19,13 @@ async def browser_get_text_tool(manager: ChromeManager, selector: str) -> Browse
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
-    extractor = ContentExtractor(instance)
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
-    text = await extractor.get_text(selector)
+    extractor = ContentExtractor(instance)
+    text = await extractor.get_element_text(selector)
 
     return BrowserResponse(success=True, text=text)
 
@@ -35,8 +38,12 @@ async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attr
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
-    element = instance.driver.find_element_by_css_selector(selector)
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
+    element = instance.driver.find_element(By.CSS_SELECTOR, selector)
     value = element.get_attribute(attribute)
 
     return BrowserResponse(success=True, data={"value": value})
@@ -50,10 +57,13 @@ async def browser_exists_tool(manager: ChromeManager, selector: str) -> BrowserR
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     try:
-        instance.driver.find_element_by_css_selector(selector)
+        instance.driver.find_element(By.CSS_SELECTOR, selector)
         exists = True
     except Exception:
         exists = False
@@ -69,11 +79,13 @@ async def browser_wait_for_tool(manager: ChromeManager, selector: str, state: st
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
 
     # Simplified wait implementation
-
-    wait = WebDriverWait(instance.driver, timeout)
+    wait = WebDriverWait(instance.driver, int(timeout))
 
     if state == "visible":
         wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector)))
@@ -93,7 +105,11 @@ async def browser_get_cookies_tool(manager: ChromeManager) -> BrowserResponse:
     if not instances:
         return BrowserResponse(success=False, error="No browser instance available")
 
-    instance = instances[0]
+    instance_info = instances[0]
+    instance = await manager.get_instance(instance_info.id)
+    if not instance or not instance.driver:
+        return BrowserResponse(success=False, error="Browser instance not available")
+
     cookies = instance.driver.get_cookies()
 
     return BrowserResponse(success=True, cookies=cookies)

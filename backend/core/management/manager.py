@@ -1,9 +1,12 @@
 """Chrome Manager using the base worker pool system."""
 
 import json
+import os
+import sys
 from datetime import datetime
 from typing import Any
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 from base.backend.workers.types import PoolConfig, PoolType
 from loguru import logger
 
