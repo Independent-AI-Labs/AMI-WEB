@@ -49,7 +49,7 @@ def run_in_thread_safe(func: Any, *args: Any, **kwargs: Any) -> Any:
     result = None
     exception = None
 
-    def wrapper():
+    def wrapper() -> None:
         nonlocal result, exception
         try:
             result = func(*args, **kwargs)

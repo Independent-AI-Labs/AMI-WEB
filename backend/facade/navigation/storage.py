@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from typing import Any
 
 from loguru import logger
 
@@ -12,7 +13,7 @@ from ..base import BaseController
 class StorageController(BaseController):
     """Controller for browser storage operations."""
 
-    async def get_local_storage(self, key: str | None = None) -> dict | str:
+    async def get_local_storage(self, key: str | None = None) -> dict[str, Any] | str:
         """Get localStorage data.
 
         Args:
@@ -125,7 +126,7 @@ class StorageController(BaseController):
             logger.error(f"Failed to clear localStorage: {e}")
             raise NavigationError(f"Failed to clear localStorage: {e}") from e
 
-    async def get_session_storage(self, key: str | None = None) -> dict | str:
+    async def get_session_storage(self, key: str | None = None) -> dict[str, Any] | str:
         """Get sessionStorage data.
 
         Args:

@@ -18,7 +18,7 @@ from browser.backend.facade.navigation.waiter import Waiter
 from loguru import logger
 
 # Test configuration
-HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"  # Default to headless
+HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
 # Global instances
 _server_thread = None

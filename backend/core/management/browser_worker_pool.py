@@ -4,8 +4,8 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from base.backend.workers.base import WorkerPool, WorkerState
-from base.backend.workers.types import PoolConfig, WorkerInfo
+from base.backend.workers.base import WorkerPool
+from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState
 from loguru import logger
 
 from ...models.browser import ChromeOptions
@@ -36,7 +36,7 @@ class BrowserWorker:
         self.task_count = 0
         self.error_count = 0
 
-    async def execute(self, func: str, *args, **kwargs) -> Any:
+    async def execute(self, func: str, *args: Any, **kwargs: Any) -> Any:
         """Execute a function on the browser instance."""
         self.last_used = datetime.now()
         self.task_count += 1
@@ -50,8 +50,6 @@ class BrowserWorker:
                 else:
                     raise AttributeError(f"BrowserInstance has no method '{func}'")
                 return result
-            # Direct function call with instance as context
-            return await func(self.instance, *args, **kwargs)
         except Exception as e:
             self.error_count += 1
             raise e
@@ -60,7 +58,7 @@ class BrowserWorker:
         """Check if the browser instance is healthy."""
         try:
             health = await self.instance.health_check()
-            return health.get("alive", False) and health.get("responsive", False)
+            return bool(health.get("alive", False) and health.get("responsive", False))
         except Exception as e:
             logger.debug(f"Health check failed for worker {self.id}: {e}")
             return False
@@ -98,7 +96,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         self._default_options = ChromeOptions()
         self._workers: dict[str, BrowserWorker] = {}  # Track workers
 
-    async def _create_worker(self, **kwargs) -> BrowserWorker:
+    async def _create_worker(self, **kwargs: Any) -> BrowserWorker:
         """Create a new browser worker instance."""
         # Extract browser-specific options
         options = kwargs.get("options", self._default_options)
@@ -139,6 +137,11 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
     async def _hibernate_worker(self, worker: BrowserWorker) -> None:
         """Hibernate a browser worker to save resources."""
         try:
+            # Check if driver is available
+            if worker.instance.driver is None:
+                logger.warning(f"Cannot hibernate worker {worker.id}: driver is None")
+                return
+
             # Navigate to blank page and clear state
             worker.instance.driver.get("about:blank")
             worker.instance.driver.delete_all_cookies()

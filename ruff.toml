@@ -44,6 +44,19 @@ max-locals = 64
 max-statements = 96
 max-branches = 16
 
+[lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # Magic numbers are OK in tests
+    "B007",     # Unused loop variables are OK in tests
+    "PLW0603",  # Global statements OK in tests for process isolation testing
+]
+"backend/dataops/implementations/pgvector_dao.py" = [
+    "S608",     # SQL injection - we validate identifiers with _is_valid_identifier
+]
+"backend/dataops/implementations/postgresql_dao.py" = [
+    "S608",     # SQL injection - we validate identifiers with _is_valid_identifier
+]
+
 [format]
 line-ending = "auto"
 quote-style = "double"

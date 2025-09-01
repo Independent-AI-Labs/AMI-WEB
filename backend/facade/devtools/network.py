@@ -3,7 +3,7 @@
 import asyncio
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -11,14 +11,17 @@ from ...models.browser import NetworkEntry
 from ...utils.exceptions import ChromeManagerError
 from ..base import BaseController
 
+if TYPE_CHECKING:
+    from ...core.browser.instance import BrowserInstance
+
 
 class NetworkController(BaseController):
     """Controller for network monitoring and interception."""
 
-    def __init__(self, instance):
+    def __init__(self, instance: "BrowserInstance") -> None:
         super().__init__(instance)
-        self.request_handlers: list[Callable] = []
-        self.response_handlers: list[Callable] = []
+        self.request_handlers: list[Callable[..., Any]] = []
+        self.response_handlers: list[Callable[..., Any]] = []
         self._monitoring_enabled = False
 
     async def enable_monitoring(self) -> None:
@@ -165,7 +168,7 @@ class NetworkController(BaseController):
         await self._execute_cdp("Network.emulateNetworkConditions", {"offline": False, "downloadThroughput": -1, "uploadThroughput": -1, "latency": 0})
         logger.info("Network restored to online mode")
 
-    async def _execute_cdp(self, command: str, params: dict | None = None) -> Any:
+    async def _execute_cdp(self, command: str, params: dict[str, Any] | None = None) -> Any:
         """Execute CDP command.
 
         Args:

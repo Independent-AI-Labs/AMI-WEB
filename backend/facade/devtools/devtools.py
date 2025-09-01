@@ -21,7 +21,7 @@ class DevToolsController(BaseController):
         self.instance = instance
         self.driver = instance.driver
 
-    async def execute_cdp_command(self, command: str, params: dict | None = None) -> Any:
+    async def execute_cdp_command(self, command: str, params: dict[str, Any] | None = None) -> Any:
         """Execute a Chrome DevTools Protocol command.
 
         Args:
@@ -211,7 +211,7 @@ class DevToolsController(BaseController):
         await self.execute_cdp_command("Fetch.disable")
         logger.info("Disabled request interception")
 
-    def evaluate_performance_tree(self, metrics: dict, max_depth: int = 3) -> dict:
+    def evaluate_performance_tree(self, metrics: dict[str, Any], max_depth: int = 3) -> dict[str, Any]:
         """Recursively evaluate performance metrics tree.
 
         Args:

@@ -1,6 +1,7 @@
 """Browser options builder - handles Chrome options configuration."""
 
 import shutil
+import socket
 import tempfile
 import threading
 import uuid
@@ -42,7 +43,6 @@ class BrowserOptionsBuilder:
     @classmethod
     def _get_free_port(cls) -> int:
         """Get a free port for remote debugging."""
-        import socket
 
         with cls._port_lock:
             # Use socket to find a truly free port
@@ -50,7 +50,7 @@ class BrowserOptionsBuilder:
             for _ in range(100):  # Try up to 100 times
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.bind(("", 0))  # Bind to any available port
-                    port = s.getsockname()[1]
+                    port: int = s.getsockname()[1]
                     # Make sure it's in our preferred range
                     if cls.MIN_DEBUG_PORT <= port <= cls.MAX_DEBUG_PORT:
                         cls._used_ports.add(port)
@@ -158,12 +158,13 @@ class BrowserOptionsBuilder:
 
         # Apply custom options
         if options:
-            self._apply_custom_options(chrome_options, options, extensions or [])
+            valid_extensions = [ext for ext in (extensions or []) if ext is not None]
+            self._apply_custom_options(chrome_options, options, valid_extensions)
 
         # Add extensions
         if extensions:
             for ext_path in extensions:
-                if Path(ext_path).exists():
+                if ext_path is not None and Path(ext_path).exists():
                     chrome_options.add_extension(ext_path)
 
         # Apply preferences

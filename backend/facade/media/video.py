@@ -8,6 +8,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
@@ -18,13 +19,16 @@ from ...models.media import RecordingSession
 from ...utils.exceptions import MediaError
 from ..base import BaseController
 
+if TYPE_CHECKING:
+    from ...core.browser.instance import BrowserInstance
+
 
 class VideoRecorder(BaseController):
     """Controller for video recording operations."""
 
-    def __init__(self, instance):
+    def __init__(self, instance: "BrowserInstance") -> None:
         super().__init__(instance)
-        self.recording_sessions: dict[str, dict] = {}
+        self.recording_sessions: dict[str, dict[str, Any]] = {}
 
     async def start_recording(self, output_path: str, fps: int = 30, codec: str = "h264") -> RecordingSession:
         """Start recording browser session to video.
@@ -127,6 +131,8 @@ class VideoRecorder(BaseController):
             recording = self.recording_sessions[session_id]
             frame_interval = 1.0 / fps
 
+            if self.driver is None:
+                raise RuntimeError("Driver not initialized")
             viewport_size = self.driver.get_window_size()
             width = viewport_size["width"]
             height = viewport_size["height"]

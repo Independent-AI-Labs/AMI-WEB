@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 
-def sanitize_js_string(value: str) -> str:
+def sanitize_js_string(value: Any) -> str:
     """Sanitize a string for safe inclusion in JavaScript code.
 
     This prevents JavaScript injection attacks by properly escaping
@@ -17,7 +17,7 @@ def sanitize_js_string(value: str) -> str:
         str: The sanitized string safe for JavaScript inclusion
     """
     if not isinstance(value, str):
-        return str(value)
+        value = str(value)
 
     # Escape special characters
     return (

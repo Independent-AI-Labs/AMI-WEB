@@ -72,7 +72,7 @@ class BrowserInstance:
         """Get last activity timestamp."""
         return self._monitor.last_activity
 
-    def update_activity(self):
+    def update_activity(self) -> None:
         """Update last activity timestamp."""
         self._monitor.update_activity()
 
@@ -129,8 +129,8 @@ class BrowserInstance:
 
             # Track process
             try:
-                if hasattr(driver, "service") and driver.service and hasattr(driver.service, "process"):  # type: ignore[attr-defined]
-                    self.process = psutil.Process(driver.service.process.pid)  # type: ignore[attr-defined]
+                if hasattr(driver, "service") and driver.service and hasattr(driver.service, "process"):
+                    self.process = psutil.Process(driver.service.process.pid)
             except Exception as e:
                 logger.debug(f"Could not track process: {e}")
 
@@ -165,18 +165,26 @@ class BrowserInstance:
 
     async def get_console_logs(self) -> list[ConsoleEntry]:
         """Get console logs from the browser."""
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
         return await self._monitor.get_console_logs(self.driver)
 
     async def get_performance_metrics(self) -> PerformanceMetrics:
         """Get performance metrics."""
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
         return await self._monitor.get_performance_metrics(self.driver)
 
     async def get_tabs(self) -> list[TabInfo]:
         """Get information about all open tabs."""
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
         return await self._monitor.get_tabs(self.driver)
 
     async def health_check(self) -> dict[str, Any]:
         """Perform a health check."""
+        if not self.driver:
+            raise InstanceError("Browser not initialized")
         return await self._monitor.health_check(self.driver)
 
     # === Storage Management (delegates to BrowserStorage) ===
@@ -197,13 +205,13 @@ class BrowserInstance:
         """Clear all downloads."""
         return self._storage.clear_downloads()
 
-    def save_cookies(self) -> list[dict]:
+    def save_cookies(self) -> list[dict[str, Any]]:
         """Save cookies from the current session."""
         if not self.driver:
             raise InstanceError("Browser not initialized")
         return self._storage.save_cookies(self.driver)
 
-    def load_cookies(self, cookies: list[dict] | None = None, navigate_to_domain: bool = True) -> int:
+    def load_cookies(self, cookies: list[dict[str, Any]] | None = None, navigate_to_domain: bool = True) -> int:
         """Load cookies into the browser."""
         if not self.driver:
             raise InstanceError("Browser not initialized")
