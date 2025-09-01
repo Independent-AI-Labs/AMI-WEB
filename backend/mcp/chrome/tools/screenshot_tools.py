@@ -3,6 +3,7 @@
 import base64
 
 from loguru import logger
+from selenium.webdriver.common.by import By
 
 from backend.core.management.manager import ChromeManager
 
@@ -45,8 +46,6 @@ async def browser_element_screenshot_tool(manager: ChromeManager, selector: str)
         return BrowserResponse(success=False, error="Browser instance not available")
 
     # Find element and take screenshot
-    from selenium.webdriver.common.by import By
-
     element = instance.driver.find_element(By.CSS_SELECTOR, selector)
     screenshot_bytes = element.screenshot_as_png
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")

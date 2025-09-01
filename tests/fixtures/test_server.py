@@ -5,6 +5,9 @@ import logging
 from pathlib import Path
 
 from aiohttp import web
+from aiohttp.web_request import Request
+from aiohttp.web_response import Response
+from loguru import logger as loguru_logger
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +15,14 @@ logger = logging.getLogger(__name__)
 class HTMLTestServer:
     """HTTP server for serving test HTML files."""
 
-    def __init__(self, port: int = 8888):
+    def __init__(self, port: int = 8888) -> None:
         self.port = port
         self.app = web.Application()
-        self.runner = None
-        self.site = None
+        self.runner: web.AppRunner | None = None
+        self.site: web.TCPSite | None = None
         self.base_path = Path(__file__).parent / "html"
 
-    async def start(self):
+    async def start(self) -> str:
         """Start the test server."""
         # Add routes
         self.app.router.add_static("/", self.base_path, show_index=True)
@@ -39,7 +42,7 @@ class HTMLTestServer:
         logger.info(f"Test server started on http://127.0.0.1:{self.port}")
         return f"http://127.0.0.1:{self.port}"
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the test server."""
         if self.site:
             await self.site.stop()
@@ -47,7 +50,7 @@ class HTMLTestServer:
             await self.runner.cleanup()
         logger.info("Test server stopped")
 
-    async def handle_login(self, request):
+    async def handle_login(self, request: Request) -> Response:
         """Handle login POST requests."""
         data = await request.post()
         username = data.get("username")
@@ -59,7 +62,7 @@ class HTMLTestServer:
             return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
         return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
 
-    async def handle_api_data(self, request):  # noqa: ARG002
+    async def handle_api_data(self, request: Request) -> Response:  # noqa: ARG002
         """Handle API data requests."""
         # Simulate delayed response
         await asyncio.sleep(0.5)
@@ -71,19 +74,19 @@ class HTMLTestServer:
             },
         )
 
-    async def handle_submit(self, request):
+    async def handle_submit(self, request: Request) -> Response:
         """Handle form submissions."""
         data = await request.json()
 
         return web.json_response({"success": True, "received": data, "processed_at": asyncio.get_event_loop().time()})
 
 
-async def run_server():
+async def run_server() -> None:
     """Run the server standalone."""
     server = HTMLTestServer()
     url = await server.start()
-    print(f"Server running at {url}")
-    print("Press Ctrl+C to stop")
+    loguru_logger.info(f"Server running at {url}")
+    loguru_logger.info("Press Ctrl+C to stop")
 
     try:
         while True:

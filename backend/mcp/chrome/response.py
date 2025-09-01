@@ -1,14 +1,14 @@
 """Browser MCP response models."""
 
-import os
+# Use standard import setup
+from base.backend.utils.standard_imports import setup_imports
 
-# Import base response
-import sys
-from typing import Any
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../.."))
-from base.backend.mcp.core.response import MCPResponse
-from pydantic import Field
+from typing import Any  # noqa: E402
+
+from base.backend.mcp.core.response import MCPResponse  # noqa: E402
+from pydantic import Field  # noqa: E402
 
 
 class BrowserResponse(MCPResponse):

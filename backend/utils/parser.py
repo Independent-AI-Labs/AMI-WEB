@@ -142,25 +142,35 @@ class HTMLParser:
         if not isinstance(element, Tag):
             return str(element)
 
+        # Handle special elements that need specific formatting
+        special_handlers = {
+            "a": self._handle_link,
+            "img": self._handle_image,
+        }
+
+        if element.name in special_handlers:
+            return special_handlers[element.name](element)
+
+        # Handle elements with specific formatting patterns
+        return self._format_element_content(element)
+
+    def _format_element_content(self, element: Tag) -> str:
+        """Format element content based on element type."""
+        # For elements that don't need content (br, hr)
         if element.name in ["br", "hr"]:
             return "\n"
 
-        if element.name in ["p", "div", "section", "article", "header", "footer", "li", "tr"]:
-            content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
-            return f"\n{content}\n"
+        # Extract content for all other elements
+        content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
 
+        # Apply formatting based on element type
+        if element.name in ["p", "div", "section", "article", "header", "footer", "li", "tr"]:
+            return f"\n{content}\n"
         if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-            content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
             return f"\n\n{content}\n\n"
 
-        if element.name == "a":
-            return self._handle_link(element)
-
-        if element.name == "img":
-            return self._handle_image(element)
-
-        # Default: recursively extract from children
-        return "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
+        # Default: return content as-is
+        return content
 
     def _handle_link(self, element: Tag) -> str:
         """Handle link element text extraction."""

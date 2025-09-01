@@ -45,8 +45,7 @@ class StorageController(BaseController):
 
             if raw_result is not None:
                 return raw_result  # type: ignore[no-any-return]
-            else:
-                return {} if key is None else None
+            return {} if key is None else None
 
         except Exception as e:
             logger.error(f"Failed to get localStorage: {e}")
@@ -157,8 +156,7 @@ class StorageController(BaseController):
 
             if raw_result is not None:
                 return raw_result  # type: ignore[no-any-return]
-            else:
-                return {} if key is None else None
+            return {} if key is None else None
 
         except Exception as e:
             logger.error(f"Failed to get sessionStorage: {e}")

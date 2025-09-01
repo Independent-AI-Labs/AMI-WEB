@@ -7,12 +7,13 @@ import sys
 from pathlib import Path
 
 import yaml
+from loguru import logger
 
 # Get this module's root
 MODULE_ROOT = Path(__file__).resolve().parent
 
 
-def copy_platform_config():
+def copy_platform_config() -> None:
     """Copy platform-specific config if config.yaml doesn't exist."""
     config_path = MODULE_ROOT / "config.yaml"
 
@@ -26,21 +27,21 @@ def copy_platform_config():
             platform_config = MODULE_ROOT / "configs" / "config.linux.yaml"
 
         if platform_config.exists():
-            print(f"Copying platform config from {platform_config.name}")
+            logger.info(f"Copying platform config from {platform_config.name}")
             shutil.copy2(platform_config, config_path)
-            print(f"[OK] Created config.yaml from {platform_config.name}")
+            logger.info(f"[OK] Created config.yaml from {platform_config.name}")
         else:
-            print(f"[WARNING] Platform config not found: {platform_config}")
+            logger.warning(f"[WARNING] Platform config not found: {platform_config}")
             # Fall back to config.sample.yaml if it exists
             sample_config = MODULE_ROOT / "config.sample.yaml"
             if sample_config.exists():
                 shutil.copy2(sample_config, config_path)
-                print("[OK] Created config.yaml from config.sample.yaml")
+                logger.info("[OK] Created config.yaml from config.sample.yaml")
     else:
-        print("[OK] config.yaml already exists")
+        logger.info("[OK] config.yaml already exists")
 
 
-def get_chrome_paths_from_config():
+def get_chrome_paths_from_config() -> tuple[Path | None, Path | None]:
     """Get Chrome and ChromeDriver paths from config."""
     # Try config.yaml first, then config.sample.yaml
     config_path = MODULE_ROOT / "config.yaml"
@@ -68,18 +69,18 @@ def get_chrome_paths_from_config():
 
         return chrome_path, chromedriver_path
     except Exception as e:
-        print(f"[WARNING] Could not parse config: {e}")
+        logger.warning(f"[WARNING] Could not parse config: {e}")
         return None, None
 
 
-def setup_chrome_if_needed():
+def setup_chrome_if_needed() -> None:
     """Check if Chrome is installed at configured locations, and set it up if not."""
     # Get paths from config
     chrome_path, chromedriver_path = get_chrome_paths_from_config()
 
     if not chrome_path or not chromedriver_path:
-        print("[WARNING] Chrome paths not configured in config.yaml")
-        print("Using default locations from config.sample.yaml")
+        logger.warning("[WARNING] Chrome paths not configured in config.yaml")
+        logger.info("Using default locations from config.sample.yaml")
         # Fallback to sample config defaults
         if sys.platform == "win32":
             chrome_path = MODULE_ROOT / "build" / "chromium-win" / "chrome.exe"
@@ -96,42 +97,42 @@ def setup_chrome_if_needed():
     chromedriver_exists = chromedriver_path.exists() if chromedriver_path else False
 
     if not chrome_exists or not chromedriver_exists:
-        print("\n" + "=" * 60)
-        print("Chrome/ChromeDriver not found at configured locations:")
+        logger.info("\n" + "=" * 60)
+        logger.info("Chrome/ChromeDriver not found at configured locations:")
         if not chrome_exists:
-            print(f"  Chrome: {chrome_path} (NOT FOUND)")
+            logger.error(f"  Chrome: {chrome_path} (NOT FOUND)")
         if not chromedriver_exists:
-            print(f"  ChromeDriver: {chromedriver_path} (NOT FOUND)")
-        print("Setting up Chrome...")
-        print("=" * 60)
+            logger.error(f"  ChromeDriver: {chromedriver_path} (NOT FOUND)")
+        logger.info("Setting up Chrome...")
+        logger.info("=" * 60)
 
         # Run the Chrome setup script
         setup_chrome_script = MODULE_ROOT / "scripts" / "setup_chrome.py"
         if setup_chrome_script.exists():
             result = subprocess.run([sys.executable, str(setup_chrome_script)], check=False)
             if result.returncode == 0:
-                print("[OK] Chrome and ChromeDriver installed successfully")
+                logger.info("[OK] Chrome and ChromeDriver installed successfully")
             else:
-                print("[ERROR] Failed to install Chrome/ChromeDriver")
-                print("You can manually run: python browser/scripts/setup_chrome.py")
-                return False
+                logger.error("[ERROR] Failed to install Chrome/ChromeDriver")
+                logger.info("You can manually run: python browser/scripts/setup_chrome.py")
+                return
         else:
-            print("[ERROR] setup_chrome.py script not found at", setup_chrome_script)
-            return False
+            logger.error(f"[ERROR] setup_chrome.py script not found at {setup_chrome_script}")
+            return
     else:
-        print("\n[OK] Chrome and ChromeDriver found at configured locations:")
-        print(f"  Chrome: {chrome_path}")
-        print(f"  ChromeDriver: {chromedriver_path}")
+        logger.info("\n[OK] Chrome and ChromeDriver found at configured locations:")
+        logger.info(f"  Chrome: {chrome_path}")
+        logger.info(f"  ChromeDriver: {chromedriver_path}")
 
-    return True
+    return
 
 
-def main():
+def main() -> int:
     """Run setup for browser module by calling base module_setup.py directly."""
     # Find base module_setup.py
     base_setup = MODULE_ROOT.parent / "base" / "module_setup.py"
     if not base_setup.exists():
-        print("ERROR: Cannot find base/module_setup.py")
+        logger.error("ERROR: Cannot find base/module_setup.py")
         sys.exit(1)
 
     # Call base module_setup.py with appropriate arguments
@@ -146,9 +147,7 @@ def main():
     copy_platform_config()
 
     # After successful base setup, set up Chrome if needed
-    if not setup_chrome_if_needed():
-        print("\n[WARNING] Chrome setup failed, but module setup is complete")
-        print("You may need to manually set up Chrome before running browser tests")
+    setup_chrome_if_needed()
 
     return 0
 

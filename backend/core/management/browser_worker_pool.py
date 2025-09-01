@@ -1,21 +1,22 @@
 """Browser-specific worker pool implementation using base worker system."""
 
-# Import from base module
-import os
-import sys
-from datetime import datetime
-from typing import TYPE_CHECKING, Any
+# Use standard import setup
+from base.backend.utils.standard_imports import setup_imports
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
-from base.backend.workers.base import WorkerPool
-from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState
-from loguru import logger
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-from ...models.browser import ChromeOptions
-from ...utils.config import Config
-from ..browser.instance import BrowserInstance
-from ..browser.properties_manager import PropertiesManager
-from .profile_manager import ProfileManager
+from datetime import datetime  # noqa: E402
+from typing import TYPE_CHECKING, Any  # noqa: E402
+
+from base.backend.workers.base import WorkerPool  # noqa: E402
+from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from ...models.browser import ChromeOptions  # noqa: E402
+from ...utils.config import Config  # noqa: E402
+from ..browser.instance import BrowserInstance  # noqa: E402
+from ..browser.properties_manager import PropertiesManager  # noqa: E402
+from .profile_manager import ProfileManager  # noqa: E402
 
 if TYPE_CHECKING:
     pass
