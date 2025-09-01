@@ -98,7 +98,7 @@ async def browser_hover_tool(manager: ChromeManager, selector: str) -> BrowserRe
     return BrowserResponse(success=True, data={"status": "hovered"})
 
 
-async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", amount: int = 100, selector: str | None = None) -> BrowserResponse:
+async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", amount: int = 100) -> BrowserResponse:
     """Scroll page or element."""
     logger.debug(f"Scrolling {direction} by {amount}")
 

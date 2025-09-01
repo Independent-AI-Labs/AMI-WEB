@@ -1,8 +1,10 @@
 """Integration tests for anti-detection features."""
 
 import time
+from typing import Any
 
 import pytest
+from loguru import logger
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
@@ -13,7 +15,7 @@ class TestAntiDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_first_tab_antidetection(self, antidetect_browser):
+    async def test_first_tab_antidetection(self, antidetect_browser: Any) -> None:
         """Test anti-detection on first tab."""
         instance = antidetect_browser
         driver = instance.driver
@@ -58,7 +60,7 @@ class TestAntiDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_second_tab_antidetection(self, antidetect_browser):  # noqa: C901
+    async def test_second_tab_antidetection(self, antidetect_browser: Any) -> None:  # noqa: C901
         """Test anti-detection on second tab opened via window.open()."""
         instance = antidetect_browser
         driver = instance.driver
@@ -91,7 +93,7 @@ class TestAntiDetection:
             assert "bot.sannysoft.com" in driver.current_url, f"Not on correct page: {driver.current_url}"
 
             # Direct check via JavaScript
-            print("\n=== DIRECT JS CHECKS ===")
+            logger.info("\n=== DIRECT JS CHECKS ===")
             webdriver_status = driver.execute_script("return navigator.webdriver")
             # Check what bot.sannysoft "WebDriver (New)" actually tests
             webdriver_new_test = driver.execute_script(
@@ -110,11 +112,11 @@ class TestAntiDetection:
             plugin_proto = driver.execute_script("return Object.getPrototypeOf(navigator.plugins).constructor.name")
             plugin_0_proto = driver.execute_script("return navigator.plugins[0] ? Object.getPrototypeOf(navigator.plugins[0]).constructor.name : 'none'")
 
-            print(f"navigator.webdriver: {webdriver_status}")
-            print(f"WebDriver (New) test result: {webdriver_new_test}")
-            print(f"navigator.plugins.length: {plugin_count}")
-            print(f"navigator.plugins prototype: {plugin_proto}")
-            print(f"navigator.plugins[0] prototype: {plugin_0_proto}")
+            logger.info(f"navigator.webdriver: {webdriver_status}")
+            logger.info(f"WebDriver (New) test result: {webdriver_new_test}")
+            logger.info(f"navigator.plugins.length: {plugin_count}")
+            logger.info(f"navigator.plugins prototype: {plugin_proto}")
+            logger.info(f"navigator.plugins[0] prototype: {plugin_0_proto}")
 
             # Old test for compatibility
             old_plugin_test = driver.execute_script(
@@ -126,14 +128,14 @@ class TestAntiDetection:
                 return count;
             """,
             )
-            print(f"Old plugin test (for loop): {old_plugin_test}")
+            logger.info(f"Old plugin test (for loop): {old_plugin_test}")
 
             # Try to stringify plugins
             try:
                 plugin_str = driver.execute_script("return JSON.stringify(navigator.plugins)")
-                print(f"JSON.stringify(navigator.plugins): {plugin_str}")
+                logger.info(f"JSON.stringify(navigator.plugins): {plugin_str}")
             except Exception as e:
-                print(f"JSON.stringify(navigator.plugins): {e}")
+                logger.error(f"JSON.stringify(navigator.plugins): {e}")
 
             # Test instanceof
             instanceof_test = driver.execute_script(
@@ -146,7 +148,7 @@ class TestAntiDetection:
                 };
             """,
             )
-            print(f"instanceof tests: {instanceof_test}")
+            logger.info(f"instanceof tests: {instanceof_test}")
 
             # Check how bot.sannysoft.com counts plugins
             bot_test = driver.execute_script(
@@ -179,11 +181,11 @@ class TestAntiDetection:
                 return methods;
             """,
             )
-            print(f"Bot test methods: {bot_test}")
-            print("========================\n")
+            logger.info(f"Bot test methods: {bot_test}")
+            logger.info("========================\n")
 
             # Parse the actual results from the page
-            print("\n=== PARSING SECOND TAB RESULTS ===")
+            logger.info("\n=== PARSING SECOND TAB RESULTS ===")
             rows = driver.find_elements(By.CSS_SELECTOR, "table tr")
             results = {}
 
@@ -193,7 +195,7 @@ class TestAntiDetection:
                 if len(cells) >= min_cells:
                     test_name = cells[0].text.strip()
                     test_result = cells[1].text.strip()
-                    print(f"Test: {test_name} -> Result: {test_result}")
+                    logger.info(f"Test: {test_name} -> Result: {test_result}")
 
                     # Check WebDriver (New) test specifically
                     if "WebDriver" in test_name and "New" in test_name:
@@ -214,8 +216,8 @@ class TestAntiDetection:
                         results["webgl_renderer"] = "ANGLE" in test_result or "Intel" in test_result
                         results["webgl_renderer_actual"] = test_result
 
-            print(f"Parsed results: {results}")
-            print("=================================\n")
+            logger.info(f"Parsed results: {results}")
+            logger.info("=================================\n")
 
             # The critical assertion - navigator.webdriver should not be detected
             assert webdriver_status is None or webdriver_status is False, f"navigator.webdriver is {webdriver_status}, should be None or False"
@@ -235,7 +237,7 @@ class TestAntiDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_mcp_manager_antidetection(self, session_manager):
+    async def test_mcp_manager_antidetection(self, session_manager: Any) -> None:
         """Test that ChromeManager (used by MCP) has anti-detection by default."""
         manager = session_manager
         instance = None
@@ -285,7 +287,7 @@ class TestH264Codec:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_h264_codec_response(self, antidetect_browser):
+    async def test_h264_codec_response(self, antidetect_browser: Any) -> None:
         """Test that H.264 codec is properly supported."""
         instance = antidetect_browser
         driver = instance.driver

@@ -1,27 +1,29 @@
 """Chrome Manager using the base worker pool system."""
 
-import json
-import os
-import sys
-from datetime import datetime
-from typing import Any
+# Use standard import setup
+from base.backend.utils.standard_imports import setup_imports
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
-from base.backend.workers.types import PoolConfig, PoolType
-from loguru import logger
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-from ...facade.media.screenshot import ScreenshotController
-from ...facade.navigation.navigator import Navigator
-from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo
-from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
-from ...models.security import SecurityConfig
-from ...utils.config import Config
-from ...utils.exceptions import InstanceError
-from ..browser.instance import BrowserInstance
-from ..browser.properties_manager import PropertiesManager
-from .browser_worker_pool import BrowserWorkerPool
-from .profile_manager import ProfileManager
-from .session_manager import SessionManager
+import json  # noqa: E402
+from datetime import datetime  # noqa: E402
+from typing import Any  # noqa: E402
+
+from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from ...facade.media.screenshot import ScreenshotController  # noqa: E402
+from ...facade.navigation.navigator import Navigator  # noqa: E402
+from ...models.browser import BrowserStatus, ChromeOptions, InstanceInfo  # noqa: E402
+from ...models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties  # noqa: E402
+from ...models.security import SecurityConfig  # noqa: E402
+from ...utils.config import Config  # noqa: E402
+from ...utils.exceptions import InstanceError  # noqa: E402
+from ..browser.instance import BrowserInstance  # noqa: E402
+from ..browser.properties_manager import PropertiesManager  # noqa: E402
+from .browser_worker_pool import BrowserWorkerPool  # noqa: E402
+from .profile_manager import ProfileManager  # noqa: E402
+from .session_manager import SessionManager  # noqa: E402
 
 
 class ChromeManager:

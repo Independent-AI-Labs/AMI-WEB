@@ -20,17 +20,18 @@ def sanitize_js_string(value: Any) -> str:
         value = str(value)
 
     # Escape special characters
-    result: str = value
-    result = result.replace("\\", "\\\\")  # Backslash must be first
-    result = result.replace("'", "\\'")
-    result = result.replace('"', '\\"')
-    result = result.replace("\n", "\\n")
-    result = result.replace("\r", "\\r")
-    result = result.replace("\t", "\\t")
-    result = result.replace("\b", "\\b")
-    result = result.replace("\f", "\\f")
-    result = result.replace("</", "<\\/")  # Prevent script tag closing
-    return result
+    escaped: str = (
+        value.replace("\\", "\\\\")  # Backslash must be first
+        .replace("'", "\\'")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+        .replace("\b", "\\b")
+        .replace("\f", "\\f")
+        .replace("</", "<\\/")
+    )  # Prevent script tag closing
+    return escaped
 
 
 def build_js_function_call(func_name: str, *args: Any) -> str:
