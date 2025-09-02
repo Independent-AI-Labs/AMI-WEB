@@ -3,10 +3,9 @@
 import asyncio
 from typing import Any
 
+from browser.backend.facade.base import BaseController
+from browser.backend.utils.exceptions import NavigationError
 from loguru import logger
-
-from ...utils.exceptions import NavigationError
-from ..base import BaseController
 
 
 class StorageController(BaseController):

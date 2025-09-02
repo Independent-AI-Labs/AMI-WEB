@@ -2,11 +2,9 @@
 
 from typing import Any
 
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.mcp.chrome.response import BrowserResponse
 from loguru import logger
-
-from backend.core.management.manager import ChromeManager
-
-from ..response import BrowserResponse
 
 
 async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None) -> BrowserResponse:

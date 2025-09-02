@@ -8,20 +8,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
+from browser.backend.core.browser.lifecycle import BrowserLifecycle
+from browser.backend.core.browser.options import BrowserOptionsBuilder
+from browser.backend.core.browser.properties_manager import PropertiesManager
+from browser.backend.core.management.profile_manager import ProfileManager
+from browser.backend.core.monitoring.monitor import BrowserMonitor
+from browser.backend.core.storage.storage import BrowserStorage
+from browser.backend.models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, PerformanceMetrics, TabInfo
+from browser.backend.models.browser_properties import BrowserProperties
+from browser.backend.models.security import SecurityConfig
+from browser.backend.utils.config import Config
+from browser.backend.utils.exceptions import InstanceError
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
-
-from ...models.browser import BrowserStatus, ChromeOptions, ConsoleEntry, InstanceInfo, PerformanceMetrics, TabInfo
-from ...models.browser_properties import BrowserProperties
-from ...models.security import SecurityConfig
-from ...utils.config import Config
-from ...utils.exceptions import InstanceError
-from ..management.profile_manager import ProfileManager
-from ..monitoring.monitor import BrowserMonitor
-from ..storage.storage import BrowserStorage
-from .lifecycle import BrowserLifecycle
-from .options import BrowserOptionsBuilder
-from .properties_manager import PropertiesManager
 
 if TYPE_CHECKING:
     pass

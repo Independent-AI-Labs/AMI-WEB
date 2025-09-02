@@ -8,15 +8,14 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from browser.backend.core.management.profile_manager import ProfileManager
+from browser.backend.core.security.antidetect import get_anti_detection_arguments, get_anti_detection_prefs
+from browser.backend.models.browser import ChromeOptions
+from browser.backend.models.browser_properties import BrowserProperties
+from browser.backend.models.security import SecurityConfig
+from browser.backend.utils.config import Config
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
-
-from ...models.browser import ChromeOptions
-from ...models.browser_properties import BrowserProperties
-from ...models.security import SecurityConfig
-from ...utils.config import Config
-from ..management.profile_manager import ProfileManager
-from ..security.antidetect import get_anti_detection_arguments, get_anti_detection_prefs
 
 if TYPE_CHECKING:
     pass

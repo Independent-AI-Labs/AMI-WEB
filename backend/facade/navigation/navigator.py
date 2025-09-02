@@ -3,12 +3,11 @@
 import asyncio
 import time
 
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.navigation.waiter import Waiter
+from browser.backend.models.browser import PageResult, WaitCondition
+from browser.backend.utils.exceptions import NavigationError
 from loguru import logger
-
-from ...models.browser import PageResult, WaitCondition
-from ...utils.exceptions import NavigationError
-from ..base import BaseController
-from .waiter import Waiter
 
 
 class Navigator(BaseController):

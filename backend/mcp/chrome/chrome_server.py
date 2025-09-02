@@ -7,25 +7,22 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from typing import Any, Literal  # noqa: E402
 
-from mcp.server import FastMCP  # noqa: E402
-
-from backend.core.management.manager import ChromeManager  # noqa: E402
-
-from .response import BrowserResponse  # noqa: E402
-from .tools.browser_tools import (  # noqa: E402
+from browser.backend.core.management.manager import ChromeManager  # noqa: E402
+from browser.backend.mcp.chrome.response import BrowserResponse  # noqa: E402
+from browser.backend.mcp.chrome.tools.browser_tools import (  # noqa: E402
     browser_get_active_tool,
     browser_launch_tool,
     browser_list_tool,
     browser_terminate_tool,
 )
-from .tools.extraction_tools import (  # noqa: E402
+from browser.backend.mcp.chrome.tools.extraction_tools import (  # noqa: E402
     browser_exists_tool,
     browser_get_attribute_tool,
     browser_get_cookies_tool,
     browser_get_text_tool,
     browser_wait_for_tool,
 )
-from .tools.input_tools import (  # noqa: E402
+from browser.backend.mcp.chrome.tools.input_tools import (  # noqa: E402
     browser_click_tool,
     browser_hover_tool,
     browser_press_tool,
@@ -33,21 +30,22 @@ from .tools.input_tools import (  # noqa: E402
     browser_select_tool,
     browser_type_tool,
 )
-from .tools.javascript_tools import (  # noqa: E402
+from browser.backend.mcp.chrome.tools.javascript_tools import (  # noqa: E402
     browser_evaluate_tool,
     browser_execute_tool,
 )
-from .tools.navigation_tools import (  # noqa: E402
+from browser.backend.mcp.chrome.tools.navigation_tools import (  # noqa: E402
     browser_back_tool,
     browser_forward_tool,
     browser_get_url_tool,
     browser_navigate_tool,
     browser_refresh_tool,
 )
-from .tools.screenshot_tools import (  # noqa: E402
+from browser.backend.mcp.chrome.tools.screenshot_tools import (  # noqa: E402
     browser_element_screenshot_tool,
     browser_screenshot_tool,
 )
+from mcp.server import FastMCP  # noqa: E402
 
 
 class ChromeFastMCPServer:
