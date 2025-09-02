@@ -4,13 +4,12 @@ import asyncio
 import json
 from typing import Any
 
+from browser.backend.core.browser.instance import BrowserInstance
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.devtools.config import get_device_config, list_available_devices
+from browser.backend.models.browser import ConsoleEntry, NetworkEntry
+from browser.backend.utils.exceptions import ChromeManagerError
 from loguru import logger
-
-from ...core.browser.instance import BrowserInstance
-from ...models.browser import ConsoleEntry, NetworkEntry
-from ...utils.exceptions import ChromeManagerError
-from ..base import BaseController
-from .config import get_device_config, list_available_devices
 
 
 class DevToolsController(BaseController):

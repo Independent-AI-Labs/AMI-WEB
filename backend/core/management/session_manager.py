@@ -7,10 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from browser.backend.core.browser.instance import BrowserInstance
+from browser.backend.utils.exceptions import SessionError
 from loguru import logger
-
-from ...utils.exceptions import SessionError
-from ..browser.instance import BrowserInstance
 
 if TYPE_CHECKING:
     from .manager import ChromeManager

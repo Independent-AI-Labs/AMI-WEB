@@ -4,10 +4,9 @@ import json
 from datetime import datetime
 from typing import Any
 
+from browser.backend.models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics, TabInfo
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
-
-from ...models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics, TabInfo
 
 
 class BrowserMonitor:

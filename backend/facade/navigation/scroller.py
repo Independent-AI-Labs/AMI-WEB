@@ -3,10 +3,10 @@
 import asyncio
 import time
 
-from ...utils.exceptions import NavigationError
-from ..base import BaseController
-from ..config import FACADE_CONFIG
-from ..utils import parameterized_js_execution
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.config import FACADE_CONFIG
+from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.utils.exceptions import NavigationError
 
 
 class Scroller(BaseController):

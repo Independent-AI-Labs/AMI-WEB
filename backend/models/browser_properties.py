@@ -5,9 +5,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from browser.backend.services.property_injection import PropertyInjectionService
 from pydantic import BaseModel, Field
-
-from ..services.property_injection import PropertyInjectionService
 
 
 class WebGLVendor(str, Enum):

@@ -1,11 +1,9 @@
 """Navigation tools for Chrome MCP server."""
 
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.facade.navigation.navigator import Navigator
+from browser.backend.mcp.chrome.response import BrowserResponse
 from loguru import logger
-
-from backend.core.management.manager import ChromeManager
-from backend.facade.navigation.navigator import Navigator
-
-from ..response import BrowserResponse
 
 
 async def browser_navigate_tool(manager: ChromeManager, url: str, wait_for: str | None = None, timeout: float = 30) -> BrowserResponse:
