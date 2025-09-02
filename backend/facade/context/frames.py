@@ -3,13 +3,12 @@
 import asyncio
 from typing import Any
 
+from browser.backend.facade.base import BaseController
+from browser.backend.utils.exceptions import NavigationError
 from loguru import logger
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
-
-from ...utils.exceptions import NavigationError
-from ..base import BaseController
 
 
 class FrameController(BaseController):

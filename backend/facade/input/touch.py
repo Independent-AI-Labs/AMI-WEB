@@ -3,11 +3,10 @@
 import asyncio
 import time
 
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.utils.exceptions import InputError
 from loguru import logger
-
-from ...utils.exceptions import InputError
-from ..base import BaseController
-from ..utils import parameterized_js_execution
 
 
 class TouchController(BaseController):

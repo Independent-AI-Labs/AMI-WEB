@@ -4,11 +4,10 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
+from browser.backend.facade.base import BaseController
+from browser.backend.models.browser import PerformanceMetrics
+from browser.backend.utils.exceptions import ChromeManagerError
 from loguru import logger
-
-from ...models.browser import PerformanceMetrics
-from ...utils.exceptions import ChromeManagerError
-from ..base import BaseController
 
 
 class PerformanceController(BaseController):

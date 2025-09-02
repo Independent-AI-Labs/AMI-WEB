@@ -10,13 +10,12 @@ from typing import TYPE_CHECKING, Any  # noqa: E402
 
 from base.backend.workers.base import WorkerPool  # noqa: E402
 from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState  # noqa: E402
+from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
+from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
+from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
+from browser.backend.models.browser import ChromeOptions  # noqa: E402
+from browser.backend.utils.config import Config  # noqa: E402
 from loguru import logger  # noqa: E402
-
-from ...models.browser import ChromeOptions  # noqa: E402
-from ...utils.config import Config  # noqa: E402
-from ..browser.instance import BrowserInstance  # noqa: E402
-from ..browser.properties_manager import PropertiesManager  # noqa: E402
-from .profile_manager import ProfileManager  # noqa: E402
 
 if TYPE_CHECKING:
     pass

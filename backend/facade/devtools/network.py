@@ -5,14 +5,13 @@ import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from browser.backend.facade.base import BaseController
+from browser.backend.models.browser import NetworkEntry
+from browser.backend.utils.exceptions import ChromeManagerError
 from loguru import logger
 
-from ...models.browser import NetworkEntry
-from ...utils.exceptions import ChromeManagerError
-from ..base import BaseController
-
 if TYPE_CHECKING:
-    from ...core.browser.instance import BrowserInstance
+    from browser.backend.core.browser.instance import BrowserInstance
 
 
 class NetworkController(BaseController):

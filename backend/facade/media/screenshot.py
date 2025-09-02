@@ -6,13 +6,12 @@ import io
 import time
 from pathlib import Path
 
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.config import FACADE_CONFIG
+from browser.backend.models.media import ImageFormat
+from browser.backend.utils.exceptions import MediaError
 from loguru import logger
 from PIL import Image
-
-from ...models.media import ImageFormat
-from ...utils.exceptions import MediaError
-from ..base import BaseController
-from ..config import FACADE_CONFIG
 
 
 class ScreenshotController(BaseController):

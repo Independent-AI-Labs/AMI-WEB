@@ -4,19 +4,18 @@ import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from browser.backend.core.security.antidetect import ChromeDriverPatcher, execute_anti_detection_scripts
+from browser.backend.core.security.tab_injector import SimpleTabInjector
+from browser.backend.models.browser import BrowserStatus
+from browser.backend.models.security import SecurityConfig, SecurityLevel
+from browser.backend.utils.config import Config
+from browser.backend.utils.exceptions import InstanceError
 from loguru import logger
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
-
-from ...models.browser import BrowserStatus
-from ...models.security import SecurityConfig, SecurityLevel
-from ...utils.config import Config
-from ...utils.exceptions import InstanceError
-from ..security.antidetect import ChromeDriverPatcher, execute_anti_detection_scripts
-from ..security.tab_injector import SimpleTabInjector
 
 if TYPE_CHECKING:
     pass

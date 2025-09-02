@@ -2,12 +2,10 @@
 
 import base64
 
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.mcp.chrome.response import BrowserResponse
 from loguru import logger
 from selenium.webdriver.common.by import By
-
-from backend.core.management.manager import ChromeManager
-
-from ..response import BrowserResponse
 
 
 async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = False) -> BrowserResponse:
