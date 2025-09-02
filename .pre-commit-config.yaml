@@ -16,11 +16,12 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: .venv/Scripts/python.exe -m mypy
+        entry: cmd /c "cd .. && browser\\.venv\\Scripts\\python.exe -m mypy browser\\backend --config-file=browser\\mypy.ini"
         language: system
         types: [ python ]
         require_serial: true
         stages: [ pre-commit ]
+        pass_filenames: false
 
   - repo: local
     hooks:
