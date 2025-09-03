@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(grep:*)",
+      "Bash(git reset:*)",
+      "Bash(sed:*)",
+      "Bash(rm:*)",
+      "Bash(\".venv/Scripts/python.exe\" -m pytest)",
+      "Bash(npm test)",
+      "Bash(./preflight.sh)",
+      "Bash(npm run:*)",
+      "Bash(mkdir:*)",
+      "Bash(git submodule:*)",
+      "Bash(\".venv/Scripts/python.exe\" -m pip install pyahocorasick regex)",
+      "Bash(uv pip install:*)",
+      "Bash(uv pip:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl:*)",
+      "Bash(\".venv/Scripts/python.exe\" scripts/convert_extensions.py)",
+      "Bash(\".venv/Scripts/python.exe\" -m mypy backend/mcp/filesys/fast_search.py --ignore-missing-imports)",
+      "Bash(\".venv/Scripts/python.exe\":*)"
+    ],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\c\\Users\\vdonc\\AMI-ORCHESTRATOR"
+    ]
+  }
+}

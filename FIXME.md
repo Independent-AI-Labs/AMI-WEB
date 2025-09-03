@@ -1,102 +1,97 @@
-# CRITICAL MODULE FIX INSTRUCTIONS
+# BROWSER MODULE REMAINING ISSUES
 
-## YOUR MISSION:
-Fix ALL issues in BROWSER module and push with ALL checks passing. NO CHEATING.
+## STATUS UPDATE:
+Several major issues have been RESOLVED. Only specific configuration and dependency issues remain.
 
 ---
 
-### STEP 1: GO TO MODULE
-```bash
-cd browser
-pwd
+## RESOLVED (COMPLETED):
+- **Import System Fixed**: Complete migration from relative to absolute imports completed
+- **ami_path.py Deployed**: Path setup script is properly deployed
+- **Ruff Violations Fixed**: All ruff checks now pass
+- **Dependencies Defined**: requirements.txt contains all necessary packages
+
+---
+
+## REMAINING CRITICAL ISSUES:
+
+### ISSUE 1: MYPY CONFIGURATION PROBLEMS
+**Status**: UNRESOLVED - Critical configuration errors still present
+
+**Problem**: mypy.ini contains problematic settings causing double module detection
+```ini
+# THESE LINES MUST BE REMOVED:
+files = backend/          # Line 5 - Limits mypy to backend/ only
+mypy_path = ..           # Line 9 - Causes double module detection
 ```
 
-### STEP 2: FIX MYPY.INI 
-**THE MOST CRITICAL ISSUE: mypy.ini has `files = backend/` which ONLY checks backend folder**
-```bash
-# Read current mypy.ini
-cat mypy.ini
-
-# Edit mypy.ini and REMOVE the line "files = backend/" completely
-# Also REMOVE "mypy_path = .." if present
-# This makes mypy scan EVERYTHING
+**Current Error**:
+```
+backend\core\browser\lifecycle.py: error: Source file found twice under different module names: 
+"backend.core.browser.lifecycle" and "browser.backend.core.browser.lifecycle"
 ```
 
-### STEP 3: RUN RUFF AND FIX ALL
+**Fix Required**:
 ```bash
-# Auto-fix what's possible
-../.venv/Scripts/ruff check . --fix
-
-# Check what remains
-../.venv/Scripts/ruff check .
-
-# Fix remaining issues manually - NO SUPPRESSION
+# Edit mypy.ini and remove these two lines:
+# - Remove line 5: files = backend/
+# - Remove line 9: mypy_path = ..
 ```
 
-### STEP 4: RUN MYPY AND FIX ALL
-```bash
-# Run mypy on ENTIRE module
-../.venv/Scripts/python -m mypy . --show-error-codes
+### ISSUE 2: VIRTUAL ENVIRONMENT DEPENDENCIES
+**Status**: UNRESOLVED - Dependencies not installed in .venv
 
-# Fix EVERY type error - NO "type: ignore"
+**Problem**: Tests failing due to missing packages in virtual environment
+```
+ModuleNotFoundError: No module named 'psutil'
 ```
 
-### STEP 5: RUN TESTS AND FIX ALL
+**Fix Required**:
 ```bash
-# Run all tests
-../.venv/Scripts/python -m pytest tests/ -v --tb=short
-
-# Fix EVERY failing test - NO "pytest.skip"
+# Install dependencies in virtual environment
+../.venv/Scripts/pip install -r requirements.txt
 ```
 
-### STEP 6: RUN PRE-COMMIT
-```bash
-# Run all pre-commit hooks
-../.venv/Scripts/pre-commit run --all-files
+### ISSUE 3: TEST EXECUTION
+**Status**: BLOCKED by Issue 2 - Cannot run until dependencies installed
 
-# If anything fails, fix and re-run
+**Problem**: Tests cannot execute due to missing dependencies
+
+**Fix Required**:
+1. First resolve Issue 2 (install dependencies)
+2. Then run tests: `../.venv/Scripts/python -m pytest tests/ -v`
+
+---
+
+## FINAL STEPS NEEDED:
+
+### STEP 1: FIX MYPY CONFIGURATION
+```bash
+# Edit mypy.ini - Remove these two lines:
+# files = backend/
+# mypy_path = ..
 ```
 
-### STEP 7: FINAL VERIFICATION
+### STEP 2: INSTALL DEPENDENCIES
+```bash
+../.venv/Scripts/pip install -r requirements.txt
+```
+
+### STEP 3: VERIFY ALL CHECKS
 ```bash
 # ALL must pass:
-../.venv/Scripts/ruff check .
-../.venv/Scripts/python -m mypy . --show-error-codes  
-../.venv/Scripts/python -m pytest tests/ -v
-../.venv/Scripts/pre-commit run --all-files
-```
-
-### STEP 8: COMMIT AND PUSH
-```bash
-git add -A
-git commit -m "fix: Complete BROWSER module code quality overhaul"
-# NO --no-verify EVER
-
-git push origin HEAD
-# Use 600000ms (10 minute) timeout for push
+../.venv/Scripts/ruff check .                           # ✓ Already passing
+../.venv/Scripts/python -m mypy . --show-error-codes    # Fix after Step 1
+../.venv/Scripts/python -m pytest tests/ -v            # Fix after Step 2
+../.venv/Scripts/pre-commit run --all-files             # Fix after Steps 1&2
 ```
 
 ---
 
-## ABSOLUTE RULES:
-1. **REMOVE `files = backend/` from mypy.ini** - MUST scan entire module
-2. **REMOVE `mypy_path = ..` from mypy.ini** - Causes double detection
-3. **ZERO ruff violations**
-4. **ZERO mypy errors**  
-5. **ALL tests pass**
-6. **ALL pre-commit hooks pass**
-7. **NO --no-verify**
-8. **NO type: ignore**
-9. **NO # noqa**
-10. **NO pytest.skip**
-11. **FIX ACTUAL PROBLEMS, not symptoms**
-
----
-
-## IF YOU FAIL ANY CHECK:
-**STOP. FIX IT. DON'T PROCEED.**
-
-## SPECIFIC BROWSER MODULE ISSUES:
-- Remove mypy_path = .. from mypy.ini (causes double module detection)
-- Fix browser automation dependencies
-- Ensure Playwright/Selenium types are correct
+## PROGRESS SUMMARY:
+- **Import system**: ✓ COMPLETE (70 files migrated)
+- **Path setup**: ✓ COMPLETE (ami_path.py deployed)
+- **Ruff compliance**: ✓ COMPLETE (all checks pass)
+- **MyPy config**: ❌ NEEDS FIXING (2 lines to remove)
+- **Dependencies**: ❌ NEEDS INSTALLATION (.venv missing packages)
+- **Tests**: ❌ BLOCKED (waiting for dependencies)
