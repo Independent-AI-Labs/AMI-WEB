@@ -1,6 +1,12 @@
 line-length = 160
 target-version = "py312"
 
+# Exclude reference code directories from checking
+exclude = [
+    "_reference_code/",
+    "*/_reference_code/",
+]
+
 [lint]
 # Comprehensive rule set replacing pylint + bandit
 select = [
