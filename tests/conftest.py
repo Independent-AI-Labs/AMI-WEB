@@ -1,25 +1,29 @@
 """Pytest configuration and shared fixtures."""
+# ruff: noqa: E402, I001
 
-import atexit
-import contextlib
-import os
-import random
-import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-import pytest_asyncio
-from loguru import logger
+# Path setup FIRST
+MODULE_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(MODULE_ROOT))
+sys.path.insert(0, str(MODULE_ROOT.parent))
+sys.path.insert(0, str(MODULE_ROOT / "scripts"))
 
-# Add orchestrator root to path for proper imports
-current = Path(__file__).resolve().parent
-while current != current.parent:
-    if (current / ".git").exists() and (current / "base").exists():
-        # Found the main orchestrator root - add it FIRST
-        sys.path.insert(0, str(current))
-        break
-    current = current.parent
+from scripts.ami_path import setup_ami_paths  # noqa: E402, I001
+
+ORCHESTRATOR_ROOT, MODULE_ROOT, MODULE_NAME = setup_ami_paths()
+
+# NOW other imports  # isort: skip_file
+import atexit  # noqa: E402
+import contextlib  # noqa: E402
+import os  # noqa: E402
+import random  # noqa: E402
+import subprocess  # noqa: E402
+
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from loguru import logger  # noqa: E402
 
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402

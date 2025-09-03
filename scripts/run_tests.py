@@ -4,14 +4,17 @@
 import sys
 from pathlib import Path
 
-# Get module root
-MODULE_ROOT = Path(__file__).resolve().parent.parent
-
-# Add browser and base to path (base imported as 'base')
+# Path setup FIRST
+MODULE_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(MODULE_ROOT))
 sys.path.insert(0, str(MODULE_ROOT.parent))
+sys.path.insert(0, str(MODULE_ROOT / "scripts"))
 
-# Import from base using proper base. prefix
+from ami_path import setup_ami_paths  # noqa: E402, I001
+
+ORCHESTRATOR_ROOT, MODULE_ROOT, MODULE_NAME = setup_ami_paths()
+
+# NOW other imports
 from base.scripts.run_tests import main  # noqa: E402
 
 if __name__ == "__main__":

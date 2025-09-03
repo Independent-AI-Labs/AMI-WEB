@@ -1,16 +1,25 @@
 #!/usr/bin/env python
 """Browser module setup - uses base AMIModuleSetup and sets up Chrome."""
 
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
-import yaml
-from loguru import logger
+# Add paths FIRST!
+MODULE_ROOT = Path(__file__).parent
+sys.path.insert(0, str(MODULE_ROOT))
+sys.path.insert(0, str(MODULE_ROOT.parent))
+sys.path.insert(0, str(MODULE_ROOT / "scripts"))
 
-# Get this module's root
-MODULE_ROOT = Path(__file__).resolve().parent
+# Import ami_path
+from scripts.ami_path import setup_ami_paths  # noqa: E402, I001
+
+ORCHESTRATOR_ROOT, MODULE_ROOT, MODULE_NAME = setup_ami_paths()
+
+# NOW safe to import other modules
+import shutil  # noqa: E402, I001
+import subprocess  # noqa: E402, I001
+import yaml  # noqa: E402, I001
+from loguru import logger  # noqa: E402, I001
 
 
 def copy_platform_config() -> None:
