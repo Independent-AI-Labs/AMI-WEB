@@ -1,15 +1,16 @@
 """Unit tests for browser properties validation and management."""
 
 import json
+from typing import Any
 from unittest.mock import Mock, patch
 
 
 class TestBrowserProperties:
     """Test browser properties configuration without real browser."""
 
-    def test_default_properties_structure(self):
+    def test_default_properties_structure(self) -> None:
         """Test default browser properties have required fields."""
-        properties = {
+        properties: dict[str, Any] = {
             "userAgent": "Mozilla/5.0...",
             "platform": "Win32",
             "language": "en-US",
@@ -28,9 +29,9 @@ class TestBrowserProperties:
         assert "hardwareConcurrency" in properties
         assert isinstance(properties["languages"], list)
 
-    def test_stealth_preset_properties(self):
+    def test_stealth_preset_properties(self) -> None:
         """Test stealth preset removes detection vectors."""
-        stealth_properties = {
+        stealth_properties: dict[str, Any] = {
             "webdriver": False,
             "plugins": {"length": 3, "0": {"name": "Chrome PDF Plugin"}, "1": {"name": "Chrome PDF Viewer"}, "2": {"name": "Native Client"}},
             "chrome": {"runtime": {}},
@@ -43,9 +44,9 @@ class TestBrowserProperties:
         assert stealth_properties["plugins"]["length"] > 0
         assert stealth_properties["navigator"]["webdriver"] is False
 
-    def test_mobile_preset_properties(self):
+    def test_mobile_preset_properties(self) -> None:
         """Test mobile preset properties."""
-        mobile_properties = {
+        mobile_properties: dict[str, Any] = {
             "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)",
             "platform": "iPhone",
             "maxTouchPoints": 5,
@@ -60,9 +61,9 @@ class TestBrowserProperties:
         max_mobile_width = 500
         assert mobile_properties["screenResolution"]["width"] < max_mobile_width
 
-    def test_property_validation_types(self):
+    def test_property_validation_types(self) -> None:
         """Test property type validation."""
-        properties = {
+        properties: dict[str, Any] = {
             "webdriver": "false",  # Should be boolean
             "hardwareConcurrency": "8",  # Should be number
             "languages": "en-US",  # Should be array
@@ -73,7 +74,7 @@ class TestBrowserProperties:
         assert not isinstance(properties["hardwareConcurrency"], int)
         assert not isinstance(properties["languages"], list)
 
-    def test_property_merging(self):
+    def test_property_merging(self) -> None:
         """Test merging custom properties with defaults."""
         defaults = {"userAgent": "Default UA", "platform": "Win32", "webdriver": True, "languages": ["en"]}
 
@@ -93,7 +94,7 @@ class TestPropertiesManager:
     """Test PropertiesManager functionality without real implementation."""
 
     @patch("browser.backend.core.browser.properties_manager.PropertiesManager")
-    def test_load_default_properties(self, mock_manager):
+    def test_load_default_properties(self, mock_manager: Any) -> None:
         """Test loading default properties."""
         manager = mock_manager()
         manager.load_default_properties = Mock(return_value={"userAgent": "Default", "webdriver": False})
@@ -105,7 +106,7 @@ class TestPropertiesManager:
         manager.load_default_properties.assert_called_once()
 
     @patch("browser.backend.core.browser.properties_manager.PropertiesManager")
-    def test_load_preset(self, mock_manager):
+    def test_load_preset(self, mock_manager: Any) -> None:
         """Test loading property presets."""
         manager = mock_manager()
         manager.load_preset = Mock(return_value={"preset": "stealth", "webdriver": False, "plugins": {"length": 3}})
@@ -118,7 +119,7 @@ class TestPropertiesManager:
         manager.load_preset.assert_called_once_with("stealth")
 
     @patch("browser.backend.core.browser.properties_manager.PropertiesManager")
-    def test_apply_overrides(self, mock_manager):
+    def test_apply_overrides(self, mock_manager: Any) -> None:
         """Test applying property overrides."""
         manager = mock_manager()
         base_props = {"userAgent": "Base", "webdriver": True}
@@ -133,7 +134,7 @@ class TestPropertiesManager:
         assert result["custom"] == "value"
 
     @patch("browser.backend.core.browser.properties_manager.PropertiesManager")
-    def test_validate_properties(self, mock_manager):
+    def test_validate_properties(self, mock_manager: Any) -> None:
         """Test property validation."""
         manager = mock_manager()
 
@@ -154,9 +155,9 @@ class TestPropertiesManager:
 class TestPropertyInjection:
     """Test property injection into browser without real browser."""
 
-    def test_generate_injection_script(self):
+    def test_generate_injection_script(self) -> None:
         """Test generating property injection JavaScript."""
-        properties = {"userAgent": "Custom UA", "webdriver": False, "platform": "Win32"}
+        properties: dict[str, Any] = {"userAgent": "Custom UA", "webdriver": False, "platform": "Win32"}
 
         # Generate injection script
         script = f"""
@@ -175,9 +176,9 @@ class TestPropertyInjection:
         assert "false" in script.lower()
         assert "Win32" in script
 
-    def test_injection_script_escaping(self):
+    def test_injection_script_escaping(self) -> None:
         """Test proper escaping in injection scripts."""
-        properties = {"userAgent": "Mozilla/5.0 'test' \"quotes\"", "customProp": "<script>alert('xss')</script>"}
+        properties: dict[str, Any] = {"userAgent": "Mozilla/5.0 'test' \"quotes\"", "customProp": "<script>alert('xss')</script>"}
 
         # Should escape quotes and special characters
         escaped_ua = properties["userAgent"].replace("'", "\\'").replace('"', '\\"')
@@ -188,7 +189,7 @@ class TestPropertyInjection:
         assert "\\<" in escaped_custom
         assert "\\>" in escaped_custom
 
-    def test_property_getter_definitions(self):
+    def test_property_getter_definitions(self) -> None:
         """Test property getter definitions."""
         script = """
         Object.defineProperty(navigator, 'hardwareConcurrency', {
@@ -203,7 +204,7 @@ class TestPropertyInjection:
         assert "configurable: false" in script
         assert "enumerable: true" in script
 
-    def test_property_injection_order(self):
+    def test_property_injection_order(self) -> None:
         """Test property injection order matters."""
         # Order: Core properties first, then overrides
         injection_order = [
@@ -225,9 +226,9 @@ class TestPropertyInjection:
 class TestPropertyPersistence:
     """Test property persistence and loading."""
 
-    def test_save_properties_to_profile(self):
+    def test_save_properties_to_profile(self) -> None:
         """Test saving properties to profile."""
-        properties = {"userAgent": "Custom UA", "webdriver": False, "profile_id": "test-profile-123"}
+        properties: dict[str, Any] = {"userAgent": "Custom UA", "webdriver": False, "profile_id": "test-profile-123"}
 
         # Simulate saving to JSON
         json_data = json.dumps(properties, indent=2)
@@ -236,7 +237,7 @@ class TestPropertyPersistence:
         assert "false" in json_data
         assert "test-profile-123" in json_data
 
-    def test_load_properties_from_profile(self):
+    def test_load_properties_from_profile(self) -> None:
         """Test loading properties from profile."""
         json_data = '{"userAgent": "Loaded UA", "webdriver": false}'
 
@@ -245,7 +246,7 @@ class TestPropertyPersistence:
         assert properties["userAgent"] == "Loaded UA"
         assert properties["webdriver"] is False
 
-    def test_profile_properties_migration(self):
+    def test_profile_properties_migration(self) -> None:
         """Test migrating old property format to new."""
         old_format = {"ua": "Old UA", "no_webdriver": True}
 
