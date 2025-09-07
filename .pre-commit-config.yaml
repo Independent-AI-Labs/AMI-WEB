@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: "cmd /c \"cd .. && .venv\\Scripts\\python.exe -m mypy browser\\backend --config-file=browser\\mypy.ini\""
+        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy browser/backend --config-file=browser/mypy.ini"'
         language: system
         types: [ python ]
         require_serial: true

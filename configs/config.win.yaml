@@ -34,6 +34,15 @@ backend:
     # Health check interval in seconds
     health_check_interval: 30
 
+    # Timeout (seconds) to wait when acquiring a browser from the pool
+    acquire_timeout: 30
+
+    # Whether idle workers may hibernate instead of terminating
+    enable_hibernation: true
+
+    # Seconds an idle worker waits before hibernating
+    hibernation_delay: 60
+
   performance:
     # Maximum memory per instance in MB
     max_memory_per_instance: 512

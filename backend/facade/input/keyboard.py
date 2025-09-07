@@ -3,14 +3,15 @@
 import asyncio
 import time
 
-from browser.backend.facade.base import BaseController
-from browser.backend.utils.exceptions import InputError
 from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
+
+from browser.backend.facade.base import BaseController
+from browser.backend.utils.exceptions import InputError
 
 # Minimum number of keys required for a key combination
 MIN_KEYS_FOR_COMBINATION = 2

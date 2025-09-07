@@ -1,12 +1,13 @@
 """Input tools for Chrome MCP server."""
 
+from loguru import logger
+
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.facade.input.forms import FormsController
 from browser.backend.facade.input.keyboard import KeyboardController
 from browser.backend.facade.input.mouse import MouseController
 from browser.backend.facade.navigation.scroller import Scroller
 from browser.backend.mcp.chrome.response import BrowserResponse
-from loguru import logger
 
 
 async def browser_click_tool(manager: ChromeManager, selector: str, button: str = "left", click_count: int = 1) -> BrowserResponse:

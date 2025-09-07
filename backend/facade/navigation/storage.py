@@ -3,9 +3,10 @@
 import asyncio
 from typing import Any
 
+from loguru import logger
+
 from browser.backend.facade.base import BaseController
 from browser.backend.utils.exceptions import NavigationError
-from loguru import logger
 
 
 class StorageController(BaseController):

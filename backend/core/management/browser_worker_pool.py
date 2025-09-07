@@ -10,12 +10,13 @@ from typing import TYPE_CHECKING, Any  # noqa: E402
 
 from base.backend.workers.base import WorkerPool  # noqa: E402
 from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState  # noqa: E402
+from loguru import logger  # noqa: E402
+
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
 from browser.backend.models.browser import ChromeOptions  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
-from loguru import logger  # noqa: E402
 
 if TYPE_CHECKING:
     pass
@@ -223,8 +224,11 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         Returns:
             A browser instance from the pool
         """
+        # Determine acquire timeout: prefer explicit backend.pool.acquire_timeout, fallback to PoolConfig
+        timeout = self._browser_config.get("backend.pool.acquire_timeout", self.config.acquire_timeout)
+
         # Get a worker from the pool
-        worker_id = await self.acquire_worker(timeout=30)
+        worker_id = await self.acquire_worker(timeout=timeout)
         worker = await self._get_worker_instance(worker_id)
 
         if not worker:

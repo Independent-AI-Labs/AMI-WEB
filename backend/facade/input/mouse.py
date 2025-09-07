@@ -3,15 +3,16 @@
 import asyncio
 import time
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.utils import parameterized_js_execution
-from browser.backend.models.browser import ClickOptions
-from browser.backend.utils.exceptions import InputError
 from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
+
+from browser.backend.facade.base import BaseController
+from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.models.browser import ClickOptions
+from browser.backend.utils.exceptions import InputError
 
 
 class MouseController(BaseController):

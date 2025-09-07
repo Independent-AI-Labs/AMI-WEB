@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
+from loguru import logger
+from selenium.webdriver.remote.webdriver import WebDriver
+
 from browser.backend.core.browser.lifecycle import BrowserLifecycle
 from browser.backend.core.browser.options import BrowserOptionsBuilder
 from browser.backend.core.browser.properties_manager import PropertiesManager
@@ -19,8 +22,6 @@ from browser.backend.models.browser_properties import BrowserProperties
 from browser.backend.models.security import SecurityConfig
 from browser.backend.utils.config import Config
 from browser.backend.utils.exceptions import InstanceError
-from loguru import logger
-from selenium.webdriver.remote.webdriver import WebDriver
 
 if TYPE_CHECKING:
     pass

@@ -7,6 +7,7 @@ from pathlib import Path
 from threading import Thread
 
 import pytest
+from loguru import logger
 
 # BrowserInstance and ChromeManager imports removed - using fixtures from conftest
 from browser.backend.facade.input.keyboard import KeyboardController
@@ -15,7 +16,6 @@ from browser.backend.facade.media.screenshot import ScreenshotController
 from browser.backend.facade.navigation.extractor import ContentExtractor
 from browser.backend.facade.navigation.navigator import Navigator
 from browser.backend.facade.navigation.waiter import Waiter
-from loguru import logger
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

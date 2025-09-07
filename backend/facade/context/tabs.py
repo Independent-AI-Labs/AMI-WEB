@@ -2,10 +2,11 @@
 
 import asyncio
 
+from loguru import logger
+
 from browser.backend.facade.base import BaseController
 from browser.backend.models.browser import TabInfo
 from browser.backend.utils.exceptions import NavigationError
-from loguru import logger
 
 
 class TabController(BaseController):
