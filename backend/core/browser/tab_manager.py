@@ -3,10 +3,11 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from browser.backend.core.browser.properties_manager import PropertiesManager
-from browser.backend.models.browser_properties import BrowserProperties
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from browser.backend.core.browser.properties_manager import PropertiesManager
+from browser.backend.models.browser_properties import BrowserProperties
 
 if TYPE_CHECKING:
     pass

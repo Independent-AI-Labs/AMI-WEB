@@ -24,7 +24,6 @@ while current != current.parent:
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
-
 from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 

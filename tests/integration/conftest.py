@@ -4,8 +4,9 @@ import asyncio
 import os
 from pathlib import Path
 
-from browser.backend.core.management.manager import ChromeManager
 from loguru import logger
+
+from browser.backend.core.management.manager import ChromeManager
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

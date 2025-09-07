@@ -6,8 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from browser.backend.utils.exceptions import ProfileError
 from loguru import logger
+
+from browser.backend.utils.exceptions import ProfileError
 
 
 class ProfileManager:

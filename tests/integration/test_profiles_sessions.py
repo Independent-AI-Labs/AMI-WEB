@@ -6,11 +6,12 @@ from pathlib import Path
 
 import pytest
 import yaml
+from selenium.webdriver.common.by import By
+
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.models.security import SecurityConfig, SecurityLevel
 from browser.backend.utils.config import Config
-from selenium.webdriver.common.by import By
 
 
 @pytest.fixture

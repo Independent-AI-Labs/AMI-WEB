@@ -77,4 +77,3 @@ python_version = "3.12"
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_return_any = true
-

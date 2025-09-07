@@ -96,15 +96,15 @@ def with_timeout(timeout: float) -> Callable[[Callable[..., Any]], Callable[...,
                     raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s")
 
                 # Set timeout alarm
-                old_handler = signal.signal(signal.SIGALRM, timeout_handler)  # type: ignore[attr-defined]
-                signal.alarm(int(timeout))  # type: ignore[attr-defined]
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(int(timeout))
 
                 try:
                     result = func(*args, **kwargs)
                 finally:
                     # Reset alarm
-                    signal.alarm(0)  # type: ignore[attr-defined]
-                    signal.signal(signal.SIGALRM, old_handler)  # type: ignore[attr-defined]
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, old_handler)
 
                 return result
 

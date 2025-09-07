@@ -1,13 +1,17 @@
 #!/usr/bin/env python
-"""Browser module setup - uses base AMIModuleSetup and sets up Chrome."""
+"""Browser module setup - delegates to Base and optionally provisions Chrome.
 
+Uses stdlib logging only; third-party imports are deferred until after venv exists.
+"""
+
+import logging
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import yaml
-from loguru import logger
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 # Get this module's root
 MODULE_ROOT = Path(__file__).resolve().parent
@@ -53,6 +57,13 @@ def get_chrome_paths_from_config() -> tuple[Path | None, Path | None]:
         return None, None
 
     try:
+        # Defer third-party import until needed
+        try:
+            import yaml  # type: ignore  # noqa: PLC0415
+        except Exception:
+            logger.warning("[WARNING] PyYAML not available; cannot parse config. Skipping Chrome path detection.")
+            return None, None
+
         with config_path.open() as f:
             config = yaml.safe_load(f)
 
