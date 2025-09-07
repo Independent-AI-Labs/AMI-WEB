@@ -5,9 +5,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from browser.backend.utils.exceptions import InstanceError
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from browser.backend.utils.exceptions import InstanceError
 
 DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
 

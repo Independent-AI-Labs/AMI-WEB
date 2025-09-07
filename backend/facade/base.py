@@ -2,10 +2,11 @@
 
 from typing import Any
 
+from selenium.webdriver.common.by import By
+
 from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.utils.selectors import parse_selector
 from browser.backend.utils.threading import is_in_thread_context
-from selenium.webdriver.common.by import By
 
 
 class BaseController:

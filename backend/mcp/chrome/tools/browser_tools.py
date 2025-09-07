@@ -1,8 +1,9 @@
 """Browser lifecycle tools for Chrome MCP server."""
 
+from loguru import logger
+
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
-from loguru import logger
 
 
 async def browser_launch_tool(

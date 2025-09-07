@@ -12,11 +12,12 @@ from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
+from loguru import logger
+from PIL import Image
+
 from browser.backend.facade.base import BaseController
 from browser.backend.models.media import RecordingSession
 from browser.backend.utils.exceptions import MediaError
-from loguru import logger
-from PIL import Image
 
 if TYPE_CHECKING:
     from browser.backend.core.browser.instance import BrowserInstance

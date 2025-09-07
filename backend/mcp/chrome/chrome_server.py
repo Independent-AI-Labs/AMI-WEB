@@ -7,6 +7,8 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from typing import Any, Literal  # noqa: E402
 
+from mcp.server import FastMCP  # noqa: E402
+
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.backend.mcp.chrome.response import BrowserResponse  # noqa: E402
 from browser.backend.mcp.chrome.tools.browser_tools import (  # noqa: E402
@@ -45,7 +47,6 @@ from browser.backend.mcp.chrome.tools.screenshot_tools import (  # noqa: E402
     browser_element_screenshot_tool,
     browser_screenshot_tool,
 )
-from mcp.server import FastMCP  # noqa: E402
 
 
 class ChromeFastMCPServer:

@@ -1,12 +1,13 @@
 """Content extraction tools for Chrome MCP server."""
 
-from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.navigation.extractor import ContentExtractor
-from browser.backend.mcp.chrome.response import BrowserResponse
 from loguru import logger
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
+
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.facade.navigation.extractor import ContentExtractor
+from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_get_text_tool(manager: ChromeManager, selector: str) -> BrowserResponse:

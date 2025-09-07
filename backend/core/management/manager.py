@@ -10,6 +10,8 @@ from datetime import datetime  # noqa: E402
 from typing import Any  # noqa: E402
 
 from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
+from loguru import logger  # noqa: E402
+
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.browser_worker_pool import BrowserWorkerPool  # noqa: E402
@@ -22,7 +24,6 @@ from browser.backend.models.browser_properties import BrowserProperties, Browser
 from browser.backend.models.security import SecurityConfig  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
 from browser.backend.utils.exceptions import InstanceError  # noqa: E402
-from loguru import logger  # noqa: E402
 
 
 class ChromeManager:
@@ -42,8 +43,9 @@ class ChromeManager:
             warm_workers=self.config.get("backend.pool.warm_instances", 2),
             worker_ttl=self.config.get("backend.pool.instance_ttl", 3600),
             health_check_interval=self.config.get("backend.pool.health_check_interval", 30),
-            enable_hibernation=True,
-            hibernation_delay=60,  # Hibernate after 60 seconds of inactivity
+            acquire_timeout=self.config.get("backend.pool.acquire_timeout", 30),
+            enable_hibernation=self.config.get("backend.pool.enable_hibernation", True),
+            hibernation_delay=self.config.get("backend.pool.hibernation_delay", 60),
         )
 
         # Create the browser worker pool

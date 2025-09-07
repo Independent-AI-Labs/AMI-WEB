@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from browser.backend.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
-from browser.backend.utils.config import Config
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from browser.backend.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
+from browser.backend.utils.config import Config
 
 
 class PropertiesManager:

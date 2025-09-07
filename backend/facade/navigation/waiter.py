@@ -2,12 +2,13 @@
 
 import asyncio
 
-from browser.backend.facade.base import BaseController
-from browser.backend.models.browser import WaitCondition
-from browser.backend.utils.exceptions import NavigationError
 from loguru import logger
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
+
+from browser.backend.facade.base import BaseController
+from browser.backend.models.browser import WaitCondition
+from browser.backend.utils.exceptions import NavigationError
 
 
 class Waiter(BaseController):
