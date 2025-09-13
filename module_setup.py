@@ -4,6 +4,8 @@
 Uses stdlib logging only; third-party imports are deferred until after venv exists.
 """
 
+from __future__ import annotations
+
 import logging
 import shutil
 import subprocess
