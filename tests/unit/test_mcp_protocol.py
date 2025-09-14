@@ -1,6 +1,7 @@
 """Unit tests for MCP protocol implementation."""
 
 import json
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -11,7 +12,7 @@ import pytest
 class TestMCPProtocol:
     """Test MCP protocol handling without real browser or server."""
 
-    def test_request_format(self, mock_mcp_request):
+    def test_request_format(self, mock_mcp_request: Any) -> None:
         """Test MCP request format."""
         request = mock_mcp_request("tools/list", {"filter": "browser"}, 42)
 
@@ -21,7 +22,7 @@ class TestMCPProtocol:
         expected_id = 42
         assert request["id"] == expected_id
 
-    def test_response_format(self, mock_mcp_response):
+    def test_response_format(self, mock_mcp_response: Any) -> None:
         """Test MCP response format."""
         response = mock_mcp_response({"tools": ["browser_launch", "browser_navigate"]}, 42)
 
@@ -31,7 +32,7 @@ class TestMCPProtocol:
         assert response["id"] == expected_id
         assert "error" not in response
 
-    def test_error_response_format(self, mock_mcp_response):
+    def test_error_response_format(self, mock_mcp_response: Any) -> None:
         """Test MCP error response format."""
         error = {"code": -32601, "message": "Method not found"}
         response = mock_mcp_response(None, 42, error=error)
@@ -43,7 +44,7 @@ class TestMCPProtocol:
         assert "result" not in response
 
     @pytest.mark.asyncio
-    async def test_websocket_send_receive(self, mock_websocket):
+    async def test_websocket_send_receive(self, mock_websocket: Any) -> None:
         """Test WebSocket send/receive without real connection."""
         message = {"jsonrpc": "2.0", "method": "ping", "id": 1}
         mock_websocket.recv.return_value = json.dumps({"jsonrpc": "2.0", "result": "pong", "id": 1})
@@ -55,7 +56,7 @@ class TestMCPProtocol:
         assert json.loads(response)["result"] == "pong"
 
     @pytest.mark.asyncio
-    async def test_transport_message_handling(self, mock_transport):
+    async def test_transport_message_handling(self, mock_transport: Any) -> None:
         """Test transport layer message handling."""
         request = {"jsonrpc": "2.0", "method": "tools/list", "id": 1}
         response = {"jsonrpc": "2.0", "result": {"tools": []}, "id": 1}
@@ -73,9 +74,9 @@ class TestMCPProtocol:
 class TestMCPTools:
     """Test MCP tool definitions and validation."""
 
-    def test_browser_launch_tool_schema(self):
+    def test_browser_launch_tool_schema(self) -> None:
         """Test browser_launch tool schema."""
-        tool = {
+        tool: dict[str, Any] = {
             "name": "browser_launch",
             "description": "Launch a new browser instance",
             "inputSchema": {
@@ -88,9 +89,9 @@ class TestMCPTools:
         assert "headless" in tool["inputSchema"]["properties"]
         assert tool["inputSchema"]["properties"]["headless"]["type"] == "boolean"
 
-    def test_browser_navigate_tool_schema(self):
+    def test_browser_navigate_tool_schema(self) -> None:
         """Test browser_navigate tool schema."""
-        tool = {
+        tool: dict[str, Any] = {
             "name": "browser_navigate",
             "description": "Navigate to a URL",
             "inputSchema": {
@@ -105,22 +106,26 @@ class TestMCPTools:
         assert "instance_id" in tool["inputSchema"]["required"]
         assert "url" in tool["inputSchema"]["required"]
 
-    def test_tool_validation_missing_required(self):
+    def test_tool_validation_missing_required(self) -> None:
         """Test tool validation with missing required fields."""
-        schema = {"type": "object", "properties": {"instance_id": {"type": "string"}, "url": {"type": "string"}}, "required": ["instance_id", "url"]}
+        schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"instance_id": {"type": "string"}, "url": {"type": "string"}},
+            "required": ["instance_id", "url"],
+        }
 
         # Missing url - should fail validation
-        args = {"instance_id": "test-123"}
+        args: dict[str, Any] = {"instance_id": "test-123"}
         required = schema.get("required", [])
 
         missing = [field for field in required if field not in args]
         assert missing == ["url"]
 
-    def test_tool_validation_wrong_type(self):
+    def test_tool_validation_wrong_type(self) -> None:
         """Test tool validation with wrong type."""
 
         # String instead of boolean - should fail type check
-        args = {"headless": "true", "timeout": 30}
+        args: dict[str, Any] = {"headless": "true", "timeout": 30}
 
         assert not isinstance(args["headless"], bool)
         assert isinstance(args["timeout"], int | float)
@@ -130,7 +135,7 @@ class TestMCPServerHandlers:
     """Test MCP server request handlers without real implementation."""
 
     @pytest.mark.asyncio
-    async def test_initialize_handler(self):
+    async def test_initialize_handler(self) -> None:
         """Test initialize request handler."""
         # Mock the server directly
         mock_server = AsyncMock()
@@ -142,7 +147,7 @@ class TestMCPServerHandlers:
         assert "capabilities" in result
 
     @pytest.mark.asyncio
-    async def test_tools_list_handler(self):
+    async def test_tools_list_handler(self) -> None:
         """Test tools/list request handler."""
         # Mock the server directly
         mock_server = AsyncMock()
@@ -155,7 +160,7 @@ class TestMCPServerHandlers:
         assert len(result["tools"]) == expected_tool_count
 
     @pytest.mark.asyncio
-    async def test_tools_call_handler(self):
+    async def test_tools_call_handler(self) -> None:
         """Test tools/call request handler."""
         # Mock the server directly
         mock_server = AsyncMock()
@@ -168,7 +173,7 @@ class TestMCPServerHandlers:
         assert result["content"][0]["type"] == "text"
 
     @pytest.mark.asyncio
-    async def test_error_handler(self):
+    async def test_error_handler(self) -> None:
         """Test error handling in request processing."""
         # Mock the server directly
         mock_server = AsyncMock()
@@ -184,7 +189,7 @@ class TestMCPConnectionLifecycle:
     """Test MCP connection lifecycle management."""
 
     @pytest.mark.asyncio
-    async def test_connection_open(self, mock_websocket):
+    async def test_connection_open(self, mock_websocket: Any) -> None:
         """Test connection open sequence."""
         mock_websocket.closed = False
 
@@ -196,7 +201,7 @@ class TestMCPConnectionLifecycle:
         mock_websocket.send.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connection_close(self, mock_websocket):
+    async def test_connection_close(self, mock_websocket: Any) -> None:
         """Test connection close sequence."""
         mock_websocket.closed = False
 
@@ -208,7 +213,7 @@ class TestMCPConnectionLifecycle:
         assert mock_websocket.closed
 
     @pytest.mark.asyncio
-    async def test_connection_error_handling(self, mock_websocket):
+    async def test_connection_error_handling(self, mock_websocket: Any) -> None:
         """Test connection error handling."""
         mock_websocket.send.side_effect = ConnectionError("Connection lost")
 
@@ -218,7 +223,7 @@ class TestMCPConnectionLifecycle:
         assert str(exc.value) == "Connection lost"
 
     @pytest.mark.asyncio
-    async def test_reconnection_logic(self, mock_websocket):
+    async def test_reconnection_logic(self, mock_websocket: Any) -> None:
         """Test reconnection logic."""
         mock_websocket.closed = True
 

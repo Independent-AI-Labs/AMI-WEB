@@ -3,6 +3,7 @@
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -11,16 +12,16 @@ class TestAntidetectionScripts:
     """Test antidetection scripts functionality."""
 
     @pytest.fixture
-    def script_dir(self):
+    def script_dir(self) -> Path:
         """Get the scripts directory path."""
         return Path(__file__).parent.parent.parent / "web" / "scripts"
 
     @pytest.fixture
-    def extension_dir(self):
+    def extension_dir(self) -> Path:
         """Get the extension directory path."""
         return Path(__file__).parent.parent.parent / "web" / "extensions" / "antidetect"
 
-    def test_scripts_exist(self, script_dir):
+    def test_scripts_exist(self, script_dir: Path) -> None:
         """Test that all required scripts exist."""
         required_scripts = ["complete-antidetect.js", "antidetect-optimized.js", "config-loader.js"]
 
@@ -28,7 +29,7 @@ class TestAntidetectionScripts:
             script_path = script_dir / script
             assert script_path.exists(), f"Script {script} not found"
 
-    def test_extension_files_exist(self, extension_dir):
+    def test_extension_files_exist(self, extension_dir: Path) -> None:
         """Test that extension files exist."""
         required_files = ["manifest.json", "content.js", "inject.js"]
 
@@ -36,7 +37,7 @@ class TestAntidetectionScripts:
             file_path = extension_dir / file
             assert file_path.exists(), f"Extension file {file} not found"
 
-    def test_manifest_valid(self, extension_dir):
+    def test_manifest_valid(self, extension_dir: Path) -> None:
         """Test that manifest.json is valid."""
         manifest_path = extension_dir / "manifest.json"
 
@@ -59,7 +60,7 @@ class TestAntidetectionScripts:
         assert content_scripts["matches"] == ["http://*/*", "https://*/*"]
         assert "<all_urls>" not in str(manifest)
 
-    def test_config_file_valid(self):
+    def test_config_file_valid(self) -> None:
         """Test that config file is valid JSON."""
         config_path = Path(__file__).parent.parent.parent / "web" / "config" / "antidetect-config.json"
 
@@ -78,7 +79,7 @@ class TestAntidetectionScripts:
         assert features["chrome"]["enabled"] is True
         assert features["permissions"]["enabled"] is True
 
-    def test_scripts_no_syntax_errors(self, script_dir):
+    def test_scripts_no_syntax_errors(self, script_dir: Path) -> None:
         """Test that JavaScript files have no obvious syntax errors."""
         scripts = ["complete-antidetect.js", "config-loader.js"]
 
@@ -96,7 +97,7 @@ class TestAntidetectionScripts:
             assert "try {" in content, f"No error handling in {script_name}"
             assert "} catch" in content, f"No catch blocks in {script_name}"
 
-    def test_no_polling_loops(self, script_dir):
+    def test_no_polling_loops(self, script_dir: Path) -> None:
         """Test that scripts don't use polling loops."""
         script_path = script_dir / "complete-antidetect.js"
 
@@ -108,7 +109,7 @@ class TestAntidetectionScripts:
         assert "while (true)" not in content, "Script contains infinite loop"
         assert "while(true)" not in content, "Script contains infinite loop"
 
-    def test_no_global_namespace_pollution(self, extension_dir):
+    def test_no_global_namespace_pollution(self, extension_dir: Path) -> None:
         """Test that inject.js doesn't pollute global namespace."""
         inject_path = extension_dir / "inject.js"
 
@@ -128,7 +129,7 @@ class TestAntidetectionScripts:
         content_stripped = content_no_comments.strip()
         assert content_stripped.startswith("(function"), "Script not wrapped in IIFE after comments"
 
-    def test_webdriver_removal_optimized(self, script_dir):
+    def test_webdriver_removal_optimized(self, script_dir: Path) -> None:
         """Test that webdriver removal is optimized."""
         script_path = script_dir / "complete-antidetect.js"
 
@@ -148,7 +149,7 @@ class TestAntidetectionScripts:
         max_webdriver_methods = 2
         assert method_count <= max_webdriver_methods, f"Too many webdriver removal methods: {method_count}"
 
-    def test_extension_inject_script_wrapped(self, extension_dir):
+    def test_extension_inject_script_wrapped(self, extension_dir: Path) -> None:
         """Test that inject.js is properly wrapped."""
         inject_path = extension_dir / "inject.js"
 
@@ -170,7 +171,7 @@ class TestAntidetectionIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_webdriver_property_removed(self, antidetect_browser):
+    async def test_webdriver_property_removed(self, antidetect_browser: Any) -> None:
         """Test that webdriver property is removed in browser."""
         driver = antidetect_browser.driver
 
@@ -201,7 +202,7 @@ class TestAntidetectionIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_chrome_object_exists(self, antidetect_browser):
+    async def test_chrome_object_exists(self, antidetect_browser: Any) -> None:
         """Test that chrome object is properly defined."""
         driver = antidetect_browser.driver
 

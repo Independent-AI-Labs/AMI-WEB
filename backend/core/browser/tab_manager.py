@@ -38,7 +38,7 @@ class TabManager:
         """Ensure anti-detection is applied to the current tab."""
         # Cleanup closed tabs automatically to prevent memory leak
         self.cleanup_closed_tabs()
-        current_handle = self.driver.current_window_handle
+        current_handle: str = str(self.driver.current_window_handle)
 
         # Inject browser properties if available
         if self.properties_manager and self.instance_id:
@@ -68,7 +68,7 @@ class TabManager:
         """Open a new tab with anti-detection and optionally custom properties."""
         # Open new tab
         self.driver.switch_to.new_window("tab")
-        current_handle = self.driver.current_window_handle
+        current_handle: str = str(self.driver.current_window_handle)
 
         # Set custom properties for this tab if provided
         if properties and self.properties_manager and self.instance_id:

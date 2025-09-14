@@ -55,12 +55,25 @@ max-branches = 16
     "PLR2004",  # Magic numbers are OK in tests
     "B007",     # Unused loop variables are OK in tests
     "PLW0603",  # Global statements OK in tests for process isolation testing
+    "ARG001",   # Unused test fixtures/args are fine
+    "C901",     # Complex test helpers are acceptable
+    "UP022",    # subprocess capture_output preference not critical in tests
+    "S112",     # try/except/continue acceptable in tests
+    "S110",     # try/except/pass acceptable in tests
+    "UP007",    # Python 3.10+ union syntax not required in tests
 ]
 "backend/dataops/implementations/pgvector_dao.py" = [
     "S608",     # SQL injection - we validate identifiers with _is_valid_identifier
 ]
 "backend/dataops/implementations/postgresql_dao.py" = [
     "S608",     # SQL injection - we validate identifiers with _is_valid_identifier
+]
+"backend/core/browser/lifecycle.py" = [
+    "SIM105",  # contextlib.suppress is stylistic; leave for now
+    "S110",    # try/except/pass used to tolerate browser state edges
+]
+"scripts/setup_chrome.py" = [
+    "PLR0912", # slightly higher branching acceptable for setup script
 ]
 
 [format]

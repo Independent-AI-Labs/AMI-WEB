@@ -18,7 +18,7 @@ class TestChromeFastMCPServer:
     """Test Chrome FastMCP server using official MCP client."""
 
     @pytest.mark.asyncio
-    async def test_chrome_server_with_client(self):
+    async def test_chrome_server_with_client(self) -> None:
         """Test Chrome FastMCP server using official MCP client."""
         # Get the server script path
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
@@ -52,7 +52,7 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration  # Mark as integration test that requires Chrome
-    async def test_browser_launch_and_terminate(self):
+    async def test_browser_launch_and_terminate(self) -> None:
         """Test launching and terminating a browser instance."""
         server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
 

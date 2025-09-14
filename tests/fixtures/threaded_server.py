@@ -1,10 +1,13 @@
 """Threaded HTML test server to avoid event loop blocking."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import threading
 import time
 from pathlib import Path
+from typing import Optional
 
 from aiohttp import web
 
@@ -14,7 +17,17 @@ logger = logging.getLogger(__name__)
 class ThreadedHTMLServer:
     """HTML server that runs in its own thread to avoid blocking."""
 
-    def __init__(self, port: int = 8889):
+    port: int
+    base_url: str
+    thread: Optional[threading.Thread]
+    loop: Optional[asyncio.AbstractEventLoop]
+    runner: Optional[web.AppRunner]
+    site: Optional[web.TCPSite]
+    ready: threading.Event
+    stop_event: threading.Event
+    base_path: Path
+
+    def __init__(self, port: int = 8889) -> None:
         self.port = port
         self.base_url = f"http://127.0.0.1:{port}"
         self.thread = None
@@ -25,27 +38,30 @@ class ThreadedHTMLServer:
         self.stop_event = threading.Event()
         self.base_path = Path(__file__).parent / "html"
 
-    def _run_server(self):
+    def _run_server(self) -> None:
         """Run server in thread with its own event loop."""
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        loop = asyncio.new_event_loop()
+        self.loop = loop
+        asyncio.set_event_loop(loop)
 
         try:
-            self.loop.run_until_complete(self._start_server())
+            loop.run_until_complete(self._start_server())
             self.ready.set()
 
             # Keep running until stop is requested
             while not self.stop_event.is_set():
-                self.loop.run_until_complete(asyncio.sleep(0.1))
+                loop.run_until_complete(asyncio.sleep(0.1))
 
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - best-effort logging
             logger.error(f"Server error: {e}")
             self.ready.set()  # Signal ready even on error
         finally:
-            self.loop.run_until_complete(self._stop_server())
-            self.loop.close()
+            try:
+                loop.run_until_complete(self._stop_server())
+            finally:
+                loop.close()
 
-    async def _start_server(self):
+    async def _start_server(self) -> None:
         """Start the aiohttp server."""
         app = web.Application()
 
@@ -66,15 +82,15 @@ class ThreadedHTMLServer:
 
         logger.info(f"Threaded test server started on {self.base_url}")
 
-    async def _stop_server(self):
+    async def _stop_server(self) -> None:
         """Stop the aiohttp server."""
-        if self.site:
+        if self.site is not None:
             await self.site.stop()
-        if self.runner:
+        if self.runner is not None:
             await self.runner.cleanup()
         logger.info("Threaded test server stopped")
 
-    def start(self):
+    def start(self) -> str:
         """Start the server in a thread."""
         self.thread = threading.Thread(target=self._run_server, daemon=True)
         self.thread.start()
@@ -87,23 +103,23 @@ class ThreadedHTMLServer:
         time.sleep(0.1)
         return self.base_url
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the server thread."""
         self.stop_event.set()
-        if self.thread:
+        if self.thread is not None:
             self.thread.join(timeout=2)
             if self.thread.is_alive():
                 logger.warning("Server thread did not stop gracefully")
         # Force cleanup the event loop if it exists
-        if self.loop and not self.loop.is_closed():
+        if self.loop is not None and not self.loop.is_closed():
             try:
                 self.loop.stop()
                 self.loop.close()
-            except Exception as e:
+            except Exception as e:  # pragma: no cover - best-effort logging
                 logger.error(f"Error closing loop: {e}")
         logger.info("Server thread stopped")
 
-    async def _handle_login(self, request):
+    async def _handle_login(self, request: web.Request) -> web.Response:
         """Handle login POST requests."""
         data = await request.post()
         username = data.get("username")
@@ -113,18 +129,22 @@ class ThreadedHTMLServer:
             return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
         return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
 
-    async def _handle_api_data(self, _request):
+    async def _handle_api_data(self, _request: web.Request) -> web.Response:
         """Handle API data requests."""
         await asyncio.sleep(0.1)  # Simulate delay
 
         return web.json_response(
             {
-                "data": [{"id": 1, "name": "Item 1", "value": 100}, {"id": 2, "name": "Item 2", "value": 200}, {"id": 3, "name": "Item 3", "value": 300}],
+                "data": [
+                    {"id": 1, "name": "Item 1", "value": 100},
+                    {"id": 2, "name": "Item 2", "value": 200},
+                    {"id": 3, "name": "Item 3", "value": 300},
+                ],
                 "timestamp": time.time(),
             },
         )
 
-    async def _handle_submit(self, request):
+    async def _handle_submit(self, request: web.Request) -> web.Response:
         """Handle form submissions."""
         data = await request.json()
 

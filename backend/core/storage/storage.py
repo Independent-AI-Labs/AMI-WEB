@@ -94,7 +94,7 @@ class BrowserStorage:
         if not driver:
             raise InstanceError("Browser not initialized")
 
-        cookies = driver.get_cookies()
+        cookies: list[dict[str, Any]] = driver.get_cookies()
 
         # Save to profile if configured
         if self._profile_name:
@@ -137,9 +137,9 @@ class BrowserStorage:
 
         try:
             with cookies_file.open() as f:
-                cookies = json.load(f)
+                cookies: list[dict[str, Any]] = json.load(f)
             logger.debug(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
-            return cookies  # type: ignore[no-any-return]
+            return cookies
         except Exception as e:
             logger.warning(f"Failed to load cookies from profile: {e}")
             return None

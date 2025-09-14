@@ -12,7 +12,7 @@ class TestSessionManager:
     """Test SessionManager without file I/O."""
 
     @pytest.mark.asyncio
-    async def test_initialize(self):
+    async def test_initialize(self) -> None:
         """Test session manager initialization."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -27,7 +27,7 @@ class TestSessionManager:
             manager.initialize.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_session(self):
+    async def test_create_session(self) -> None:
         """Test creating a new session."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -40,7 +40,7 @@ class TestSessionManager:
             manager.create_session.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_save_session_data(self):
+    async def test_save_session_data(self) -> None:
         """Test saving session data."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -59,7 +59,7 @@ class TestSessionManager:
             manager.save_session.assert_called_once_with("session-123", session_data)
 
     @pytest.mark.asyncio
-    async def test_load_session(self):
+    async def test_load_session(self) -> None:
         """Test loading session data."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -79,7 +79,7 @@ class TestSessionManager:
             manager.get_session.assert_called_once_with("session-123")
 
     @pytest.mark.asyncio
-    async def test_delete_session(self):
+    async def test_delete_session(self) -> None:
         """Test deleting a session."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -92,7 +92,7 @@ class TestSessionManager:
             assert "session-456" in manager.sessions
             manager.delete_session.assert_called_once_with("session-123")
 
-    def test_list_sessions(self):
+    def test_list_sessions(self) -> None:
         """Test listing all sessions."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -114,7 +114,7 @@ class TestSessionManager:
 class TestSessionPersistence:
     """Test session persistence logic."""
 
-    def test_serialize_session(self):
+    def test_serialize_session(self) -> None:
         """Test serializing session data."""
         session_data = {
             "id": "session-123",
@@ -130,7 +130,7 @@ class TestSessionPersistence:
         assert "cookies" in serialized
         assert "local_storage" in serialized
 
-    def test_deserialize_session(self):
+    def test_deserialize_session(self) -> None:
         """Test deserializing session data."""
         json_data = """{
             "id": "session-123",
@@ -144,7 +144,7 @@ class TestSessionPersistence:
         assert len(session_data["cookies"]) == 1
         assert session_data["url"] == "https://example.com"
 
-    def test_validate_session_data(self):
+    def test_validate_session_data(self) -> None:
         """Test session data validation."""
         valid_session = {
             "id": "session-123",
@@ -171,7 +171,7 @@ class TestSessionPersistence:
 class TestSessionMerging:
     """Test session merging and update operations."""
 
-    def test_merge_cookies(self):
+    def test_merge_cookies(self) -> None:
         """Test merging cookies from multiple sources."""
         existing_cookies = [
             {"name": "session", "value": "old", "domain": ".example.com"},
@@ -193,7 +193,7 @@ class TestSessionMerging:
         session_cookie = next(c for c in result if c["name"] == "session")
         assert session_cookie["value"] == "new"  # New value overrides old
 
-    def test_merge_local_storage(self):
+    def test_merge_local_storage(self) -> None:
         """Test merging local storage data."""
         existing_storage = {"key1": "value1", "key2": "value2"}
         new_storage = {"key2": "updated", "key3": "value3"}
@@ -206,7 +206,7 @@ class TestSessionMerging:
         assert merged["key3"] == "value3"  # New key
 
     @pytest.mark.asyncio
-    async def test_update_session(self):
+    async def test_update_session(self) -> None:
         """Test updating an existing session."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -233,7 +233,7 @@ class TestSessionCleanup:
     """Test session cleanup and expiration."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_sessions(self):
+    async def test_cleanup_expired_sessions(self) -> None:
         """Test cleaning up expired sessions."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             current_time = time.time()
@@ -258,7 +258,7 @@ class TestSessionCleanup:
             manager.cleanup_expired.assert_called_once_with(max_age_seconds)
 
     @pytest.mark.asyncio
-    async def test_cleanup_invalid_sessions(self):
+    async def test_cleanup_invalid_sessions(self) -> None:
         """Test cleaning up invalid sessions."""
         with patch("browser.backend.core.management.session_manager.SessionManager") as mock_manager_class:
             manager = mock_manager_class()

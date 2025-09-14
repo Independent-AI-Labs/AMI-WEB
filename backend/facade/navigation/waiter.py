@@ -148,10 +148,10 @@ class Waiter(BaseController):
 
             if self._is_in_thread_context():
                 wait.until(lambda driver: driver.current_url != current_url)
-                return self.driver.current_url
+                return str(self.driver.current_url)
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, wait.until, lambda driver: driver.current_url != current_url)
-            return self.driver.current_url
+            return str(self.driver.current_url)
 
         except Exception as e:
             logger.warning(f"URL change wait timeout: {e}")

@@ -9,7 +9,7 @@ class TestNavigationLogic:
     """Test navigation logic without real browser."""
 
     @pytest.mark.asyncio
-    async def test_wait_for_element_logic(self):
+    async def test_wait_for_element_logic(self) -> None:
         """Test wait for element logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -22,7 +22,7 @@ class TestNavigationLogic:
             instance.wait_for_element.assert_called_once_with("#content", timeout=5)
 
     @pytest.mark.asyncio
-    async def test_page_content_extraction(self):
+    async def test_page_content_extraction(self) -> None:
         """Test page content extraction logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -38,7 +38,7 @@ class TestInputSimulationLogic:
     """Test input simulation logic without real browser."""
 
     @pytest.mark.asyncio
-    async def test_click_element_logic(self):
+    async def test_click_element_logic(self) -> None:
         """Test click element logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -50,7 +50,7 @@ class TestInputSimulationLogic:
             instance.click_element.assert_called_once_with("#button")
 
     @pytest.mark.asyncio
-    async def test_type_text_logic(self):
+    async def test_type_text_logic(self) -> None:
         """Test type text logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -62,7 +62,7 @@ class TestInputSimulationLogic:
             instance.type_text.assert_called_once_with("#input", "test text")
 
     @pytest.mark.asyncio
-    async def test_checkbox_interaction_logic(self):
+    async def test_checkbox_interaction_logic(self) -> None:
         """Test checkbox interaction logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -79,7 +79,7 @@ class TestScreenshotLogic:
     """Test screenshot logic without real browser."""
 
     @pytest.mark.asyncio
-    async def test_viewport_screenshot_logic(self):
+    async def test_viewport_screenshot_logic(self) -> None:
         """Test viewport screenshot logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -91,7 +91,7 @@ class TestScreenshotLogic:
             instance.screenshot_viewport.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_element_screenshot_logic(self):
+    async def test_element_screenshot_logic(self) -> None:
         """Test element screenshot logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -107,7 +107,7 @@ class TestPoolManagement:
     """Test browser pool management logic."""
 
     @pytest.mark.asyncio
-    async def test_pool_instance_creation(self):
+    async def test_pool_instance_creation(self) -> None:
         """Test pool instance creation logic."""
         with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager:
             manager = mock_manager()
@@ -121,7 +121,7 @@ class TestPoolManagement:
             manager.create_pool_instance.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_pool_warm_instances(self):
+    async def test_pool_warm_instances(self) -> None:
         """Test pool warm instances logic."""
         with patch("browser.backend.core.management.manager.ChromeManager") as mock_manager:
             manager = mock_manager()
@@ -143,7 +143,7 @@ class TestScriptInjection:
     """Test script injection logic."""
 
     @pytest.mark.asyncio
-    async def test_inject_script_logic(self):
+    async def test_inject_script_logic(self) -> None:
         """Test script injection logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()
@@ -156,7 +156,7 @@ class TestScriptInjection:
             instance.inject_script.assert_called_once_with(script)
 
     @pytest.mark.asyncio
-    async def test_modify_dom_logic(self):
+    async def test_modify_dom_logic(self) -> None:
         """Test DOM modification logic."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance:
             instance = mock_instance()

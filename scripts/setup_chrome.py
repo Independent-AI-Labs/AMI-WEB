@@ -35,19 +35,26 @@ def print_colored(message: str, color: str = "") -> None:
 
 
 def get_platform_info() -> tuple[str, str]:
-    """Get platform and architecture information."""
+    """Get platform and architecture information for Chromium snapshots and drivers.
+
+    Returns a tuple of (snapshot_platform, arch_label)
+    where snapshot_platform matches the Google Chromium snapshot folder naming.
+    """
     system = platform.system()
     machine = platform.machine().lower()
 
     if system == "Windows":
-        plat = "Win"
-        arch = "x64" if "64" in machine or "amd64" in machine else "x32"
+        is_64 = ("64" in machine) or ("amd64" in machine) or ("x86_64" in machine)
+        plat = "Win_x64" if is_64 else "Win"
+        arch = "x64" if is_64 else "x32"
     elif system == "Darwin":
-        plat = "Mac"
-        arch = "arm64" if machine == "arm64" else "x64"
+        is_arm = machine in {"arm64", "aarch64"}
+        plat = "Mac_Arm" if is_arm else "Mac"
+        arch = "arm64" if is_arm else "x64"
     elif system == "Linux":
-        plat = "Linux"
-        arch = "x64"
+        is_64 = ("64" in machine) or ("x86_64" in machine)
+        plat = "Linux_x64" if is_64 else "Linux"
+        arch = "x64" if is_64 else "x32"
     else:
         raise RuntimeError(f"Unsupported platform: {system}")
 
@@ -95,6 +102,12 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
         chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
 
     if chrome_exe.exists():
+        # Ensure executable bit is set on Unix
+        if system != "Windows":
+            try:
+                chrome_exe.chmod(0o755)
+            except Exception as e:
+                print_colored(f"Warning: failed to set executable bit on Chrome: {e}", YELLOW)
         print_colored(f"Chrome already exists at {chrome_dir}", GREEN)
         return chrome_dir
 
@@ -143,6 +156,21 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
 
     # Clean up zip file
     zip_path.unlink()
+
+    # Ensure chrome binary is executable on Unix-like systems
+    try:
+        if system == "Windows":
+            pass
+        elif system == "Darwin":
+            chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+            if chrome_exe.exists():
+                chrome_exe.chmod(0o755)
+        else:  # Linux
+            chrome_exe = chrome_dir / "chrome"
+            if chrome_exe.exists():
+                chrome_exe.chmod(0o755)
+    except Exception as e:
+        print_colored(f"Warning: failed to set executable bit on Chrome: {e}", YELLOW)
 
     # Remove quarantine on macOS
     if system == "Darwin":

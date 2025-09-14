@@ -61,7 +61,7 @@ def get_chrome_paths_from_config() -> tuple[Path | None, Path | None]:
     try:
         # Defer third-party import until needed
         try:
-            import yaml  # type: ignore  # noqa: PLC0415
+            import yaml  # noqa: PLC0415
         except Exception:
             logger.warning("[WARNING] PyYAML not available; cannot parse config. Skipping Chrome path detection.")
             return None, None
@@ -96,13 +96,16 @@ def setup_chrome_if_needed() -> None:
         logger.info("Using default locations from config.sample.yaml")
         # Fallback to sample config defaults
         if sys.platform == "win32":
+            # Match installer output locations
             chrome_path = MODULE_ROOT / "build" / "chromium-win" / "chrome.exe"
-            chromedriver_path = MODULE_ROOT / "build" / "chromedriver-win64" / "chromedriver.exe"
+            chromedriver_path = MODULE_ROOT / "build" / "chromedriver.exe"
         elif sys.platform == "darwin":
-            chrome_path = MODULE_ROOT / "build" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+            # Our setup script installs under build/chromium-mac
+            chrome_path = MODULE_ROOT / "build" / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
             chromedriver_path = MODULE_ROOT / "build" / "chromedriver"
         else:  # Linux
-            chrome_path = MODULE_ROOT / "build" / "chrome-linux" / "chrome"
+            # Our setup script installs under build/chromium-linux
+            chrome_path = MODULE_ROOT / "build" / "chromium-linux" / "chrome"
             chromedriver_path = MODULE_ROOT / "build" / "chromedriver"
 
     # Check if both executables exist

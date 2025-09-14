@@ -113,7 +113,18 @@ class BrowserLifecycle:
         if not patched_driver_path:
             raise InstanceError("ChromeDriver path is not set after patching")
         self._service = Service(executable_path=patched_driver_path)
-        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+        try:
+            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+        except WebDriverException as e:
+            logger.warning(f"Primary Chrome launch failed, applying safe flags and retrying: {e}")
+            # Add safe fallback flags for constrained/headless environments
+            for arg in ["--disable-gpu", "--use-gl=swiftshader", "--no-zygote"]:
+                try:
+                    chrome_options.add_argument(arg)
+                except Exception:
+                    pass
+            # Retry once
+            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
 
         # Set timeouts
         driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
@@ -140,7 +151,18 @@ class BrowserLifecycle:
         if not chromedriver_path:
             raise InstanceError("ChromeDriver path is not set")
         self._service = Service(executable_path=chromedriver_path)
-        driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+        try:
+            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+        except WebDriverException as e:
+            logger.warning(f"Primary Chrome launch failed, applying safe flags and retrying: {e}")
+            # Add safe fallback flags for constrained/headless environments
+            for arg in ["--disable-gpu", "--use-gl=swiftshader", "--no-zygote"]:
+                try:
+                    chrome_options.add_argument(arg)
+                except Exception:
+                    pass
+            # Retry once
+            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
 
         # Set timeouts
         driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)

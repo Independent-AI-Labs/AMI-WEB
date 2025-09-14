@@ -4,7 +4,7 @@
 backend:
   browser:
     # Path to Chrome/Chromium executable
-    chrome_binary_path: "./build/chrome-linux/chrome"
+    chrome_binary_path: "./build/chromium-linux/chrome"
     
     # Path to ChromeDriver executable  
     chromedriver_path: "./build/chromedriver"

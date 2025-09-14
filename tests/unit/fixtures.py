@@ -8,7 +8,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_browser_instance():
+def mock_browser_instance() -> Any:
     """Create a mock browser instance for unit testing."""
     instance = MagicMock()
     instance.id = "test-instance-123"
@@ -23,7 +23,7 @@ def mock_browser_instance():
 
 
 @pytest.fixture
-def mock_chrome_manager():
+def mock_chrome_manager() -> Any:
     """Create a mock ChromeManager for unit testing."""
     manager = MagicMock()
     manager.create_instance = AsyncMock()
@@ -37,7 +37,7 @@ def mock_chrome_manager():
 
 
 @pytest.fixture
-def mock_websocket():
+def mock_websocket() -> Any:
     """Create a mock WebSocket connection for unit testing."""
     ws = AsyncMock()
     ws.send = AsyncMock()
@@ -48,20 +48,20 @@ def mock_websocket():
 
 
 @pytest.fixture
-def mock_mcp_request():
+def mock_mcp_request() -> Any:
     """Create a mock MCP request."""
 
-    def _make_request(method: str, params: dict[str, Any] | None = None, request_id: int = 1):
+    def _make_request(method: str, params: dict[str, Any] | None = None, request_id: int = 1) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": request_id}
 
     return _make_request
 
 
 @pytest.fixture
-def mock_mcp_response():
+def mock_mcp_response() -> Any:
     """Create a mock MCP response."""
 
-    def _make_response(result: Any, response_id: int = 1, error: dict[str, Any] | None = None):
+    def _make_response(result: Any, response_id: int = 1, error: dict[str, Any] | None = None) -> dict[str, Any]:
         if error:
             return {"jsonrpc": "2.0", "error": error, "id": response_id}
         return {"jsonrpc": "2.0", "result": result, "id": response_id}
@@ -70,7 +70,7 @@ def mock_mcp_response():
 
 
 @pytest.fixture
-def mock_session_manager():
+def mock_session_manager() -> Any:
     """Create a mock SessionManager for unit testing."""
     manager = MagicMock()
     manager.create_session = AsyncMock(return_value="session-123")
@@ -82,7 +82,7 @@ def mock_session_manager():
 
 
 @pytest.fixture
-def mock_profile_manager():
+def mock_profile_manager() -> Any:
     """Create a mock ProfileManager for unit testing."""
     manager = MagicMock()
     manager.create_profile = AsyncMock(return_value="profile-123")
@@ -93,7 +93,7 @@ def mock_profile_manager():
 
 
 @pytest.fixture
-def sample_html_content():
+def sample_html_content() -> str:
     """Sample HTML content for testing."""
     return """
     <!DOCTYPE html>
@@ -113,7 +113,7 @@ def sample_html_content():
 
 
 @pytest.fixture
-def sample_cookies():
+def sample_cookies() -> list[dict[str, Any]]:
     """Sample cookies for testing."""
     return [
         {"name": "session_id", "value": "abc123", "domain": ".example.com", "path": "/", "secure": True, "httpOnly": True},
@@ -122,7 +122,7 @@ def sample_cookies():
 
 
 @pytest.fixture
-def sample_network_logs():
+def sample_network_logs() -> list[dict[str, Any]]:
     """Sample network logs for testing."""
     return [
         {"url": "https://example.com/api/data", "method": "GET", "status_code": 200, "response_time": 150, "size": 2048},
@@ -133,34 +133,34 @@ def sample_network_logs():
 class MockTransport:
     """Mock transport for testing MCP communication."""
 
-    def __init__(self):
-        self.messages = []
-        self.responses = []
+    def __init__(self) -> None:
+        self.messages: list[dict[str, Any]] = []
+        self.responses: list[dict[str, Any]] = []
         self.closed = False
 
-    async def send(self, message: str):
+    async def send(self, message: str) -> Any:
         """Mock send method."""
         self.messages.append(json.loads(message))
         if self.responses:
             return self.responses.pop(0)
         return None
 
-    async def receive(self):
+    async def receive(self) -> str | None:
         """Mock receive method."""
         if self.responses:
             return json.dumps(self.responses.pop(0))
         return None
 
-    def add_response(self, response: dict[str, Any]):
+    def add_response(self, response: dict[str, Any]) -> None:
         """Add a response to be returned."""
         self.responses.append(response)
 
-    async def close(self):
+    async def close(self) -> None:
         """Mock close method."""
         self.closed = True
 
 
 @pytest.fixture
-def mock_transport():
+def mock_transport() -> MockTransport:
     """Create a mock transport for unit testing."""
     return MockTransport()
