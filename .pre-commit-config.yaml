@@ -5,10 +5,13 @@ repos:
     hooks:
       # Linting (includes security checks)
       - id: ruff
-        args: [ --fix, --exit-non-zero-on-fix ]
+        args: [ --fix, --exit-non-zero-on-fix, . ]
+        pass_filenames: false
         stages: [ pre-commit ]
       # Formatting (replaces black)
       - id: ruff-format
+        args: [ . ]
+        pass_filenames: false
         stages: [ pre-commit ]
 
   # Type checking
@@ -16,18 +19,19 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: "bash -lc 'cd .. && browser/.venv/bin/python -m mypy browser/backend --config-file=browser/mypy.ini'"
+        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser.backend.mcp -p browser.scripts --config-file=browser/mypy.precommit.ini"'
         language: system
         types: [ python ]
         require_serial: true
         stages: [ pre-commit ]
         pass_filenames: false
 
+  # Run tests on pre-push
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: python scripts/run_tests.py
+        entry: bash -c "./.venv/bin/python -m pytest -q"
         language: system
         pass_filenames: false
         always_run: true
