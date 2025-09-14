@@ -5,6 +5,7 @@ import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
+from typing import Any
 
 import pytest
 from loguru import logger
@@ -29,16 +30,16 @@ _server_url = f"http://localhost:{_server_port}"
 class HTTPHandler(SimpleHTTPRequestHandler):
     """Custom HTTP handler for test files."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Set directory to test fixtures
         test_dir = Path(__file__).parent.parent / "fixtures" / "html"
         super().__init__(*args, directory=str(test_dir), **kwargs)
 
-    def log_message(self, format, *args):  # noqa: A002
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         """Suppress HTTP server logs."""
 
 
-def start_test_server():
+def start_test_server() -> None:
     """Start test server in background thread."""
     global _server_thread  # noqa: PLW0603
 
@@ -58,7 +59,7 @@ def start_test_server():
             raise
 
 
-def setup_module():
+def setup_module() -> None:
     """Set up test server once for all tests."""
     global _server_thread  # noqa: PLW0602
 
@@ -68,7 +69,7 @@ def setup_module():
     logger.info("Test server started for module")
 
 
-def teardown_module():
+def teardown_module() -> None:
     """Clean up test server."""
     logger.info("Module teardown complete")
 
@@ -81,7 +82,7 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_navigate_to_page(self, browser_instance):
+    async def test_navigate_to_page(self, browser_instance: Any) -> None:
         """Test basic page navigation."""
         browser = browser_instance
         nav = Navigator(browser)
@@ -96,7 +97,7 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_wait_for_element(self, browser_instance):
+    async def test_wait_for_element(self, browser_instance: Any) -> None:
         """Test waiting for elements to appear."""
         browser = browser_instance
         waiter = Waiter(browser)
@@ -115,7 +116,7 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_execute_script(self, browser_instance):
+    async def test_execute_script(self, browser_instance: Any) -> None:
         """Test JavaScript execution."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -140,7 +141,7 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_get_page_content(self, browser_instance):
+    async def test_get_page_content(self, browser_instance: Any) -> None:
         """Test retrieving page HTML content."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -163,7 +164,7 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_click_element(self, browser_instance):
+    async def test_click_element(self, browser_instance: Any) -> None:
         """Test clicking elements."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -190,7 +191,7 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_type_text(self, browser_instance):
+    async def test_type_text(self, browser_instance: Any) -> None:
         """Test typing text into inputs."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -213,7 +214,7 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_checkbox_interaction(self, browser_instance):
+    async def test_checkbox_interaction(self, browser_instance: Any) -> None:
         """Test checkbox interactions."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -236,7 +237,7 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_form_submission(self, browser_instance):
+    async def test_form_submission(self, browser_instance: Any) -> None:
         """Test complete form submission flow."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -272,7 +273,7 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_viewport_screenshot(self, browser_instance):
+    async def test_viewport_screenshot(self, browser_instance: Any) -> None:
         """Test capturing viewport screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
@@ -289,7 +290,7 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_element_screenshot(self, browser_instance):
+    async def test_element_screenshot(self, browser_instance: Any) -> None:
         """Test capturing element screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
@@ -303,7 +304,7 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_full_page_screenshot(self, browser_instance):
+    async def test_full_page_screenshot(self, browser_instance: Any) -> None:
         """Test capturing full page screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
@@ -321,7 +322,7 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_ajax_content_loading(self, browser_instance):
+    async def test_ajax_content_loading(self, browser_instance: Any) -> None:
         """Test waiting for AJAX content."""
         browser = browser_instance
         waiter = Waiter(browser)
@@ -343,7 +344,7 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_modal_interaction(self, browser_instance):
+    async def test_modal_interaction(self, browser_instance: Any) -> None:
         """Test modal dialog interaction."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -374,7 +375,7 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_infinite_scroll(self, browser_instance):
+    async def test_infinite_scroll(self, browser_instance: Any) -> None:
         """Test infinite scroll functionality."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -417,7 +418,7 @@ class TestCaptchaHandling:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_text_captcha(self, browser_instance):
+    async def test_text_captcha(self, browser_instance: Any) -> None:
         """Test solving text CAPTCHA."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -443,7 +444,7 @@ class TestCaptchaHandling:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_math_captcha(self, browser_instance):
+    async def test_math_captcha(self, browser_instance: Any) -> None:
         """Test solving math CAPTCHA."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -464,14 +465,14 @@ class TestBrowserPool:
     """Test browser pool management."""
 
     @classmethod
-    def setup_class(cls):
+    def setup_class(cls) -> None:
         """Clean pool state before tests - lightweight cleanup only."""
         # Just log the state, don't try to manipulate the pool
         # The pool is managed at module level and shouldn't be reset per class
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_create_multiple_instances(self, session_manager):
+    async def test_create_multiple_instances(self, session_manager: Any) -> None:
         """Test creating multiple browser instances."""
         # Create multiple instances
         instance1 = await session_manager.get_or_create_instance(headless=HEADLESS)
@@ -490,7 +491,7 @@ class TestBrowserPool:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_pool_warm_instances(self, session_manager):
+    async def test_pool_warm_instances(self, session_manager: Any) -> None:
         """Test pool warm instance functionality."""
         # Get current pool stats to understand state
         _ = await session_manager.get_pool_stats()
@@ -522,7 +523,7 @@ class TestBrowserPool:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_parallel_operations(self, session_manager):
+    async def test_parallel_operations(self, session_manager: Any) -> None:
         """Test parallel operations on multiple instances - lightweight version."""
         instance1 = None
         instance2 = None
@@ -587,7 +588,7 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_inject_custom_script(self, browser_instance):
+    async def test_inject_custom_script(self, browser_instance: Any) -> None:
         """Test injecting custom JavaScript."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -616,7 +617,7 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_modify_dom(self, browser_instance):
+    async def test_modify_dom(self, browser_instance: Any) -> None:
         """Test DOM modification via script."""
         browser = browser_instance
         waiter = Waiter(browser)
@@ -647,7 +648,7 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_intercept_network_requests(self, browser_instance):
+    async def test_intercept_network_requests(self, browser_instance: Any) -> None:
         """Test intercepting network requests via script."""
         browser = browser_instance
         extractor = ContentExtractor(browser)

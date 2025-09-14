@@ -139,7 +139,7 @@ class VideoRecorder(BaseController):
             width = viewport_size["width"]
             height = viewport_size["height"]
 
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
             recording["writer"] = writer
 

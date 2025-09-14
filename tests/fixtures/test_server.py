@@ -16,6 +16,7 @@ class HTMLTestServer:
     """HTTP server for serving test HTML files."""
 
     def __init__(self, port: int = 8888) -> None:
+        # Allow port=0 to request an ephemeral port from the OS
         self.port = port
         self.app = web.Application()
         self.runner: web.AppRunner | None = None
@@ -38,6 +39,16 @@ class HTMLTestServer:
         # Use 127.0.0.1 instead of localhost to avoid threading issues
         self.site = web.TCPSite(self.runner, "127.0.0.1", self.port)
         await self.site.start()
+
+        # If using ephemeral port (port=0), capture the actual OS-assigned port
+        try:
+            if hasattr(self.site, "_server") and getattr(self.site._server, "sockets", None):  # type: ignore[attr-defined]
+                sock = self.site._server.sockets[0]  # type: ignore[attr-defined]
+                actual_port = sock.getsockname()[1]
+                self.port = int(actual_port)
+        except Exception:
+            # Best-effort; keep configured port if we cannot resolve
+            pass
 
         logger.info(f"Test server started on http://127.0.0.1:{self.port}")
         return f"http://127.0.0.1:{self.port}"

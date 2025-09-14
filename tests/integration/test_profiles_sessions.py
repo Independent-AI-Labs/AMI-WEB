@@ -1,8 +1,10 @@
 """Tests for browser profiles, sessions, downloads, and security features."""
 
 import tempfile
+from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -15,7 +17,7 @@ from browser.backend.utils.config import Config
 
 
 @pytest.fixture
-async def backend():
+async def backend() -> AsyncIterator[ChromeManager]:
     """Create a Chrome manager instance with test configuration."""
 
     # Try to use existing config.yaml or config.test.yaml first
@@ -83,14 +85,14 @@ async def backend():
 
 
 @pytest.fixture
-def temp_profiles_dir():
+def temp_profiles_dir() -> Iterator[Path]:
     """Create a temporary directory for profiles."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_test_profiles(backend):
+async def cleanup_test_profiles(backend: ChromeManager) -> AsyncIterator[None]:
     """Clean up test profiles before and after each test."""
     # Clean up any leftover profiles before test
     profile_names = ["cookie_test", "download_test", "download1", "download2", "profile1", "profile2", "persistent_test", "login_test"]
@@ -110,7 +112,7 @@ async def cleanup_test_profiles(backend):
 class TestProfileManagement:
     """Test browser profile management features."""
 
-    async def test_create_and_use_profile(self, temp_profiles_dir):
+    async def test_create_and_use_profile(self, temp_profiles_dir: Any) -> None:
         """Test creating and using a browser profile."""
         profile_manager = ProfileManager(base_dir=str(temp_profiles_dir))
 
@@ -134,7 +136,7 @@ class TestProfileManagement:
         assert deleted
         assert not profile_dir.exists()
 
-    async def test_copy_profile(self, temp_profiles_dir):
+    async def test_copy_profile(self, temp_profiles_dir: Any) -> None:
         """Test copying a profile."""
         profile_manager = ProfileManager(base_dir=str(temp_profiles_dir))
 
@@ -162,7 +164,7 @@ class TestProfileManagement:
         assert names == {"original", "copied"}
 
     @pytest.mark.slow
-    async def test_profile_with_cookies(self, backend):
+    async def test_profile_with_cookies(self, backend: Any) -> None:
         """Test saving and loading cookies with profiles."""
         # Create instance with profile
         instance = await backend.get_or_create_instance(
@@ -207,7 +209,7 @@ class TestDownloadManagement:
     """Test download management features."""
 
     @pytest.mark.slow
-    async def test_download_file(self, backend):
+    async def test_download_file(self, backend: Any) -> None:
         """Test downloading a file with safe browsing."""
         instance = await backend.get_or_create_instance(
             headless=True,
@@ -254,7 +256,7 @@ class TestDownloadManagement:
             await instance.terminate()
 
     @pytest.mark.slow
-    async def test_profile_specific_downloads(self, backend):
+    async def test_profile_specific_downloads(self, backend: Any) -> None:
         """Test that downloads go to profile-specific directories."""
         instance = await backend.get_or_create_instance(
             headless=True,
@@ -275,7 +277,7 @@ class TestDownloadManagement:
 class TestSecurityConfiguration:
     """Test security and TLS configuration."""
 
-    async def test_security_levels(self):
+    async def test_security_levels(self) -> None:
         """Test different security level presets."""
         # Test strict security
         strict = SecurityConfig.from_level(SecurityLevel.STRICT)
@@ -291,7 +293,7 @@ class TestSecurityConfiguration:
         assert permissive.safe_browsing_enabled is False
         assert permissive.disable_web_security is True
 
-    async def test_security_to_chrome_args(self):
+    async def test_security_to_chrome_args(self) -> None:
         """Test converting security config to Chrome arguments."""
         config = SecurityConfig(
             ignore_certificate_errors=True,
@@ -305,7 +307,7 @@ class TestSecurityConfiguration:
         assert "--disable-web-security" in args
 
     @pytest.mark.slow
-    async def test_permissive_security_allows_insecure(self, backend):
+    async def test_permissive_security_allows_insecure(self, backend: Any) -> None:
         """Test that permissive security allows connecting to insecure sites."""
         instance = await backend.get_or_create_instance(
             headless=True,
@@ -325,7 +327,7 @@ class TestSecurityConfiguration:
             await instance.terminate()
 
     @pytest.mark.slow
-    async def test_strict_security_safe_browsing(self, backend):
+    async def test_strict_security_safe_browsing(self, backend: Any) -> None:
         """Test that strict security enables safe browsing."""
         instance = await backend.get_or_create_instance(
             headless=True,
@@ -349,7 +351,7 @@ class TestSessionIsolation:
     """Test session and instance isolation."""
 
     @pytest.mark.slow
-    async def test_profile_isolation(self, backend, test_html_server):
+    async def test_profile_isolation(self, backend: Any, test_html_server: str) -> None:
         """Test that different profiles are isolated from each other."""
         # Create two instances with different profiles
         instance1 = await backend.get_or_create_instance(
@@ -396,7 +398,7 @@ class TestSessionIsolation:
             await instance2.terminate()
 
     @pytest.mark.slow
-    async def test_download_isolation(self, backend):
+    async def test_download_isolation(self, backend: Any) -> None:
         """Test that downloads are isolated between instances."""
         instance1 = await backend.get_or_create_instance(
             headless=True,
@@ -435,7 +437,7 @@ class TestPersistentSessions:
     """Test persistent browser sessions."""
 
     @pytest.mark.slow
-    async def test_session_persistence(self, backend, test_html_server):
+    async def test_session_persistence(self, backend: Any, test_html_server: str) -> None:
         """Test that browser sessions persist across restarts."""
         profile_name = "persistent_test"
 
@@ -492,7 +494,7 @@ class TestPersistentSessions:
             await instance2.terminate()
 
     @pytest.mark.slow
-    async def test_login_persistence(self, backend):
+    async def test_login_persistence(self, backend: Any) -> None:
         """Test that login sessions can be preserved."""
         profile_name = "login_test"
 

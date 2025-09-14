@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -11,7 +12,7 @@ class TestProfileManager:
     """Test ProfileManager without file I/O."""
 
     @pytest.mark.asyncio
-    async def test_initialize(self):
+    async def test_initialize(self) -> None:
         """Test profile manager initialization."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -26,7 +27,7 @@ class TestProfileManager:
             manager.initialize.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_profile(self):
+    async def test_create_profile(self) -> None:
         """Test creating a new profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -39,7 +40,7 @@ class TestProfileManager:
             manager.create_profile.assert_called_once_with("test", {"userAgent": "Custom UA"})
 
     @pytest.mark.asyncio
-    async def test_get_profile(self):
+    async def test_get_profile(self) -> None:
         """Test retrieving a profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -60,7 +61,7 @@ class TestProfileManager:
             manager.get_profile.assert_called_once_with("profile-123")
 
     @pytest.mark.asyncio
-    async def test_update_profile(self):
+    async def test_update_profile(self) -> None:
         """Test updating profile properties."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -79,7 +80,7 @@ class TestProfileManager:
             manager.update_profile.assert_called_once_with("profile-123", {"userAgent": "New UA"})
 
     @pytest.mark.asyncio
-    async def test_delete_profile(self):
+    async def test_delete_profile(self) -> None:
         """Test deleting a profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -92,7 +93,7 @@ class TestProfileManager:
             assert "profile-456" in manager.profiles
             manager.delete_profile.assert_called_once_with("profile-123")
 
-    def test_list_profiles(self):
+    def test_list_profiles(self) -> None:
         """Test listing all profiles."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -114,9 +115,9 @@ class TestProfileManager:
 class TestProfilePresets:
     """Test profile preset management."""
 
-    def test_stealth_preset(self):
+    def test_stealth_preset(self) -> None:
         """Test stealth preset properties."""
-        stealth_preset = {
+        stealth_preset: dict[str, Any] = {
             "name": "stealth",
             "properties": {
                 "webdriver": False,
@@ -132,9 +133,9 @@ class TestProfilePresets:
         assert stealth_preset["properties"]["plugins"]["length"] > 0
         assert "en-US" in stealth_preset["properties"]["languages"]
 
-    def test_mobile_preset(self):
+    def test_mobile_preset(self) -> None:
         """Test mobile preset properties."""
-        mobile_preset = {
+        mobile_preset: dict[str, Any] = {
             "name": "mobile",
             "properties": {
                 "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)",
@@ -149,9 +150,9 @@ class TestProfilePresets:
         assert mobile_preset["properties"]["platform"] == "iPhone"
         assert mobile_preset["properties"]["maxTouchPoints"] > 0
 
-    def test_desktop_preset(self):
+    def test_desktop_preset(self) -> None:
         """Test desktop preset properties."""
-        desktop_preset = {
+        desktop_preset: dict[str, Any] = {
             "name": "desktop",
             "properties": {
                 "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -168,7 +169,7 @@ class TestProfilePresets:
         assert desktop_preset["properties"]["hardwareConcurrency"] >= min_cores
 
     @pytest.mark.asyncio
-    async def test_apply_preset(self):
+    async def test_apply_preset(self) -> None:
         """Test applying a preset to a profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -190,19 +191,19 @@ class TestProfilePresets:
 class TestProfileValidation:
     """Test profile property validation."""
 
-    def test_validate_user_agent(self):
+    def test_validate_user_agent(self) -> None:
         """Test user agent validation."""
         valid_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         invalid_ua = ""
 
         # Simple validation: non-empty and contains browser identifier
-        def validate_ua(ua):
+        def validate_ua(ua: str) -> bool:
             return bool(ua) and ("Mozilla" in ua or "Chrome" in ua or "Safari" in ua)
 
         assert validate_ua(valid_ua) is True
         assert validate_ua(invalid_ua) is False
 
-    def test_validate_screen_resolution(self):
+    def test_validate_screen_resolution(self) -> None:
         """Test screen resolution validation."""
         valid_resolutions = [
             {"width": 1920, "height": 1080},
@@ -217,7 +218,7 @@ class TestProfileValidation:
             {},
         ]
 
-        def validate_resolution(res):
+        def validate_resolution(res: object) -> bool:
             return isinstance(res, dict) and "width" in res and "height" in res and res["width"] > 0 and res["height"] > 0
 
         for res in valid_resolutions:
@@ -226,7 +227,7 @@ class TestProfileValidation:
         for res in invalid_resolutions:
             assert validate_resolution(res) is False
 
-    def test_validate_languages(self):
+    def test_validate_languages(self) -> None:
         """Test languages validation."""
         valid_languages = [
             ["en-US", "en"],
@@ -241,17 +242,17 @@ class TestProfileValidation:
             None,
         ]
 
-        def validate_languages(langs):
+        def validate_languages(langs: object) -> bool:
             return isinstance(langs, list) and len(langs) > 0 and all(isinstance(lang, str) and lang for lang in langs)
 
         for langs in valid_languages:
             assert validate_languages(langs) is True
 
-        for langs in invalid_languages:
-            assert validate_languages(langs) is False
+        for invalid in invalid_languages:
+            assert validate_languages(invalid) is False
 
     @pytest.mark.asyncio
-    async def test_validate_profile(self):
+    async def test_validate_profile(self) -> None:
         """Test complete profile validation."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -284,7 +285,7 @@ class TestProfileValidation:
 class TestProfilePersistence:
     """Test profile persistence operations."""
 
-    def test_serialize_profile(self):
+    def test_serialize_profile(self) -> None:
         """Test serializing profile data."""
         profile = {
             "id": "profile-123",
@@ -303,7 +304,7 @@ class TestProfilePersistence:
         assert "Custom Profile" in serialized
         assert "Custom UA" in serialized
 
-    def test_deserialize_profile(self):
+    def test_deserialize_profile(self) -> None:
         """Test deserializing profile data."""
         json_data = """{
             "id": "profile-123",
@@ -321,7 +322,7 @@ class TestProfilePersistence:
         assert profile["properties"]["webdriver"] is False
 
     @pytest.mark.asyncio
-    async def test_export_profile(self):
+    async def test_export_profile(self) -> None:
         """Test exporting a profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
@@ -341,13 +342,13 @@ class TestProfilePersistence:
             manager.export_profile.assert_called_once_with("profile-123")
 
     @pytest.mark.asyncio
-    async def test_import_profile(self):
+    async def test_import_profile(self) -> None:
         """Test importing a profile."""
         with patch("browser.backend.core.management.profile_manager.ProfileManager") as mock_manager_class:
             manager = mock_manager_class()
             manager.profiles = {}
 
-            async def mock_import(data):
+            async def mock_import(data: str | dict[str, Any]) -> None:
                 profile = json.loads(data) if isinstance(data, str) else data
                 manager.profiles[profile["id"]] = profile
 

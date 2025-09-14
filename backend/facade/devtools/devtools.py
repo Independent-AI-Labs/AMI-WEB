@@ -60,7 +60,7 @@ class DevToolsController(BaseController):
         try:
             if not self.driver:
                 raise ChromeManagerError("Browser not initialized")
-            logs = self.driver.get_log("performance")  # type: ignore[attr-defined]
+            logs = self.driver.get_log("performance")
             entries = []
 
             for log in logs:

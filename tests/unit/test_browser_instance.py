@@ -9,7 +9,7 @@ class TestBrowserInstanceState:
     """Test BrowserInstance state management without real browser."""
 
     @pytest.mark.asyncio
-    async def test_instance_initialization(self):
+    async def test_instance_initialization(self) -> None:
         """Test browser instance initialization."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -25,7 +25,7 @@ class TestBrowserInstanceState:
             instance.initialize.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_instance_navigation(self):
+    async def test_instance_navigation(self) -> None:
         """Test navigation state management."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -38,7 +38,7 @@ class TestBrowserInstanceState:
             instance.navigate.assert_called_once_with("https://example.com")
 
     @pytest.mark.asyncio
-    async def test_instance_script_execution(self):
+    async def test_instance_script_execution(self) -> None:
         """Test script execution handling."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -52,7 +52,7 @@ class TestBrowserInstanceState:
             instance.execute_script.assert_called_once_with("return 21 * 2;")
 
     @pytest.mark.asyncio
-    async def test_instance_termination(self):
+    async def test_instance_termination(self) -> None:
         """Test instance termination."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -65,7 +65,7 @@ class TestBrowserInstanceState:
             instance.terminate.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_instance_crash_detection(self):
+    async def test_instance_crash_detection(self) -> None:
         """Test crash detection mechanism."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -86,7 +86,7 @@ class TestBrowserInstanceTabs:
     """Test tab management in BrowserInstance."""
 
     @pytest.mark.asyncio
-    async def test_create_new_tab(self):
+    async def test_create_new_tab(self) -> None:
         """Test creating a new tab."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -100,7 +100,7 @@ class TestBrowserInstanceTabs:
             instance.create_tab.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_switch_tab(self):
+    async def test_switch_tab(self) -> None:
         """Test switching between tabs."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -114,7 +114,7 @@ class TestBrowserInstanceTabs:
             instance.switch_to_tab.assert_called_once_with("tab-1")
 
     @pytest.mark.asyncio
-    async def test_close_tab(self):
+    async def test_close_tab(self) -> None:
         """Test closing a tab."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -132,7 +132,7 @@ class TestBrowserInstanceTabs:
 class TestBrowserInstanceCookies:
     """Test cookie management in BrowserInstance."""
 
-    def test_parse_cookies(self):
+    def test_parse_cookies(self) -> None:
         """Test cookie parsing."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -150,7 +150,7 @@ class TestBrowserInstanceCookies:
             assert cookies[1]["value"] == "dark"
 
     @pytest.mark.asyncio
-    async def test_set_cookie(self):
+    async def test_set_cookie(self) -> None:
         """Test setting a cookie."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -165,7 +165,7 @@ class TestBrowserInstanceCookies:
             instance.set_cookie.assert_called_once_with(cookie)
 
     @pytest.mark.asyncio
-    async def test_get_cookies(self):
+    async def test_get_cookies(self) -> None:
         """Test getting cookies."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -183,7 +183,7 @@ class TestBrowserInstanceCookies:
             instance.get_cookies.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_clear_cookies(self):
+    async def test_clear_cookies(self) -> None:
         """Test clearing cookies."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -200,7 +200,7 @@ class TestBrowserInstanceNetwork:
     """Test network monitoring in BrowserInstance."""
 
     @pytest.mark.asyncio
-    async def test_enable_network_monitoring(self):
+    async def test_enable_network_monitoring(self) -> None:
         """Test enabling network monitoring."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -213,7 +213,7 @@ class TestBrowserInstanceNetwork:
             instance.enable_network_monitoring.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_capture_network_request(self):
+    async def test_capture_network_request(self) -> None:
         """Test capturing network requests."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()
@@ -232,7 +232,7 @@ class TestBrowserInstanceNetwork:
             instance.capture_request.assert_called_once_with(request)
 
     @pytest.mark.asyncio
-    async def test_get_network_logs(self):
+    async def test_get_network_logs(self) -> None:
         """Test retrieving network logs."""
         with patch("browser.backend.core.browser.instance.BrowserInstance") as mock_instance_class:
             instance = mock_instance_class()

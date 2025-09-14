@@ -1,7 +1,7 @@
 """Unit test configuration and shared fixtures."""
 
 # Import all fixtures from fixtures.py
-from tests.unit.fixtures import (
+from browser.tests.unit.fixtures import (
     mock_browser_instance,
     mock_chrome_manager,
     mock_mcp_request,

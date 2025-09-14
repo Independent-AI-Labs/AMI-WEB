@@ -19,9 +19,9 @@ class ContentExtractor(BaseController):
 
         try:
             if self._is_in_thread_context():
-                return self.driver.page_source
+                return str(self.driver.page_source)
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: self.driver.page_source if self.driver else "")
+            return await loop.run_in_executor(None, lambda: str(self.driver.page_source) if self.driver else "")
         except Exception as e:
             raise NavigationError(f"Failed to get page source: {e}") from e
 

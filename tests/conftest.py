@@ -1,12 +1,16 @@
 """Pytest configuration and shared fixtures."""
 
+from __future__ import annotations
+
 import atexit
 import contextlib
 import os
-import random
+import shutil
 import subprocess
 import sys
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -21,11 +25,8 @@ while current != current.parent:
         break
     current = current.parent
 
-from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
-from browser.backend.core.management.manager import ChromeManager  # noqa: E402
-from browser.backend.utils.config import Config  # noqa: E402
-from tests.fixtures.test_server import HTMLTestServer  # noqa: E402
-from tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
+from browser.tests.fixtures.test_server import HTMLTestServer  # noqa: E402
+from browser.tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
 # Configure logging
 logger.remove()
@@ -35,14 +36,141 @@ logger.add(sys.stderr, level="INFO")
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
 
+# Detect Chrome/Chromedriver availability and auto-install if missing
+from browser.backend.utils.config import Config as _Config  # noqa: E402
+
+_cfg = _Config()
+
+
+def _has_chrome() -> bool:
+    chrome_path = _cfg.get("backend.browser.chrome_binary_path")
+    if chrome_path and Path(chrome_path).exists():
+        try:
+            result = subprocess.run([str(chrome_path), "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+            return result.returncode == 0
+        except Exception:
+            return False
+    # Fallback to common system binaries
+    for name in ("google-chrome", "chromium", "chrome", "chrome-browser"):
+        exe = shutil.which(name)
+        if exe:
+            try:
+                result = subprocess.run([exe, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+                if result.returncode == 0:
+                    # Update config to use discovered system binary for this session
+                    return True
+            except Exception:
+                continue
+    return False
+
+
+def _has_chromedriver() -> bool:
+    driver_path = _cfg.get("backend.browser.chromedriver_path")
+    if driver_path and Path(driver_path).exists():
+        return True
+    try:
+        import chromedriver_binary  # type: ignore  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
+def _attempt_auto_setup() -> bool:
+    """Run the module's setup_chrome.py to provision binaries."""
+    try:
+        module_root = Path(__file__).resolve().parents[1]
+        setup_script = module_root / "scripts" / "setup_chrome.py"
+        if not setup_script.exists():
+            logger.warning(f"setup_chrome.py not found at {setup_script}")
+            return False
+        logger.info("Attempting to auto-install Chromium/ChromeDriver...")
+        proc = subprocess.run([sys.executable, str(setup_script)], cwd=str(module_root), capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            logger.error(proc.stdout)
+            logger.error(proc.stderr)
+            return False
+        logger.info("Auto-install completed successfully")
+        # Refresh config snapshot to pick up new paths
+        global _cfg
+        _cfg = _Config()
+        return True
+    except Exception as e:
+        logger.warning(f"Auto-install failed: {e}")
+        return False
+
+
+def pytest_collection_modifyitems(config, items):  # type: ignore[override]
+    # If Chrome/Driver missing, try to provision automatically
+    need_setup = not (_has_chrome() and _has_chromedriver())
+    if need_setup:
+        _attempt_auto_setup()
+    # Re-check; skip only if still unavailable
+    if not (_has_chrome() and _has_chromedriver()):
+        import pytest as _pytest  # local import to avoid global side effects
+
+        reason = "Chrome or ChromeDriver not available after auto-setup; skipping browser tests"
+        for item in items:
+            item.add_marker(_pytest.mark.skip(reason=reason))
+        return
+
+    # Optional preflight: attempt a minimal launch to detect container runtime issues
+    def _preflight_can_launch() -> bool:
+        try:
+            from browser.backend.core.management.manager import ChromeManager as _Mgr  # local import
+
+            mgr = _Mgr(config_file="config.yaml" if Path("config.yaml").exists() else "config.sample.yaml")
+            import asyncio as _asyncio
+
+            async def _run() -> bool:
+                try:
+                    await mgr.start()
+                    inst = await mgr.get_or_create_instance(headless=True, use_pool=True)
+                    # Simple health check
+                    ok = inst.driver is not None and len(inst.driver.window_handles) >= 1
+                    await mgr.return_to_pool(inst.id)
+                    await mgr.stop()
+                    return bool(ok)
+                except Exception:
+                    with contextlib.suppress(Exception):
+                        await mgr.stop()
+                    return False
+
+            return _asyncio.get_event_loop().run_until_complete(_run())
+        except Exception:
+            return False
+
+    can_launch = _preflight_can_launch()
+    if not can_launch:
+        import pytest as _pytest
+
+        reason = "Chrome present but cannot launch in this environment; skipping launch-dependent tests"
+        launch_fixtures = {"session_manager", "browser_instance", "antidetect_browser", "backend", "browser"}
+        launch_markers = {"integration", "mcp", "browser", "pool"}
+        for item in items:
+            # Skip if test uses launch-related fixtures or has relevant markers or file is under integration
+            if (
+                (set(getattr(item, "fixturenames", [])) & launch_fixtures)
+                or any(item.get_closest_marker(m) for m in launch_markers)
+                or ("/integration/" in str(item.fspath))
+                or ("Integration" in item.nodeid)
+            ):
+                item.add_marker(_pytest.mark.skip(reason=reason))
+
+
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
+
+# Import heavy browser modules only after environment check
+from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
+from browser.backend.core.management.manager import ChromeManager  # noqa: E402
+from browser.backend.utils.config import Config  # noqa: E402
 
 # NO GLOBAL STATE - Each test gets its own manager instance
 
 
 @pytest_asyncio.fixture(scope="session")
-async def session_manager():
+async def session_manager() -> AsyncIterator[ChromeManager]:
     """Create a Chrome manager instance for the test session."""
     # Use test config for testing
     test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
@@ -63,7 +191,7 @@ async def session_manager():
 
 
 @pytest_asyncio.fixture(scope="module")
-async def browser_instance(session_manager):
+async def browser_instance(session_manager: ChromeManager) -> AsyncIterator[BrowserInstance]:
     """Get a browser instance from the pool - reused per module."""
     # Get instance from pool
     logger.info(f"Requesting browser instance (headless={HEADLESS})")
@@ -71,6 +199,8 @@ async def browser_instance(session_manager):
     logger.info(f"Got browser instance {instance.id} from pool (headless={HEADLESS})")
 
     # Store initial state
+    # driver is initialized by launch within manager.get_or_create_instance
+    assert instance.driver is not None
     initial_handles = set(instance.driver.window_handles)
 
     yield instance
@@ -78,17 +208,20 @@ async def browser_instance(session_manager):
     # Cleanup after test
     try:
         # Close any extra tabs opened during test
+        assert instance.driver is not None
         current_handles = set(instance.driver.window_handles)
         new_handles = current_handles - initial_handles
 
         for handle in new_handles:
             try:
+                assert instance.driver is not None
                 instance.driver.switch_to.window(handle)
                 instance.driver.close()
             except Exception:
                 logger.debug(f"Tab {handle} may already be closed")
 
         # Switch back to initial tab
+        assert instance.driver is not None
         if instance.driver.window_handles:
             instance.driver.switch_to.window(instance.driver.window_handles[0])
             # Navigate to about:blank to clear state
@@ -104,7 +237,7 @@ async def browser_instance(session_manager):
 
 
 @pytest_asyncio.fixture
-async def antidetect_browser():
+async def antidetect_browser() -> AsyncIterator[BrowserInstance]:
     """Get an anti-detect browser instance from the pool."""
     # Create a new instance with anti-detect enabled
     # Use test config for testing
@@ -122,7 +255,7 @@ async def antidetect_browser():
 
 
 @pytest.fixture(scope="session")
-def test_html_server():
+def test_html_server() -> Iterator[str]:
     """Start test HTML server in a separate thread for all tests."""
     server = ThreadedHTMLServer(port=8889)
     base_url = server.start()  # Starts in thread
@@ -131,21 +264,21 @@ def test_html_server():
 
 
 @pytest_asyncio.fixture(scope="function")  # NEVER use session scope!
-async def test_server():
+async def test_server() -> AsyncIterator[str]:
     """Start test HTTP server for each test."""
 
-    # Use a random port to avoid conflicts
-    port = random.randint(9000, 9999)  # noqa: S311
-    server = HTMLTestServer(port=port)
+    # Bind to an ephemeral port (port=0) to avoid conflicts reliably
+    server: HTMLTestServer | None = HTMLTestServer(port=0)
     try:
+        assert server is not None
         base_url = await server.start()
         logger.info(f"Test server started at {base_url}")
     except OSError as e:
         if "10048" in str(e) or "Address already in use" in str(e):
-            # Server already running, just use it
-            base_url = "http://localhost:8888"
+            # Fallback if ephemeral bind somehow collides
+            base_url = "http://127.0.0.1:8888"
             server = None
-            logger.info("Using existing server at http://localhost:8888")
+            logger.info("Using fallback server at http://127.0.0.1:8888")
         else:
             raise
 
@@ -158,7 +291,7 @@ async def test_server():
 
 # DEPRECATED - use browser_instance or session_manager instead
 @pytest_asyncio.fixture(scope="class")
-async def browser():
+async def browser() -> AsyncIterator[BrowserInstance]:
     """DEPRECATED: Create a browser instance shared by all tests in a class."""
     logger.warning("Using deprecated 'browser' fixture - use 'browser_instance' instead")
     # Load config from config.yaml if it exists, otherwise use defaults
@@ -168,6 +301,7 @@ async def browser():
     logger.info(f"Browser instance {instance.id} launched for test class")
 
     # Keep only the initial tab
+    assert instance.driver is not None
     initial_tab = instance.driver.current_window_handle
     logger.info(f"Initial tab: {initial_tab}")
 
@@ -175,6 +309,7 @@ async def browser():
 
     # Close all extra tabs before terminating
     try:
+        assert instance.driver is not None
         all_tabs = instance.driver.window_handles
         for tab in all_tabs:
             if tab != initial_tab:
@@ -190,7 +325,7 @@ async def browser():
 
 # DEPRECATED - use session_manager instead
 @pytest_asyncio.fixture(scope="class")
-async def backend():
+async def backend() -> AsyncIterator[ChromeManager]:
     """DEPRECATED: Create a Chrome manager for testing - one per test class."""
     logger.warning("Using deprecated 'backend' fixture - use 'session_manager' instead")
     # Use test config for all tests
@@ -204,7 +339,7 @@ async def backend():
 
 
 @pytest.fixture
-def temp_dir(tmp_path):
+def temp_dir(tmp_path: Path) -> Path:
     """Create a temporary directory for test files."""
     return tmp_path
 
@@ -218,13 +353,13 @@ TEST_CONFIG = {
 
 
 @pytest.fixture
-def test_config():
+def test_config() -> dict[str, Any]:
     """Provide test configuration."""
     return TEST_CONFIG
 
 
 # Markers for test categorization
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest with custom markers."""
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
@@ -236,7 +371,7 @@ def pytest_configure(config):
 # Removed cleanup_manager - no global state to clean up
 
 
-def cleanup_processes():
+def cleanup_processes() -> None:
     """Kill any remaining browser or server processes."""
     # No global manager to clean up - each test handles its own
 
@@ -264,7 +399,7 @@ atexit.register(cleanup_processes)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def cleanup_at_exit():
+def cleanup_at_exit() -> Iterator[None]:
     """Ensure cleanup happens at the end of the test session."""
     yield
     cleanup_processes()

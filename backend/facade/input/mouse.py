@@ -96,7 +96,7 @@ class MouseController(BaseController):
         actions = ActionChains(self.driver)
 
         def context_click_perform(act: ActionChains = actions, el: WebElement = element) -> None:
-            return act.context_click(el).perform()
+            act.context_click(el).perform()
 
         await loop.run_in_executor(None, context_click_perform)
 

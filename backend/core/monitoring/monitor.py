@@ -40,7 +40,7 @@ class BrowserMonitor:
             return self._console_logs
 
         try:
-            logs = driver.get_log("browser")  # type: ignore[attr-defined]
+            logs = driver.get_log("browser")
             for log in logs:
                 entry = ConsoleEntry(
                     level=log.get("level", "INFO"),
@@ -60,7 +60,7 @@ class BrowserMonitor:
             return self._network_logs
 
         try:
-            logs = driver.get_log("performance")  # type: ignore[attr-defined]
+            logs = driver.get_log("performance")
             for log in logs:
                 message = json.loads(log["message"])
                 if message.get("message", {}).get("method", "").startswith("Network."):
