@@ -19,7 +19,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser.backend.mcp -p browser.scripts --config-file=browser/mypy.precommit.ini"'
+        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser --config-file=browser/mypy.ini"'
         language: system
         types: [ python ]
         require_serial: true
