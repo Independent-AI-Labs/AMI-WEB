@@ -158,9 +158,6 @@ def pytest_collection_modifyitems(config, items):  # type: ignore[override]
                 item.add_marker(_pytest.mark.skip(reason=reason))
 
 
-# Configure pytest-asyncio
-pytest_plugins = ("pytest_asyncio",)
-
 # Import heavy browser modules only after environment check
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
