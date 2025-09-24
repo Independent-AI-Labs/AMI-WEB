@@ -3,7 +3,7 @@
 import asyncio
 import json
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
@@ -64,7 +64,8 @@ class NetworkController(BaseController):
 
             if not self.driver:
                 raise ChromeManagerError("Browser not initialized")
-            logs = self.driver.get_log("performance")
+            driver_obj = cast(Any, self.driver)
+            logs = driver_obj.get_log("performance")
             entries = []
 
             for log in logs:
@@ -185,9 +186,13 @@ class NetworkController(BaseController):
 
         try:
             if self._is_in_thread_context():
-                return self.driver.execute_cdp_cmd(command, params or {})
+                driver_obj = cast(Any, self.driver)
+                return driver_obj.execute_cdp_cmd(command, params or {})
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: self.driver.execute_cdp_cmd(command, params or {}) if self.driver else None)
+            return await loop.run_in_executor(
+                None,
+                lambda: cast(Any, self.driver).execute_cdp_cmd(command, params or {}) if self.driver else None,
+            )
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
             raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e

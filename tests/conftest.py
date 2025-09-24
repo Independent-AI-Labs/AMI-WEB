@@ -100,7 +100,7 @@ def _attempt_auto_setup() -> bool:
         return False
 
 
-def pytest_collection_modifyitems(config, items):  # type: ignore[override]
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     # If Chrome/Driver missing, try to provision automatically
     need_setup = not (_has_chrome() and _has_chromedriver())
     if need_setup:

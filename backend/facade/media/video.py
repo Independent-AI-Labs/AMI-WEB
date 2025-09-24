@@ -6,9 +6,10 @@ import contextlib
 import io
 import time
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import cv2
 import numpy as np
@@ -119,6 +120,40 @@ class VideoRecorder(BaseController):
         self.recording_sessions[session_id]["session"].status = "recording"
         logger.info(f"Resumed recording session {session_id}")
 
+    def _build_video_writer(self, output_path: str, fps: int) -> Any:
+        """Create and configure a video writer for the current viewport."""
+
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized")
+        viewport_size = self.driver.get_window_size()
+        width = int(viewport_size["width"])
+        height = int(viewport_size["height"])
+
+        fourcc_attr = getattr(cv2, "VideoWriter_fourcc", None)
+        if fourcc_attr is None:
+            raise AttributeError("cv2 does not provide VideoWriter_fourcc")
+        fourcc_func = cast("Callable[..., int]", fourcc_attr)
+        fourcc = fourcc_func(*"mp4v")
+        return cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    async def _maybe_capture_frame(self, recording: dict[str, Any], writer: Any, start_time: float) -> None:
+        """Capture a frame if the recording session is active."""
+
+        if recording["session"].status != "recording":
+            return
+        if self.driver is None:
+            raise RuntimeError("Driver lost during recording")
+
+        screenshot_base64 = self.driver.get_screenshot_as_base64()
+        screenshot_bytes = base64.b64decode(screenshot_base64)
+
+        img = Image.open(io.BytesIO(screenshot_bytes))
+        frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+        writer.write(frame)
+        recording["session"].frame_count += 1
+        recording["session"].duration = time.time() - start_time
+
     async def _record_loop(self, session_id: str, output_path: str, fps: int, _codec: str) -> None:
         """Recording loop that captures frames.
 
@@ -133,32 +168,13 @@ class VideoRecorder(BaseController):
             recording = self.recording_sessions[session_id]
             frame_interval = 1.0 / fps
 
-            if self.driver is None:
-                raise RuntimeError("Driver not initialized")
-            viewport_size = self.driver.get_window_size()
-            width = viewport_size["width"]
-            height = viewport_size["height"]
-
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            writer = self._build_video_writer(output_path, fps)
             recording["writer"] = writer
 
             start_time = time.time()
 
             while recording["session"].status != "stopped":
-                if recording["session"].status == "recording":
-                    if self.driver is None:
-                        raise RuntimeError("Driver lost during recording")
-                    screenshot_base64 = self.driver.get_screenshot_as_base64()
-                    screenshot_bytes = base64.b64decode(screenshot_base64)
-
-                    img = Image.open(io.BytesIO(screenshot_bytes))
-                    frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
-                    writer.write(frame)
-                    recording["session"].frame_count += 1
-                    recording["session"].duration = time.time() - start_time
-
+                await self._maybe_capture_frame(recording, writer, start_time)
                 await asyncio.sleep(frame_interval)
 
         except asyncio.CancelledError:

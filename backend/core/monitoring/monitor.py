@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -27,9 +27,10 @@ class BrowserMonitor:
         """Setup CDP logging for console and network."""
         try:
             # Enable console and network logging via CDP
-            driver.execute_cdp_cmd("Console.enable", {})
-            driver.execute_cdp_cmd("Network.enable", {})
-            driver.execute_cdp_cmd("Performance.enable", {})
+            driver_obj = cast(Any, driver)
+            driver_obj.execute_cdp_cmd("Console.enable", {})
+            driver_obj.execute_cdp_cmd("Network.enable", {})
+            driver_obj.execute_cdp_cmd("Performance.enable", {})
             logger.debug(f"Logging enabled for instance {self.instance_id}")
         except Exception as e:
             logger.warning(f"Failed to setup logging: {e}")
@@ -40,7 +41,8 @@ class BrowserMonitor:
             return self._console_logs
 
         try:
-            logs = driver.get_log("browser")
+            driver_obj = cast(Any, driver)
+            logs = driver_obj.get_log("browser")
             for log in logs:
                 entry = ConsoleEntry(
                     level=log.get("level", "INFO"),
@@ -60,7 +62,8 @@ class BrowserMonitor:
             return self._network_logs
 
         try:
-            logs = driver.get_log("performance")
+            driver_obj = cast(Any, driver)
+            logs = driver_obj.get_log("performance")
             for log in logs:
                 message = json.loads(log["message"])
                 if message.get("message", {}).get("method", "").startswith("Network."):
@@ -81,7 +84,8 @@ class BrowserMonitor:
 
         try:
             # Get navigation timing
-            nav_timing = driver.execute_script(
+            driver_obj = cast(Any, driver)
+            nav_timing = driver_obj.execute_script(
                 """
                 var timing = window.performance.timing;
                 return {
@@ -94,7 +98,7 @@ class BrowserMonitor:
             )
 
             # Get paint timing
-            paint_timing = driver.execute_script(
+            paint_timing = driver_obj.execute_script(
                 """
                 var entries = window.performance.getEntriesByType('paint');
                 var result = {};
@@ -127,16 +131,26 @@ class BrowserMonitor:
         if not driver:
             return []
 
+        driver_obj = cast(Any, driver)
         tabs = []
-        current_handle = driver.current_window_handle
+        current_handle = driver_obj.current_window_handle
 
         try:
-            for idx, handle in enumerate(driver.window_handles):
-                driver.switch_to.window(handle)
-                tabs.append(TabInfo(id=handle, title=driver.title, url=driver.current_url, active=handle == current_handle, index=idx, window_handle=handle))
+            for idx, handle in enumerate(driver_obj.window_handles):
+                driver_obj.switch_to.window(handle)
+                tabs.append(
+                    TabInfo(
+                        id=handle,
+                        title=driver_obj.title,
+                        url=driver_obj.current_url,
+                        active=handle == current_handle,
+                        index=idx,
+                        window_handle=handle,
+                    )
+                )
 
             # Switch back to original tab
-            driver.switch_to.window(current_handle)
+            driver_obj.switch_to.window(current_handle)
         except Exception as e:
             logger.warning(f"Failed to get tab info: {e}")
 
@@ -151,15 +165,16 @@ class BrowserMonitor:
 
         try:
             # Check if driver is alive
-            _ = driver.current_url
+            driver_obj = cast(Any, driver)
+            _ = driver_obj.current_url
             health["alive"] = True
 
             # Check if responsive
-            driver.execute_script("return document.readyState")
+            driver_obj.execute_script("return document.readyState")
             health["responsive"] = True
 
             # Count tabs
-            health["tabs_count"] = len(driver.window_handles)
+            health["tabs_count"] = len(driver_obj.window_handles)
 
             # Get memory usage (not available in current metrics)
             health["memory_usage"] = 0

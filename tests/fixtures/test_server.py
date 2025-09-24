@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
 from aiohttp import web
 from aiohttp.web_request import Request
@@ -42,8 +43,10 @@ class HTMLTestServer:
 
         # If using ephemeral port (port=0), capture the actual OS-assigned port
         try:
-            if hasattr(self.site, "_server") and getattr(self.site._server, "sockets", None):  # type: ignore[attr-defined]
-                sock = self.site._server.sockets[0]  # type: ignore[attr-defined]
+            server_obj: Any = getattr(self.site, "_server", None)
+            sockets = getattr(server_obj, "sockets", None)
+            if sockets:
+                sock = sockets[0]
                 actual_port = sock.getsockname()[1]
                 self.port = int(actual_port)
         except Exception:
