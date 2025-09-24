@@ -69,7 +69,7 @@ def _has_chromedriver() -> bool:
     if driver_path and Path(driver_path).exists():
         return True
     try:
-        import chromedriver_binary  # type: ignore  # noqa: F401
+        import chromedriver_binary  # type: ignore  # noqa: F401,PLC0415
 
         return True
     except Exception:
@@ -107,7 +107,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         _attempt_auto_setup()
     # Re-check; skip only if still unavailable
     if not (_has_chrome() and _has_chromedriver()):
-        import pytest as _pytest  # local import to avoid global side effects
+        import pytest as _pytest  # local import to avoid global side effects  # noqa: PLC0415
 
         reason = "Chrome or ChromeDriver not available after auto-setup; skipping browser tests"
         for item in items:
@@ -117,10 +117,10 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     # Optional preflight: attempt a minimal launch to detect container runtime issues
     def _preflight_can_launch() -> bool:
         try:
-            from browser.backend.core.management.manager import ChromeManager as _Mgr  # local import
+            from browser.backend.core.management.manager import ChromeManager as _Mgr  # local import  # noqa: PLC0415
 
             mgr = _Mgr(config_file="config.yaml" if Path("config.yaml").exists() else "config.sample.yaml")
-            import asyncio as _asyncio
+            import asyncio as _asyncio  # noqa: PLC0415
 
             async def _run() -> bool:
                 try:
@@ -142,7 +142,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
     can_launch = _preflight_can_launch()
     if not can_launch:
-        import pytest as _pytest
+        import pytest as _pytest  # noqa: PLC0415
 
         reason = "Chrome present but cannot launch in this environment; skipping launch-dependent tests"
         launch_fixtures = {"session_manager", "browser_instance", "antidetect_browser", "backend", "browser"}
