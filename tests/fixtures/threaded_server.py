@@ -7,7 +7,6 @@ import logging
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 from aiohttp import web
 
@@ -19,10 +18,10 @@ class ThreadedHTMLServer:
 
     port: int
     base_url: str
-    thread: Optional[threading.Thread]
-    loop: Optional[asyncio.AbstractEventLoop]
-    runner: Optional[web.AppRunner]
-    site: Optional[web.TCPSite]
+    thread: threading.Thread | None
+    loop: asyncio.AbstractEventLoop | None
+    runner: web.AppRunner | None
+    site: web.TCPSite | None
     ready: threading.Event
     stop_event: threading.Event
     base_path: Path
