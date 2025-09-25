@@ -16,6 +16,7 @@ from browser.backend.core.security.antidetect import get_anti_detection_argument
 from browser.backend.models.browser import ChromeOptions
 from browser.backend.models.browser_properties import BrowserProperties
 from browser.backend.models.security import SecurityConfig
+from browser.backend.utils.compute_profile import get_compute_profile
 from browser.backend.utils.config import Config
 
 if TYPE_CHECKING:
@@ -179,13 +180,19 @@ class BrowserOptionsBuilder:
 
     def _add_basic_options(self, chrome_options: Options, headless: bool) -> None:
         """Add basic Chrome options."""
+        compute_profile = get_compute_profile()
+
         if headless:
             chrome_options.add_argument("--headless=new")
             chrome_options.add_argument("--no-sandbox")
             # KEEP GPU ENABLED for WebGL support!
             chrome_options.add_argument("--enable-webgl")
-            chrome_options.add_argument("--use-gl=angle")  # Use ANGLE for hardware acceleration
-            chrome_options.add_argument("--use-angle=default")  # Let ANGLE choose best backend
+            if compute_profile == "cpu":
+                chrome_options.add_argument("--use-angle=swiftshader")
+                chrome_options.add_argument("--use-gl=swiftshader")
+            else:
+                chrome_options.add_argument("--use-gl=angle")  # Use ANGLE for hardware acceleration
+                chrome_options.add_argument("--use-angle=default")  # Let ANGLE choose best backend
             # Suppress GPU error logging
             chrome_options.add_argument("--log-level=3")  # Only show fatal errors
             chrome_options.add_argument("--disable-logging")  # Disable Chrome logging

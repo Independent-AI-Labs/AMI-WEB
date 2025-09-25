@@ -9,6 +9,36 @@ from typing import Any
 
 from loguru import logger
 
+from browser.backend.utils.compute_profile import get_compute_profile
+
+
+def _adjust_gpu_arguments_for_cpu(args: list[str]) -> list[str]:
+    """Convert anti-detect GPU flags to SwiftShader-friendly variants."""
+
+    cpu_safe_args: list[str] = []
+    for arg in args:
+        if arg in {"--disable-software-rasterizer", "--enable-gpu"}:
+            # Allow software rasterizer (SwiftShader) and avoid forcing hardware GPU
+            continue
+        if arg.startswith("--use-angle="):
+            cpu_safe_args.append("--use-angle=swiftshader")
+            continue
+        if arg.startswith("--use-gl="):
+            cpu_safe_args.append("--use-gl=swiftshader")
+            continue
+        if arg == "--enable-features=VaapiVideoDecoder":
+            # VAAPI requires GPU-specific stacks; skip on CPU
+            continue
+        cpu_safe_args.append(arg)
+
+    # Ensure required SwiftShader flags are present if not already injected
+    if not any(a.startswith("--use-angle=") for a in cpu_safe_args):
+        cpu_safe_args.append("--use-angle=swiftshader")
+    if not any(a.startswith("--use-gl=") for a in cpu_safe_args):
+        cpu_safe_args.append("--use-gl=swiftshader")
+
+    return cpu_safe_args
+
 
 def _validate_executable_path(executable_path: str) -> bool:
     """Validate that an executable path is safe to use in subprocess calls."""
@@ -260,7 +290,7 @@ def get_anti_detection_arguments(user_agent: str | None = None, window_size: tup
             "--enable-accelerated-video-decode",
             # Ignore GPU blocklist to ensure WebGL works
             "--ignore-gpu-blocklist",
-            # Don't use software renderer - we want real WebGL
+            # Don't use software renderer - we want real WebGL (overridden on CPU)
             "--disable-software-rasterizer",
             # Use ANGLE (more compatible on Windows)
             "--use-angle=default",
@@ -275,6 +305,10 @@ def get_anti_detection_arguments(user_agent: str | None = None, window_size: tup
             "--enable-features=VaapiVideoDecoder",
         ],
     )
+
+    # Adjust GPU arguments for CPU-only environments to favour SwiftShader
+    if get_compute_profile() == "cpu":
+        args = _adjust_gpu_arguments_for_cpu(args)
 
     return args
 

@@ -1,15 +1,26 @@
 #!/usr/bin/env python
-"""Run Chrome MCP server via console script entrypoint.
-
-This wrapper avoids ad-hoc sys.path hacks by relying on package installation.
-"""
+"""Run Chrome MCP server via console script entrypoint."""
 
 from __future__ import annotations
 
-from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer
+import sys
+from pathlib import Path
+
+
+def _ensure_repo_on_path() -> None:
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / ".git").exists() and (current / "base").exists():
+            sys.path.insert(0, str(current))
+            return
+        current = current.parent
 
 
 def main() -> None:
+    _ensure_repo_on_path()
+
+    from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
+
     server = ChromeFastMCPServer()
     server.run(transport="stdio")
 
