@@ -131,7 +131,7 @@ python scripts/run_tests.py tests/integration/test_mcp_server.py
 
 ## Headless Chrome Runtime Dependencies (Unix)
 
-Running Chrome in headless/container environments requires a set of shared libraries even without a GPU. Our test suite will skip launch-dependent tests if these are missing. Install the following packages to enable software rendering (SwiftShader) and satisfy Chrome’s runtime deps:
+Running Chrome in headless/container environments requires a set of shared libraries even without a GPU. Our test suite will skip launch-dependent tests if these are missing. Install the following packages to enable software rendering (SwiftShader) and satisfy Chrome's runtime deps:
 
 - Debian/Ubuntu (recommended minimal set):
   - libnss3 libgbm1 libxkbcommon0 libasound2 libxdamage1 libxfixes3 libxrandr2
@@ -163,10 +163,18 @@ SUDO_PASSWORD=docker bash browser/scripts/install_chrome_deps.sh --minimal
 
 Notes:
 - No GPU is required. We fall back to software GL via `--use-gl=swiftshader` when needed.
-- If running as root in a container, Chrome’s sandbox may be blocked. Tests run headless and include `--no-sandbox`, but some hosts also need `sysctl -w kernel.unprivileged_userns_clone=1` or a non-root user.
+- If running as root in a container, Chrome's sandbox may be blocked. Tests run headless and include `--no-sandbox`, but some hosts also need `sysctl -w kernel.unprivileged_userns_clone=1` or a non-root user.
 - Ensure `/tmp` is writable (Chrome uses it extensively). We pass `--disable-dev-shm-usage` via options.
 
-If Chrome still won’t launch, check missing libs:
+### Compute Profiles
+
+The module honours the orchestrator compute profile environment variables (`AMI_COMPUTE_PROFILE`, `AMI_COMPUTE_TARGET`, `COMPUTE_PROFILE`).
+
+- Default (`cpu`) swaps Chromium to SwiftShader automatically so anti-detect tests still pass on machines without discrete GPUs.
+- Set `AMI_COMPUTE_PROFILE=nvidia`, `intel`, or `amd` (aliases like `gpu`, `cuda`, `xpu`, `rocm` are accepted) before running `module_setup.py` or the browser tests to pull the matching dependency bundle and retain hardware acceleration flags.
+- The profile is read at runtime, so you can toggle between CPU and GPU behaviour without reinstalling environments.
+
+If Chrome still won't launch, check missing libs:
 
 ```bash
 ldd "$(python3 - <<'PY'\nfrom browser.backend.utils.config import Config\nprint(Config().get('backend.browser.chrome_binary_path'))\nPY)" | grep 'not found'

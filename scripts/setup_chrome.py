@@ -5,6 +5,7 @@ import contextlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,15 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 BUILD_DIR = PROJECT_ROOT / "build"
 
+# Revision thresholds used as a fallback when the binary cannot reveal its version.
+REVISION_VERSION_HEURISTICS: list[tuple[int, str]] = [
+    (1518000, "142.0.0.0"),
+    (1506000, "141.0.7379.0"),
+    (1490000, "132.0.6834.0"),
+    (1470000, "131.0.6778.0"),
+    (0, "130.0.6723.0"),
+]
+
 # Colors for output (cross-platform)
 if platform.system() == "Windows":
     RED = GREEN = YELLOW = NC = ""
@@ -32,6 +42,19 @@ else:
 def print_colored(message: str, color: str = "") -> None:
     """Print colored message."""
     logger.info(f"{color}{message}{NC}")
+
+
+def _invalidate_patched_driver(driver_path: Path) -> None:
+    """Remove any stale patched driver so the next launch re-patches a fresh binary."""
+    patched_name = f"{driver_path.stem}_patched{driver_path.suffix}"
+    patched_path = driver_path.with_name(patched_name)
+
+    if patched_path.exists():
+        try:
+            patched_path.unlink()
+            print_colored(f"Removed stale patched ChromeDriver at {patched_path}", YELLOW)
+        except Exception as exc:  # noqa: BLE001
+            print_colored(f"Warning: failed to remove {patched_path}: {exc}", YELLOW)
 
 
 def get_platform_info() -> tuple[str, str]:
@@ -77,6 +100,35 @@ def get_latest_chromium_revision() -> str:
     return revision
 
 
+def _ensure_chromium_permissions(chrome_dir: Path, system: str) -> None:
+    """Ensure Chromium runtime binaries have the right permissions."""
+
+    if system == "Windows":
+        return
+
+    try:
+        if system == "Darwin":
+            app_contents = chrome_dir / "Chromium.app" / "Contents"
+            helpers_dir = app_contents / "Frameworks" / "Chromium Framework.framework" / "Versions" / "Current" / "Helpers"
+
+            chrome_exe = app_contents / "MacOS" / "Chromium"
+            crashpad = helpers_dir / "Chrome Crashpad Handler.app" / "Contents" / "MacOS" / "Chrome Crashpad Handler"
+            sandbox = helpers_dir / "chrome_crashpad_handler"
+        else:  # Linux and other Unix
+            chrome_exe = chrome_dir / "chrome"
+            crashpad = chrome_dir / "chrome_crashpad_handler"
+            sandbox = chrome_dir / "chrome_sandbox"
+
+        for binary in (chrome_exe, crashpad, sandbox):
+            if binary and binary.exists():
+                try:
+                    binary.chmod(0o755)
+                except Exception as exc:  # noqa: BLE001
+                    print_colored(f"Warning: failed to set executable bit on {binary.name}: {exc}", YELLOW)
+    except Exception as e:  # noqa: BLE001
+        print_colored(f"Warning: failed to adjust Chromium binary permissions: {e}", YELLOW)
+
+
 def download_chromium(revision: str) -> Path:  # noqa: C901
     """Download Chromium for the current platform."""
     plat, _ = get_platform_info()
@@ -102,12 +154,7 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
         chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
 
     if chrome_exe.exists():
-        # Ensure executable bit is set on Unix
-        if system != "Windows":
-            try:
-                chrome_exe.chmod(0o755)
-            except Exception as e:
-                print_colored(f"Warning: failed to set executable bit on Chrome: {e}", YELLOW)
+        _ensure_chromium_permissions(chrome_dir, system)
         print_colored(f"Chrome already exists at {chrome_dir}", GREEN)
         return chrome_dir
 
@@ -157,20 +204,7 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
     # Clean up zip file
     zip_path.unlink()
 
-    # Ensure chrome binary is executable on Unix-like systems
-    try:
-        if system == "Windows":
-            pass
-        elif system == "Darwin":
-            chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-            if chrome_exe.exists():
-                chrome_exe.chmod(0o755)
-        else:  # Linux
-            chrome_exe = chrome_dir / "chrome"
-            if chrome_exe.exists():
-                chrome_exe.chmod(0o755)
-    except Exception as e:
-        print_colored(f"Warning: failed to set executable bit on Chrome: {e}", YELLOW)
+    _ensure_chromium_permissions(chrome_dir, system)
 
     # Remove quarantine on macOS
     if system == "Darwin":
@@ -181,43 +215,76 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
     return chrome_dir
 
 
-def get_chrome_version(chrome_dir: Path, revision: str | None = None) -> str:
-    """Get Chrome version from the binary or use known mapping."""
-    system = platform.system()
-
+def _find_chrome_executable(chrome_dir: Path, system: str) -> Path:
     if system == "Windows":
-        chrome_exe = chrome_dir / "chrome.exe"
-    elif system == "Darwin":
-        chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-    else:
-        chrome_exe = chrome_dir / "chrome"
+        return chrome_dir / "chrome.exe"
+    if system == "Darwin":
+        return chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    return chrome_dir / "chrome"
+
+
+def _version_from_binary(chrome_exe: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            [str(chrome_exe), "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        print_colored(
+            f"Warning: Failed to query Chrome binary for version ({exc}); falling back to revision heuristic",
+            YELLOW,
+        )
+        return None
+
+    output = (result.stdout or result.stderr or "").strip()
+    match = re.search(r"(\d+\.\d+\.\d+\.\d+)", output)
+    if match:
+        return match.group(1)
+
+    print_colored(
+        f"Warning: Unexpected --version output '{output}', will fall back to revision heuristic",
+        YELLOW,
+    )
+    return None
+
+
+def _version_from_revision(revision: str | None) -> str | None:
+    if not revision:
+        return None
+
+    try:
+        revision_num = int(revision)
+    except ValueError:
+        return None
+
+    for threshold, version in REVISION_VERSION_HEURISTICS:
+        if revision_num >= threshold:
+            return version
+    return None
+
+
+def get_chrome_version(chrome_dir: Path, revision: str | None = None) -> str:
+    """Resolve the installed Chromium build version."""
+
+    system = platform.system()
+    chrome_exe = _find_chrome_executable(chrome_dir, system)
 
     if not chrome_exe.exists():
         raise FileNotFoundError(f"Chrome binary not found at {chrome_exe}")
 
-    # Known revision to version mappings (approximately)
-    # Revision 1506999 is Chrome 141
-    if revision:
-        revision_num = int(revision)
-        revision_141 = 1506000
-        revision_132 = 1490000
-        revision_131 = 1470000
-        if revision_num >= revision_141:
-            version = "141.0.7379.0"  # Chrome 141 dev
-        elif revision_num >= revision_132:
-            version = "132.0.6834.0"
-        elif revision_num >= revision_131:
-            version = "131.0.6778.0"
-        else:
-            version = "130.0.6723.0"
-        print_colored(f"Chrome version (from revision {revision}): {version}", GREEN)
+    version = _version_from_binary(chrome_exe)
+    if version:
+        print_colored(f"Chrome version (from binary): {version}", GREEN)
         return version
 
-    # Fallback - try to get from binary (might open window)
-    print_colored("Warning: Unable to determine version from revision, trying binary...", YELLOW)
-    version = "131.0.6778.205"  # Default fallback
-    print_colored(f"Chrome version: {version}", GREEN)
-    return version
+    version = _version_from_revision(revision)
+    if version:
+        print_colored(f"Chrome version (from revision heuristic {revision}): {version}", GREEN)
+        return version
+
+    raise RuntimeError("Unable to determine Chrome version from binary or revision")
 
 
 def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C901
@@ -304,6 +371,7 @@ def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C90
             subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
+    _invalidate_patched_driver(driver_path)
     return driver_path
 
 
@@ -383,6 +451,7 @@ def download_chromedriver(version: str) -> Path:  # noqa: C901
             subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
+    _invalidate_patched_driver(driver_path)
     return driver_path
 
 
