@@ -1,43 +1,24 @@
-# MCP Test Notes
+# FastMCP Integration Test Notes
 
-The MCP (Model Context Protocol) tests require special handling because they import from the `base` module which is in the parent directory (AMI-ORCHESTRATOR root).
+The integration suite targets `backend/mcp/chrome`, which builds on the shared Base
+FastMCP infrastructure. To avoid import issues, always run these tests through the
+module runner so the parent `/base` package is on `sys.path`.
 
-## Running MCP Tests
-
-Due to Python import path issues, MCP tests cannot be run with the standard pytest collection. Use one of these methods:
-
-### Method 1: Run directly as Python scripts
 ```bash
-cd browser
-.venv/Scripts/python.exe tests/integration/test_mcp_server.py
-.venv/Scripts/python.exe tests/integration/test_mcp_environment_tools.py  
-.venv/Scripts/python.exe tests/integration/test_mcp_logs_storage.py
+uv run --python 3.12 --project browser \
+  python scripts/run_tests.py tests/integration/test_mcp_*
 ```
 
-### Method 2: Use the batch file (Windows)
-```bash
-cd browser
-run_mcp_tests.bat
-```
+## Pre-requisites
+1. Install Chromium + ChromeDriver via `uv run --python 3.12 --project browser python scripts/setup_chrome.py`.
+2. Ensure the Base module is installed in editable mode; the module runner handles this automatically.
+3. Provide any required environment variables in `browser/.env` (see `README.md`).
 
-### Method 3: Use the test runner script
-```bash
-cd browser
-.venv/Scripts/python.exe scripts/run_tests.py tests/integration/test_mcp_*
-```
+## Common Issues
+- **ImportError for `base.backend`** – Indicates the tests were invoked directly with `pytest`.
+  Re-run through the module runner or add the repository root to `PYTHONPATH` before execution.
+- **Chrome binary missing** – Re-run `scripts/setup_chrome.py` or point `BROWSER_CHROME_PATH`
+  to an existing binary.
 
-## Why This Is Necessary
-
-The MCP server (`backend/mcp/browser/server.py`) imports from `base.mcp.mcp_server` which is located in the parent directory. When pytest collects test modules, it imports them before `conftest.py` can set up the path, causing import errors.
-
-The test files add the necessary paths at the top of the file, but pytest's import mechanism bypasses this when collecting tests.
-
-## Test Status
-
-All 14 MCP tests pass when run directly:
-- TestMCPServerConnection: 3 tests
-- TestMCPBrowserOperations: 4 tests  
-- TestMCPCookieManagement: 1 test
-- TestMCPTabManagement: 1 test
-- TestMCPErrorHandling: 3 tests
-- TestMCPConcurrency: 2 tests
+Legacy Windows-only instructions have been removed. Tests now work cross-platform
+as long as the commands above are used.

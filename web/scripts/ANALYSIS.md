@@ -1,4 +1,9 @@
-# web/scripts Module Analysis
+# Research Note — web/scripts Module Analysis
+
+*This document is retained for research. The recommendations below describe
+anti-detection experiments that are not part of the supported Browser module
+surface. Any production work must align with the patterns documented in
+`browser/docs/` and `/base`.*
 
 **Last Updated**: 2025-08-13
 

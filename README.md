@@ -58,4 +58,4 @@ The test runner executes Base’s Python suite followed by optional npm-based ch
 - The module’s audit hooks integrate with Base logging utilities; map them to the compliance backend once `compliance/backend` is implemented.
 - Future work: surface generated session artefacts (screenshots, logs) through the compliance MCP server so evidence can be attached to controls.
 
-Refer to `docs/Architecture-Map.md` at the repository root for module relationships, and `compliance/docs/COMPLIANCE_BACKEND_SPEC.md` for the upcoming compliance integration requirements.
+Refer to `docs/Architecture-Map.md` at the repository root for module relationships, and `compliance/docs/research/COMPLIANCE_BACKEND_SPEC.md` for the upcoming compliance integration requirements.
