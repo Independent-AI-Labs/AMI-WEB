@@ -1,220 +1,61 @@
-# AMI-WEB: Compliant Browser Automation Platform
+# AMI Browser Module
 
-## Business Value
+This module provides auditable Chromium automation and a FastMCP server so agents can drive browsers using standard tooling. The implementation lives entirely inside this repository; the README summarises what is available today.
 
-AMI-WEB enables enterprises to automate web interactions while maintaining complete compliance with data protection regulations. Every browser action is auditable, sandboxed, and traceable, ensuring your automation meets EU AI Act transparency requirements and GDPR data handling standards.
+## What Exists Now
 
-## Core Capabilities
+- `backend/core/` – Chrome lifecycle management (`ChromeManager`), profile isolation, and tool implementations.
+- `backend/mcp/chrome/` – FastMCP server exposing launch/navigation/input/extraction/screenshot tools.
+- `scripts/setup_chrome.py` – Installs Chromium/ChromeDriver binaries per platform with minimal sudo usage.
+- `module_setup.py` – Delegates to Base `EnvironmentSetup`, ensuring dependencies install after the venv is created. Uses stdlib logging only.
 
-### 🌐 Auditable Web Automation
-Every browser interaction is logged, sandboxed, and compliant with enterprise security requirements.
+## MCP Tools
 
-**Compliance Features:**
-- **Complete Audit Trail** - Every click, type, and navigation logged with timestamps
-- **Profile Isolation** - Sandboxed sessions prevent data leakage between automations
-- **Session Recording** - Full replay capability for compliance reviews and audits
-- **AI Transparency** - MCP protocol ensures explainable automation decisions
+`ChromeFastMCPServer` registers the following tool families (see `backend/mcp/chrome/tools/`):
 
-### 🔌 Chrome MCP Server
+- **Lifecycle** – `browser_launch`, `browser_list`, `browser_get_active`, `browser_terminate`.
+- **Navigation** – `browser_navigate`, `browser_back`, `browser_forward`, `browser_refresh`, `browser_get_url`.
+- **Input** – `browser_click`, `browser_type`, `browser_select`, `browser_hover`, `browser_scroll`, `browser_press`.
+- **Extraction** – `browser_get_text`, `browser_exists`, `browser_wait_for`, `browser_get_attribute`, `browser_get_cookies`.
+- **JavaScript** – `browser_evaluate`, `browser_execute`.
+- **Screenshots** – `browser_screenshot`, `browser_element_screenshot`.
 
-Production-ready browser control via Model Context Protocol for AI agents and automation tools.
+Each tool returns a Pydantic `BrowserResponse` so downstream callers receive structured results (status, payload, metadata).
 
-**Available Tools:**
-
-| Tool | Purpose | Example Use |
-|------|---------|-------------|
-| `browser_launch` | Start browser instance | Launch with custom profile |
-| `browser_navigate` | Navigate to URL | Go to login page |
-| `browser_click` | Click elements | Submit forms |
-| `browser_type` | Enter text | Fill username/password |
-| `browser_screenshot` | Capture screenshots | Document state |
-| `browser_execute_script` | Run JavaScript | Extract data |
-| `browser_get_cookies` | Retrieve cookies | Session management |
-| `browser_set_cookies` | Set cookies | Restore sessions |
-| `browser_get_html` | Get page HTML | Content extraction |
-| `browser_wait_for` | Wait for elements | Handle dynamic content |
-| `browser_get_network_logs` | Monitor requests | Debug APIs |
-| `browser_terminate` | Close browser | Cleanup |
-
-**Transport Modes:**
-```bash
-# CLI integration (stdio)
-python backend/mcp/chrome/run_chrome.py
-
-# Network access (websocket)  
-python backend/mcp/chrome/run_chrome.py --transport websocket --port 9000
-```
-
-### 🛡️ Privacy-Preserving Automation
-
-Maintain data sovereignty while automating web interactions:
-
-- **Data Localization** - All browser data stays on your infrastructure
-- **Cookie Isolation** - Separate cookie stores per profile
-- **Network Control** - Route traffic through your proxies
-- **Credential Security** - Never logs passwords or sensitive data
-- **GDPR Compliance** - Respect consent banners and privacy settings
-- **Session Encryption** - All stored sessions encrypted at rest
-
-## Quick Start
+## Running the Server
 
 ```bash
-# Clone and setup
-git clone https://github.com/Independent-AI-Labs/AMI-WEB.git
-cd AMI-WEB
-uv venv .venv && uv pip install -r requirements.txt
+# stdio transport
+uv run --python 3.12 --project browser python backend/mcp/chrome/run_chrome.py
 
-# Run MCP server for AI agents
-python backend/mcp/chrome/run_chrome.py
-
-# Or use directly in Python
-from browser.backend.core.management.manager import ChromeManager
-
-manager = ChromeManager()
-await manager.initialize()
-browser = await manager.get_or_create_instance(profile_name="shopping")
-await browser.navigate("https://amazon.com")
+# websocket transport
+uv run --python 3.12 --project browser python backend/mcp/chrome/run_chrome.py --transport websocket --port 9000
 ```
 
-## Use Cases
+Before launching, ensure Chromium exists:
 
-### Compliant Enterprise Automation
-- **Regulatory Reporting** - Automate submissions with full audit trails
-- **Vendor Portal Management** - Process invoices with compliance tracking
-- **HR System Integration** - Automate workflows with data protection
-- **Compliance Monitoring** - Track website changes for regulatory updates
-
-### Secure Testing & Validation
-- **GDPR Testing** - Validate consent flows and data handling
-- **Security Testing** - Sandboxed penetration testing
-- **Compliance Validation** - Verify regulatory requirements
-- **Audit Trail Generation** - Document testing for compliance
-
-### Privacy-Preserving Data Collection
-- **Consent-Aware Scraping** - Respect user privacy settings
-- **Data Minimization** - Collect only necessary information
-- **Purpose Limitation** - Track data usage and retention
-- **Right to Erasure** - Support GDPR deletion requirements
-
-## Architecture
-
+```bash
+uv run --python 3.12 --project browser python scripts/setup_chrome.py
 ```
-browser/
-├── backend/
-│   ├── core/
-│   │   ├── browser/          # Browser control layer
-│   │   │   ├── instance.py      # Individual browser
-│   │   │   ├── lifecycle.py    # Launch/terminate
-│   │   │   └── options.py      # Chrome options
-│   │   ├── management/       # Resource management
-│   │   │   ├── manager.py      # Browser pool
-│   │   │   ├── profile_manager.py  # Profile isolation
-│   │   │   └── session_manager.py  # State persistence
-│   │   └── tools/           # Browser operations
-│   └── mcp/
-│       └── chrome/          # MCP server implementation
-│           ├── server.py       # ChromeMCPServer
-│           └── tools/          # Tool definitions
-└── tests/
-    └── integration/         # End-to-end tests
-```
+
+`setup_chrome.py` respects `AMI_COMPUTE_PROFILE` (`cpu`, `nvidia`, `intel`, `amd`) when choosing driver bundles.
 
 ## Testing
 
 ```bash
-# Run all browser tests
-python scripts/run_tests.py
-
-# Test MCP server modes
-python scripts/run_tests.py tests/integration/test_mcp_server.py
+uv run --python 3.12 --project browser python scripts/run_tests.py
 ```
 
-## Headless Chrome Runtime Dependencies (Unix)
+The test runner executes Base’s Python suite followed by optional npm-based checks when present. Browser integration tests require Chromium; they will skip gracefully if the binary is missing.
 
-Running Chrome in headless/container environments requires a set of shared libraries even without a GPU. Our test suite will skip launch-dependent tests if these are missing. Install the following packages to enable software rendering (SwiftShader) and satisfy Chrome's runtime deps:
+## Configuration
 
-- Debian/Ubuntu (recommended minimal set):
-  - libnss3 libgbm1 libxkbcommon0 libasound2 libxdamage1 libxfixes3 libxrandr2
-  - libxcomposite1 libx11-xcb1 libxss1 libglib2.0-0 libdrm2 libcups2
-  - libxcb1 libxext6 fonts-liberation ca-certificates
+- `config.yaml` – Created from the platform template on first setup. Controls binary paths, headless options, proxy settings, and profile locations.
+- Environment hints inherit from the orchestrator (`AMI_HOST`, compute profiles, etc.).
 
-Quick install:
+## Compliance & Roadmap Notes
 
-```bash
-bash browser/scripts/install_chrome_deps.sh
-```
+- The module’s audit hooks integrate with Base logging utilities; map them to the compliance backend once `compliance/backend` is implemented.
+- Future work: surface generated session artefacts (screenshots, logs) through the compliance MCP server so evidence can be attached to controls.
 
-- The script uses sudo when not run as root. By default it supplies the password "docker" to sudo. Override via env var:
-
-```bash
-SUDO_PASSWORD="your_password" bash browser/scripts/install_chrome_deps.sh
-```
-
-- Minimal-only mode (Debian/Ubuntu): installs precisely the required list with
-  apt-get -o APT::Get::Fix-Missing=true and without recommends:
-
-```bash
-# via env var
-MINIMAL_INSTALL=1 SUDO_PASSWORD=docker bash browser/scripts/install_chrome_deps.sh
-
-# or via CLI flag
-SUDO_PASSWORD=docker bash browser/scripts/install_chrome_deps.sh --minimal
-```
-
-Notes:
-- No GPU is required. We fall back to software GL via `--use-gl=swiftshader` when needed.
-- If running as root in a container, Chrome's sandbox may be blocked. Tests run headless and include `--no-sandbox`, but some hosts also need `sysctl -w kernel.unprivileged_userns_clone=1` or a non-root user.
-- Ensure `/tmp` is writable (Chrome uses it extensively). We pass `--disable-dev-shm-usage` via options.
-
-### Compute Profiles
-
-The module honours the orchestrator compute profile environment variables (`AMI_COMPUTE_PROFILE`, `AMI_COMPUTE_TARGET`, `COMPUTE_PROFILE`).
-
-- Default (`cpu`) swaps Chromium to SwiftShader automatically so anti-detect tests still pass on machines without discrete GPUs.
-- Set `AMI_COMPUTE_PROFILE=nvidia`, `intel`, or `amd` (aliases like `gpu`, `cuda`, `xpu`, `rocm` are accepted) before running `module_setup.py` or the browser tests to pull the matching dependency bundle and retain hardware acceleration flags.
-- The profile is read at runtime, so you can toggle between CPU and GPU behaviour without reinstalling environments.
-
-If Chrome still won't launch, check missing libs:
-
-```bash
-ldd "$(python3 - <<'PY'\nfrom browser.backend.utils.config import Config\nprint(Config().get('backend.browser.chrome_binary_path'))\nPY)" | grep 'not found'
-```
-
-This will list any remaining dependencies to install.
-
-## Security & Compliance
-
-- **Audit Trails** - Every action logged with timestamp
-- **Session Recording** - Replay browser sessions
-- **Data Isolation** - Profiles never share data
-- **Credential Safety** - Never logs passwords
-- **Network Control** - Proxy and header management
-
-## Performance
-
-- **Concurrent Browsers** - 100+ simultaneous sessions
-- **Fast Launch** - <2 second cold start
-- **Low Memory** - Efficient resource pooling
-- **Auto-Scaling** - Grows with demand
-- **Hibernation** - Suspend idle browsers
-
-## Recent Updates
-
-### Latest - MCP Transport Unification
-- All tools now support stdio and websocket modes
-- Consolidated transport implementation in base module
-- Proper environment handling for wrapper scripts
-- Fixed test tool name assertions
-
-## Contributing
-
-See `CLAUDE.md` for development guidelines.
-
-## License
-
-MIT License - See LICENSE file
-
-## Support
-
-- GitHub Issues: [AMI-WEB Issues](https://github.com/Independent-AI-Labs/AMI-WEB/issues)
-- Main Project: [AMI-ORCHESTRATOR](https://github.com/Independent-AI-Labs/AMI-ORCHESTRATOR)
+Refer to `docs/Architecture-Map.md` at the repository root for module relationships, and `compliance/docs/COMPLIANCE_BACKEND_SPEC.md` for the upcoming compliance integration requirements.
