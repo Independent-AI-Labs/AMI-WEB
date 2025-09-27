@@ -1,4 +1,8 @@
-# web/extensions Module Analysis
+# Research Note — web/extensions Module Analysis
+
+*This analysis summarises exploratory anti-detection work. Treat it as
+research-only; production changes must follow the Browser module guidelines and
+Base protocols.*
 
 **Last Updated**: 2025-08-13
 
