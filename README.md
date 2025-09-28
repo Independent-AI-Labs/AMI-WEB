@@ -1,6 +1,10 @@
 # AMI Browser Module
 
-This module provides auditable Chromium automation and a FastMCP server so agents can drive browsers using standard tooling. The implementation lives entirely inside this repository; the README summarises what is available today.
+Browser keeps agents connected to the real web with compliant, auditable Chromium automation. It delivers a ready-to-run FastMCP server so teams can add browsing superpowers without hand-rolling driver logic or compromising security controls.
+
+## What You Get
+
+This module packages the Chromium lifecycle manager, FastMCP tooling, and setup scripts that are used across the orchestrator. The sections below describe the components that ship today.
 
 ## What Exists Now
 
