@@ -4,14 +4,28 @@
 import sys
 from pathlib import Path
 
-# Add browser and base to path
-MODULE_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(MODULE_ROOT))
-sys.path.insert(0, str(MODULE_ROOT.parent))  # For base imports
 
-from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: E402
+def _ensure_repo_on_path() -> None:
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / ".git").exists() and (current / "base").exists():
+            sys.path.insert(0, str(current))
+            return
+        current = current.parent
 
-if __name__ == "__main__":
-    # Create and run server
+
+def main() -> None:
+    _ensure_repo_on_path()
+
+    from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: PLC0415
+
+    ensure_module_venv(Path(__file__))
+
+    from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
+
     server = ChromeFastMCPServer()
     server.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

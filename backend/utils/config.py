@@ -178,6 +178,28 @@ class Config:
                     "tls_enabled": False,
                     "ping_interval": 30,
                     "ping_timeout": 10,
+                    "tool_limits": {
+                        "global_max_bytes": 256_000,
+                        "defaults": {
+                            "response_bytes": 64_000,
+                        },
+                        "browser_get_text": {
+                            "response_bytes": 64_000,
+                            "chunk_bytes": 16_000,
+                        },
+                        "browser_execute": {
+                            "response_bytes": 32_000,
+                            "chunk_bytes": 12_000,
+                        },
+                        "browser_evaluate": {
+                            "response_bytes": 32_000,
+                            "chunk_bytes": 12_000,
+                        },
+                        "chunks": {
+                            "default_chunk_size_bytes": 16_000,
+                            "max_chunk_bytes": 128_000,
+                        },
+                    },
                 },
                 "chrome_options": {
                     "arguments": [

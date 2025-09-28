@@ -19,6 +19,10 @@ def _ensure_repo_on_path() -> None:
 def main() -> None:
     _ensure_repo_on_path()
 
+    from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: PLC0415
+
+    ensure_module_venv(Path(__file__))
+
     from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
 
     server = ChromeFastMCPServer()

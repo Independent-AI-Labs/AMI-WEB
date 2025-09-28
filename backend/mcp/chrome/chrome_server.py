@@ -21,6 +21,7 @@ from browser.backend.mcp.chrome.tools.extraction_tools import (  # noqa: E402
     browser_exists_tool,
     browser_get_attribute_tool,
     browser_get_cookies_tool,
+    browser_get_text_chunk_tool,
     browser_get_text_tool,
     browser_wait_for_tool,
 )
@@ -33,7 +34,9 @@ from browser.backend.mcp.chrome.tools.input_tools import (  # noqa: E402
     browser_type_tool,
 )
 from browser.backend.mcp.chrome.tools.javascript_tools import (  # noqa: E402
+    browser_evaluate_chunk_tool,
     browser_evaluate_tool,
+    browser_execute_chunk_tool,
     browser_execute_tool,
 )
 from browser.backend.mcp.chrome.tools.navigation_tools import (  # noqa: E402
@@ -158,6 +161,16 @@ class ChromeFastMCPServer:
             """Get element text."""
             return await browser_get_text_tool(self.manager, selector)
 
+        @self.mcp.tool(description="Stream text content of an element in deterministic chunks")
+        async def browser_get_text_chunk(
+            selector: str,
+            offset: int = 0,
+            length: int | None = None,
+            snapshot_checksum: str | None = None,
+        ) -> BrowserResponse:
+            """Get element text chunk."""
+            return await browser_get_text_chunk_tool(self.manager, selector, offset, length, snapshot_checksum)
+
         @self.mcp.tool(description="Get attribute value of an element")
         async def browser_get_attribute(selector: str, attribute: str) -> BrowserResponse:
             """Get element attribute."""
@@ -195,10 +208,31 @@ class ChromeFastMCPServer:
             """Execute JavaScript."""
             return await browser_execute_tool(self.manager, script, args)
 
+        @self.mcp.tool(description="Execute JavaScript and stream string result in chunks")
+        async def browser_execute_chunk(
+            script: str,
+            offset: int = 0,
+            length: int | None = None,
+            snapshot_checksum: str | None = None,
+            args: list[Any | None] | None = None,
+        ) -> BrowserResponse:
+            """Execute JavaScript with chunked response."""
+            return await browser_execute_chunk_tool(self.manager, script, offset, length, snapshot_checksum, args)
+
         @self.mcp.tool(description="Evaluate JavaScript expression")
         async def browser_evaluate(expression: str) -> BrowserResponse:
             """Evaluate JavaScript."""
             return await browser_evaluate_tool(self.manager, expression)
+
+        @self.mcp.tool(description="Evaluate JavaScript and stream string result in chunks")
+        async def browser_evaluate_chunk(
+            expression: str,
+            offset: int = 0,
+            length: int | None = None,
+            snapshot_checksum: str | None = None,
+        ) -> BrowserResponse:
+            """Evaluate JavaScript with chunked response."""
+            return await browser_evaluate_chunk_tool(self.manager, expression, offset, length, snapshot_checksum)
 
     def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
         """Run the server.

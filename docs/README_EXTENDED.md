@@ -35,6 +35,21 @@ audit logging) and focuses on browser-specific pieces.
 - When experimenting with alternative detection countermeasures, document them under
   `docs/research/` to keep the production surface minimal.
 
+## Tool Safety Limits
+- High-volume tools (`browser_get_text`, `browser_execute`, `browser_evaluate`) now cap UTF-8
+  responses. The caps are configured in `backend.mcp.tool_limits` and surface truncation
+  metadata (`truncated`, `returned_bytes`, `total_bytes_estimate`) in each `BrowserResponse`.
+- Companion chunk tools (`browser_get_text_chunk`, `browser_execute_chunk`,
+  `browser_evaluate_chunk`) accept a byte `offset`, optional `length`, and a
+  `snapshot_checksum`. Offsets are stateless; callers resend the checksum to detect DOM drift or
+  mutated JS results before requesting subsequent chunks.
+- Chunk metadata includes `chunk_start`, `chunk_end`, `next_offset`, and `remaining_bytes` so
+  clients can iterate until `next_offset` returns `null`. Any checksum mismatch yields a
+  descriptive error prompting the client to refresh the snapshot.
+- Global maxima and per-tool overrides prevent accidental firehose responses even when
+  misconfigured. Increase limits only when pairing with additional mitigations (auditing,
+  rate limiting).
+
 ## Research Archive
 Long-form architecture analyses and historical anti-detection reports now live in
 `docs/research/`. Update those notes only when you intentionally deviate from the current
