@@ -1,19 +1,37 @@
 #!/usr/bin/env python
 """Test runner for browser module."""
 
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-# Get module root
-MODULE_ROOT = Path(__file__).resolve().parent.parent
 
-# Add browser and base to path (base imported as 'base')
-sys.path.insert(0, str(MODULE_ROOT))
-sys.path.insert(0, str(MODULE_ROOT.parent))
+def _ensure_repo_on_path() -> None:
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / ".git").exists() and (current / "base").exists():
+            sys.path.insert(0, str(current))
+            return
+        current = current.parent
 
-# Import from base using proper base. prefix
-from base.scripts.run_tests import main  # noqa: E402
+
+def main() -> int:
+    _ensure_repo_on_path()
+
+    from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: PLC0415
+    from base.scripts.run_tests import TestRunner  # noqa: PLC0415
+
+    ensure_module_venv(Path(__file__))
+
+    module_root = Path(__file__).resolve().parent.parent
+    args = sys.argv[1:]
+    if "--timeout" not in " ".join(args):
+        args = [*args, "--timeout", "600"]
+
+    runner = TestRunner(project_root=module_root, project_name="Browser")
+    return runner.run(args)
+
 
 if __name__ == "__main__":
-    # Run tests using base test runner with browser module root
-    sys.exit(main(project_root=MODULE_ROOT, project_name="Browser"))
+    sys.exit(main())
