@@ -50,6 +50,7 @@ from browser.backend.mcp.chrome.tools.screenshot_tools import (  # noqa: E402
     browser_element_screenshot_tool,
     browser_screenshot_tool,
 )
+from browser.backend.mcp.chrome.tools.search_tools import browser_web_search_tool  # noqa: E402
 
 
 class ChromeFastMCPServer:
@@ -233,6 +234,25 @@ class ChromeFastMCPServer:
         ) -> BrowserResponse:
             """Evaluate JavaScript with chunked response."""
             return await browser_evaluate_chunk_tool(self.manager, expression, offset, length, snapshot_checksum)
+
+        # Search tools
+        @self.mcp.tool(description="Run a web search using the configured engine")
+        async def web_search(
+            query: str,
+            max_results: int = 10,
+            search_engine_url: str | None = None,
+            fallback_search_url: str | None = None,
+            timeout: float | None = None,
+        ) -> BrowserResponse:
+            """Run a web search using the configured providers."""
+            return await browser_web_search_tool(
+                self.manager,
+                query,
+                max_results=max_results,
+                search_engine_url=search_engine_url,
+                fallback_search_url=fallback_search_url,
+                timeout=timeout,
+            )
 
     def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
         """Run the server.

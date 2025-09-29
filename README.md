@@ -23,6 +23,7 @@ This module packages the Chromium lifecycle manager, FastMCP tooling, and setup 
 - **Extraction** – `browser_get_text`, `browser_exists`, `browser_wait_for`, `browser_get_attribute`, `browser_get_cookies`.
 - **JavaScript** – `browser_evaluate`, `browser_execute`.
 - **Screenshots** – `browser_screenshot`, `browser_element_screenshot`.
+- **Search** – `web_search` issues trusted queries through the Browser MCP server, defaulting to the local SearXNG instance (`http://127.0.0.1:8888`) with an anonymised Brave fallback when SearXNG is unavailable.
 
 Each tool returns a Pydantic `BrowserResponse` so downstream callers receive structured results (status, payload, metadata).
 
@@ -55,6 +56,7 @@ The test runner executes Base’s Python suite followed by optional npm-based ch
 ## Configuration
 
 - `config.yaml` – Created from the platform template on first setup. Controls binary paths, headless options, proxy settings, and profile locations.
+- `backend.tools.web_search.*` – Configure the search URL templates, timeout, and optional User-Agent. The primary template defaults to the local persistent SearXNG instance so this MCP server remains the single trusted source of remote content; the fallback template should only be used when SearXNG is unreachable.
 - Environment hints inherit from the orchestrator (`AMI_HOST`, compute profiles, etc.).
 
 ## Compliance & Roadmap Notes
