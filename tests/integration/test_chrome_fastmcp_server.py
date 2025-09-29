@@ -49,6 +49,7 @@ class TestChromeFastMCPServer:
             assert "browser_navigate" in tool_names
             assert "browser_click" in tool_names
             assert "browser_screenshot" in tool_names
+            assert "web_search" in tool_names
 
     @pytest.mark.asyncio
     @pytest.mark.integration  # Mark as integration test that requires Chrome

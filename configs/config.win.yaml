@@ -127,6 +127,24 @@ backend:
       profile.password_manager_enabled: false
       profile.default_content_setting_values.notifications: 2
 
+  tools:
+    web_search:
+      # Search engine template used by the web_search tool.
+      # "{query}" will be substituted with the user supplied query.
+      primary_url: "http://127.0.0.1:8888/search?q={query}&format=json"
+
+      # Fallback template used when the primary search provider is unreachable.
+      fallback_url: "https://search.brave.com/search?q={query}"
+
+      # Timeout (seconds) for outbound search requests.
+      timeout_seconds: 10
+
+      # Maximum results to return to the caller (can be overridden per request).
+      max_results: 10
+
+      # Optional custom User-Agent header for search requests.
+      user_agent: null
+
   # Browser Properties Configuration
   browser_properties:
     # Default properties preset
