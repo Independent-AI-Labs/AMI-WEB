@@ -38,23 +38,53 @@ async def test_run_chrome_stdio_client_initialization() -> None:
         assert result.serverInfo.name == "ChromeMCPServer"
         assert result.protocolVersion in ["2024-11-05", "2025-06-18"]
 
-        # Basic capability check: list tools and ensure key tools are present
-        tools = await session.list_tools()
-        tool_names = {t.name for t in tools.tools}
-        expected = {"browser_launch", "browser_terminate", "browser_navigate", "browser_click", "browser_screenshot"}
-        assert expected.issubset(tool_names)
+        # Ensure the server advertises the full tool surface we expect. This catches
+        # accidental regressions where the runner fails to wire modules correctly and
+        # prevents MCP clients from reconnecting because tool discovery breaks.
+        response = await session.list_tools()
+        tool_names = {tool.name for tool in response.tools}
+        expected_tools = {
+            "browser_back",
+            "browser_click",
+            "browser_element_screenshot",
+            "browser_evaluate",
+            "browser_evaluate_chunk",
+            "browser_execute",
+            "browser_execute_chunk",
+            "browser_exists",
+            "browser_forward",
+            "browser_get_active",
+            "browser_get_attribute",
+            "browser_get_cookies",
+            "browser_get_text",
+            "browser_get_text_chunk",
+            "browser_get_url",
+            "browser_hover",
+            "browser_launch",
+            "browser_list",
+            "browser_navigate",
+            "browser_press",
+            "browser_refresh",
+            "browser_screenshot",
+            "browser_scroll",
+            "browser_select",
+            "browser_terminate",
+            "browser_type",
+            "browser_wait_for",
+            "web_search",
+        }
+        assert tool_names == expected_tools
 
-        # Optional: call a lightweight info-like tool if present; skip if absent
-        # Not all servers expose an explicit info endpoint; avoid requiring a running browser instance here.
-        if "browser_get_url" in tool_names:
-            # Should return a structured BrowserResponse or text when no instance is running
+        # Call a representative tool twice to ensure the server keeps responding.
+        for attempt in range(2):
             res = await session.call_tool("browser_get_url", arguments={})
             assert res is not None and len(res.content) > 0
-            # Accept either text or object; validate JSON shape if text provided
             if res.content[0].type == "text":
                 try:
-                    payload = json.loads(res.content[0].text)
-                    assert isinstance(payload, dict)
+                    json.loads(res.content[0].text)
                 except json.decoder.JSONDecodeError:
-                    # Non-JSON textual response is acceptable in absence of an active browser
                     assert isinstance(res.content[0].text, str)
+
+        # Double-check that listing tools remains stable on a second invocation.
+        follow_up = await session.list_tools()
+        assert {tool.name for tool in follow_up.tools} == expected_tools

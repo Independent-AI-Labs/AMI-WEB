@@ -6,7 +6,11 @@ from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
-from browser.backend.mcp.chrome.utils import ChunkComputationError, compute_chunk, enforce_text_limit
+from browser.backend.mcp.chrome.utils.limits import (
+    ChunkComputationError,
+    compute_chunk,
+    enforce_text_limit,
+)
 
 
 async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None) -> BrowserResponse:

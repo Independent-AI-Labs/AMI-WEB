@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import socket
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
@@ -22,9 +23,10 @@ from browser.backend.facade.navigation.waiter import Waiter
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
 # Global instances
-_server_thread = None
-_server_port = 8888
-_server_url = f"http://localhost:{_server_port}"
+_server_thread: Thread | None = None
+_server: HTTPServer | None = None
+_server_port: int | None = None
+_server_url: str | None = None
 
 
 class HTTPHandler(SimpleHTTPRequestHandler):
@@ -39,17 +41,29 @@ class HTTPHandler(SimpleHTTPRequestHandler):
         """Suppress HTTP server logs."""
 
 
+def _get_ephemeral_port() -> int:
+    """Pick an available localhost port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
 def start_test_server() -> None:
     """Start test server in background thread."""
-    global _server_thread  # noqa: PLW0603
+    global _server_thread, _server, _server_port, _server_url  # noqa: PLW0603
 
     try:
-        # Create HTTP server
-        server = HTTPServer(("localhost", _server_port), HTTPHandler)
+        # Create HTTP server on an ephemeral port to avoid conflicts
+        port = _get_ephemeral_port()
+        server = HTTPServer(("localhost", port), HTTPHandler)
 
         # Run in thread
         _server_thread = Thread(target=server.serve_forever, daemon=True)
         _server_thread.start()
+
+        _server = server
+        _server_port = server.server_address[1]
+        _server_url = f"http://localhost:{_server_port}"
 
         logger.info(f"Test server started at {_server_url}")
     except OSError as e:
@@ -57,6 +71,13 @@ def start_test_server() -> None:
             logger.info(f"Server already running at {_server_url}")
         else:
             raise
+
+
+def _get_server_url() -> str:
+    """Return the active server URL, ensuring the server is ready."""
+    if _server_url is None:
+        raise RuntimeError("Test server not initialized")
+    return _server_url
 
 
 def setup_module() -> None:
@@ -71,6 +92,17 @@ def setup_module() -> None:
 
 def teardown_module() -> None:
     """Clean up test server."""
+    global _server_thread, _server  # noqa: PLW0602
+
+    if _server is not None:
+        _server.shutdown()
+        _server.server_close()
+        _server = None
+
+    if _server_thread is not None:
+        _server_thread.join(timeout=5)
+        _server_thread = None
+
     logger.info("Module teardown complete")
 
 
@@ -88,7 +120,7 @@ class TestBrowserNavigation:
         nav = Navigator(browser)
 
         # Navigate to login page
-        result = await nav.navigate(f"{_server_url}/login_form.html")
+        result = await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         assert result.url.endswith("login_form.html")
         assert "Login" in result.title
@@ -104,7 +136,7 @@ class TestBrowserNavigation:
         nav = Navigator(browser)
 
         # Navigate to dynamic content page
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Wait for specific element
         found = await waiter.wait_for_element("#content-area", timeout=5)
@@ -122,7 +154,7 @@ class TestBrowserNavigation:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Execute script to get form data
         result = await extractor.execute_script("return window.testHelpers.getFormData()")
@@ -147,7 +179,7 @@ class TestBrowserNavigation:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/captcha_form.html")
+        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Get outer HTML
         html = await extractor.get_page_content()
@@ -171,7 +203,7 @@ class TestInputSimulation:
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Click submit button without filling form
         await mouse.click("#submit-btn")
@@ -198,7 +230,7 @@ class TestInputSimulation:
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Type into username field
         await input_ctrl.type_text("#username", "testuser", clear=True)
@@ -221,7 +253,7 @@ class TestInputSimulation:
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/captcha_form.html")
+        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Check the robot checkbox
         await mouse.click("#robot-checkbox")
@@ -245,7 +277,7 @@ class TestInputSimulation:
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Fill and submit form
         test_password = "password123"  # noqa: S105
@@ -279,7 +311,7 @@ class TestScreenshotCapture:
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Capture viewport
         screenshot_data = await screenshot_ctrl.capture_viewport()
@@ -296,7 +328,7 @@ class TestScreenshotCapture:
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_server_url}/captcha_form.html")
+        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Capture specific element
         screenshot_data = await screenshot_ctrl.capture_element(".captcha-container")
@@ -310,7 +342,7 @@ class TestScreenshotCapture:
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Capture full page
         screenshot_data = await screenshot_ctrl.capture_full_page()
@@ -330,7 +362,7 @@ class TestDynamicContent:
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Click button to load AJAX content
         await mouse.click('[data-testid="load-ajax-btn"]')
@@ -351,7 +383,7 @@ class TestDynamicContent:
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Open modal
         await mouse.click('[data-testid="show-modal-btn"]')
@@ -381,7 +413,7 @@ class TestDynamicContent:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Switch to infinite scroll tab
         await extractor.execute_script("switchTab(2)")
@@ -426,7 +458,7 @@ class TestCaptchaHandling:
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_server_url}/captcha_form.html")
+        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Get CAPTCHA text
         captcha_text = await extractor.execute_script("return window.captchaState.textCaptcha")
@@ -450,7 +482,7 @@ class TestCaptchaHandling:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/captcha_form.html")
+        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Use helper to solve
         await extractor.execute_script("window.testHelpers.solveCaptcha('math')")
@@ -594,7 +626,7 @@ class TestScriptInjection:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/login_form.html")
+        await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Inject custom script
         await extractor.execute_script(
@@ -624,7 +656,7 @@ class TestScriptInjection:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Add new element via script
         await extractor.execute_script(
@@ -654,7 +686,7 @@ class TestScriptInjection:
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_server_url}/dynamic_content.html")
+        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
 
         # Inject request interceptor
         await extractor.execute_script(

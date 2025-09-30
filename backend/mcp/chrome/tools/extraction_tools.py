@@ -8,7 +8,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.facade.navigation.extractor import ContentExtractor
 from browser.backend.mcp.chrome.response import BrowserResponse
-from browser.backend.mcp.chrome.utils import ChunkComputationError, compute_chunk, enforce_text_limit
+from browser.backend.mcp.chrome.utils.limits import (
+    ChunkComputationError,
+    compute_chunk,
+    enforce_text_limit,
+)
 
 
 async def browser_get_text_tool(manager: ChromeManager, selector: str) -> BrowserResponse:

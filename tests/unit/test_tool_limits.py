@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from browser.backend.mcp.chrome.utils import ChunkComputationError, compute_chunk, enforce_text_limit
+from browser.backend.mcp.chrome.utils.limits import (
+    ChunkComputationError,
+    compute_chunk,
+    enforce_text_limit,
+)
 from browser.backend.utils.config import Config
 
 
