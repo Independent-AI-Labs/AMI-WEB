@@ -222,7 +222,6 @@ class Config:
                 "tools": {
                     "web_search": {
                         "primary_url": "http://127.0.0.1:8888/search?q={query}&format=json",
-                        "fallback_url": "https://search.brave.com/search?q={query}",
                         "timeout_seconds": 10,
                         "max_results": 10,
                         "user_agent": None,

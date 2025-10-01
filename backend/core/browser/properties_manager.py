@@ -138,13 +138,8 @@ class PropertiesManager:
             driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script})
             logger.debug(f"Injected browser properties via CDP{f' for tab {tab_id}' if tab_id else ''}")
         except Exception as e:
-            logger.warning(f"Failed to inject properties via CDP: {e}")
-            # Fallback to direct injection
-            try:
-                driver.execute_script(script)
-                logger.debug(f"Injected browser properties via execute_script{f' for tab {tab_id}' if tab_id else ''}")
-            except Exception as e2:
-                logger.error(f"Failed to inject browser properties: {e2}")
+            logger.error(f"Failed to inject properties via CDP: {e}")
+            raise
 
     def apply_to_chrome_options(self, options: Any, properties: BrowserProperties | None = None) -> None:
         """Apply browser properties to Chrome options before launch."""

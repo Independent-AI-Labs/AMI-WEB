@@ -56,12 +56,10 @@ class BrowserOptionsBuilder:
                     if cls.MIN_DEBUG_PORT <= port <= cls.MAX_DEBUG_PORT:
                         cls._used_ports.add(port)
                         return port
-            # Fallback: just get any available port
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("", 0))
-                port = s.getsockname()[1]
-                cls._used_ports.add(port)
-                return port
+
+            raise RuntimeError(
+                "Unable to allocate a remote debugging port within the permitted range." " Configure an explicit port via browser configuration to proceed."
+            )
 
     def get_temp_profile_dir(self) -> Path | None:
         """Get the temporary profile directory if one was created."""

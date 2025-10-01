@@ -55,7 +55,6 @@ async def test_browser_web_search_tool_primary_success() -> None:
                 "tools": {
                     "web_search": {
                         "primary_url": f"http://127.0.0.1:{port}/search?q={{query}}&format=json",
-                        "fallback_url": None,
                         "timeout_seconds": 2,
                         "max_results": 3,
                     },
@@ -80,28 +79,27 @@ async def test_browser_web_search_tool_primary_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_browser_web_search_tool_fallback_on_failure() -> None:
-    async def fallback_handler(request: web.Request) -> web.Response:
+async def test_browser_web_search_tool_primary_html_success() -> None:
+    async def html_handler(request: web.Request) -> web.Response:
         html_body = """
         <html>
             <body>
                 <div class="result">
-                    <a href="https://fallback.example.com">Fallback Title</a>
-                    <p>Fallback snippet text</p>
+                    <a href="https://html.example.com">Example HTML Title</a>
+                    <p>Example snippet text</p>
                 </div>
             </body>
         </html>
         """
         return web.Response(text=html_body, content_type="text/html")
 
-    runner, port = await _start_test_server(fallback_handler)
+    runner, port = await _start_test_server(html_handler)
     config = Config(
         {
             "backend": {
                 "tools": {
                     "web_search": {
-                        "primary_url": "http://127.0.0.1:9/search?q={query}&format=json",
-                        "fallback_url": f"http://127.0.0.1:{port}/search?q={{query}}",
+                        "primary_url": f"http://127.0.0.1:{port}/search?q={{query}}",
                         "timeout_seconds": 1,
                         "max_results": 2,
                     },
@@ -112,16 +110,16 @@ async def test_browser_web_search_tool_fallback_on_failure() -> None:
     manager = cast(ChromeManager, SimpleNamespace(config=config))
 
     try:
-        response = await browser_web_search_tool(manager, "fallback query")
+        response = await browser_web_search_tool(manager, "html query")
     finally:
         await runner.cleanup()
 
     assert response.success is True
-    assert response.data is not None and response.data["provider"] == "fallback"
+    assert response.data is not None and response.data["provider"] == "primary"
     assert isinstance(response.result, dict)
     results = response.result["results"]
-    assert results[0]["title"] == "Fallback Title"
-    assert results[0]["url"] == "https://fallback.example.com"
+    assert results[0]["title"] == "Example HTML Title"
+    assert results[0]["url"] == "https://html.example.com"
 
 
 @pytest.mark.asyncio
@@ -140,7 +138,6 @@ async def test_browser_web_search_tool_all_providers_fail() -> None:
                 "tools": {
                     "web_search": {
                         "primary_url": "http://127.0.0.1:9/search?q={query}&format=json",
-                        "fallback_url": "http://127.0.0.1:10/search?q={query}",
                         "timeout_seconds": 0.5,
                         "max_results": 1,
                     },

@@ -133,9 +133,6 @@ backend:
       # "{query}" will be substituted with the user supplied query.
       primary_url: "http://127.0.0.1:8888/search?q={query}&format=json"
 
-      # Fallback template used when the primary search provider is unreachable.
-      fallback_url: "https://search.brave.com/search?q={query}"
-
       # Timeout (seconds) for outbound search requests.
       timeout_seconds: 10
 

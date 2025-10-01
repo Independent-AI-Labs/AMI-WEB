@@ -224,7 +224,7 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         Returns:
             A browser instance from the pool
         """
-        # Determine acquire timeout: prefer explicit backend.pool.acquire_timeout, fallback to PoolConfig
+        # Determine acquire timeout: prefer explicit backend.pool.acquire_timeout, otherwise use PoolConfig default
         timeout = self._browser_config.get("backend.pool.acquire_timeout", self.config.acquire_timeout)
 
         # Get a worker from the pool

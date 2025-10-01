@@ -27,50 +27,33 @@ async def backend() -> AsyncIterator[ChromeManager]:
     elif Path("config.test.yaml").exists():
         config_file = "config.test.yaml"
 
-    if config_file:
-        # Load existing config and modify storage paths for testing
-        existing_config = Config.load(config_file)
-        config_data = existing_config._data.copy()
+    if not config_file:
+        pytest.skip("browser/config.yaml or config.test.yaml not found. Provision the configuration before running integration tests.")
 
-        # Override storage paths for test isolation
-        if "backend" not in config_data:
-            config_data["backend"] = {}
-        if "storage" not in config_data["backend"]:
-            config_data["backend"]["storage"] = {}
+    # Load existing config and modify storage paths for testing
+    existing_config = Config.load(config_file)
+    config_data = existing_config._data.copy()
 
-        config_data["backend"]["storage"].update(
-            {
-                "profiles_dir": "./data/test_profiles",
-                "download_dir": "./data/test_downloads",
-                "session_dir": "./data/test_sessions",
-            },
-        )
+    # Override storage paths for test isolation
+    if "backend" not in config_data:
+        config_data["backend"] = {}
+    if "storage" not in config_data["backend"]:
+        config_data["backend"]["storage"] = {}
 
-        # Create temporary config with correct paths
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            yaml.dump(config_data, f)
-            temp_config_file = f.name
+    config_data["backend"]["storage"].update(
+        {
+            "profiles_dir": "./data/test_profiles",
+            "download_dir": "./data/test_downloads",
+            "session_dir": "./data/test_sessions",
+        },
+    )
 
-        manager = ChromeManager(config_file=temp_config_file)
-    else:
-        # Fallback to creating config from scratch
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            config = {
-                "backend": {
-                    "browser": {
-                        "default_headless": True,
-                    },
-                    "storage": {
-                        "profiles_dir": "./data/test_profiles",
-                        "download_dir": "./data/test_downloads",
-                        "session_dir": "./data/test_sessions",
-                    },
-                },
-            }
-            yaml.dump(config, f)
-            temp_config_file = f.name
+    # Create temporary config with correct paths
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_data, f)
+        temp_config_file = f.name
 
-        manager = ChromeManager(config_file=temp_config_file)
+    manager = ChromeManager(config_file=temp_config_file)
 
     try:
         # Don't initialize pool to avoid conflicts with profile tests

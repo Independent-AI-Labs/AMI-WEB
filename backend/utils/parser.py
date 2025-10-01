@@ -1,7 +1,8 @@
 """HTML parsing and text extraction utilities."""
 
 import re
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Comment, Tag
@@ -229,11 +230,10 @@ class HTMLParser:
         Returns:
             List of dictionaries with 'text', 'href', and 'title' keys
         """
-        links = []
+        links: list[dict[str, Any]] = []
 
-        for link in self.soup.find_all("a", href=True):
-            if not isinstance(link, Tag):
-                continue
+        link_iter = cast(Iterable[Tag], self.soup.find_all("a", href=True))
+        for link in link_iter:
             href = link.get("href", "")
             if not isinstance(href, str):
                 href = str(href) if href else ""
@@ -263,11 +263,10 @@ class HTMLParser:
         Returns:
             List of dictionaries with 'src', 'alt', and 'title' keys
         """
-        images = []
+        images: list[dict[str, Any]] = []
 
-        for img in self.soup.find_all("img"):
-            if not isinstance(img, Tag):
-                continue
+        image_iter = cast(Iterable[Tag], self.soup.find_all("img"))
+        for img in image_iter:
             images.append(
                 {
                     "src": str(img.get("src", "")),
@@ -284,11 +283,10 @@ class HTMLParser:
         Returns:
             List of form dictionaries with fields and attributes
         """
-        forms = []
+        forms: list[dict[str, Any]] = []
 
-        for form in self.soup.find_all("form"):
-            if not isinstance(form, Tag):
-                continue
+        form_iter = cast(Iterable[Tag], self.soup.find_all("form"))
+        for form in form_iter:
             form_data: dict[str, Any] = {
                 "action": str(form.get("action", "")),
                 "method": str(form.get("method", "GET")).upper(),
@@ -298,9 +296,8 @@ class HTMLParser:
             }
 
             # Extract input fields
-            for input_field in form.find_all(["input", "textarea", "select"]):
-                if not isinstance(input_field, Tag):
-                    continue
+            field_iter = cast(Iterable[Tag], form.find_all(["input", "textarea", "select"]))
+            for input_field in field_iter:
                 field: dict[str, Any] = {
                     "type": str(input_field.get("type", "text")) if input_field.name == "input" else input_field.name,
                     "name": str(input_field.get("name", "")),
@@ -312,9 +309,8 @@ class HTMLParser:
 
                 # For select elements, get options
                 if input_field.name == "select":
-                    field["options"] = [
-                        {"value": str(opt.get("value", "")), "text": opt.get_text(strip=True)} for opt in input_field.find_all("option") if isinstance(opt, Tag)
-                    ]
+                    option_iter = cast(Iterable[Tag], input_field.find_all("option"))
+                    field["options"] = [{"value": str(opt.get("value", "")), "text": opt.get_text(strip=True)} for opt in option_iter]
 
                 form_data["fields"].append(field)
 
@@ -328,12 +324,10 @@ class HTMLParser:
         Returns:
             List of table dictionaries with headers and rows
         """
-        tables = []
+        tables: list[dict[str, Any]] = []
 
-        for table in self.soup.find_all("table"):
-            if not isinstance(table, Tag):
-                continue
-
+        table_iter = cast(Iterable[Tag], self.soup.find_all("table"))
+        for table in table_iter:
             table_data = self._extract_single_table(table)
             if table_data["headers"] or table_data["rows"]:
                 tables.append(table_data)
@@ -355,21 +349,20 @@ class HTMLParser:
     def _extract_table_headers(self, table: Tag) -> list[str]:
         """Extract headers from a table."""
         headers = []
-        for th in table.find_all("th"):
-            if isinstance(th, Tag):
-                headers.append(th.get_text(strip=True))
+        header_iter = cast(Iterable[Tag], table.find_all("th"))
+        for th in header_iter:
+            headers.append(th.get_text(strip=True))
         return headers
 
     def _extract_table_rows(self, table: Tag) -> list[list[str]]:
         """Extract data rows from a table."""
         rows = []
-        for tr in table.find_all("tr"):
-            if not isinstance(tr, Tag):
-                continue
+        row_iter = cast(Iterable[Tag], table.find_all("tr"))
+        for tr in row_iter:
             row = []
-            for td in tr.find_all("td"):
-                if isinstance(td, Tag):
-                    row.append(td.get_text(strip=True))
+            cell_iter = cast(Iterable[Tag], tr.find_all("td"))
+            for td in cell_iter:
+                row.append(td.get_text(strip=True))
             if row:
                 rows.append(row)
         return rows
@@ -392,11 +385,24 @@ class HTMLParser:
             text = text[:max_search_length]
 
         # Cache compiled pattern for this session
-        pattern = re.compile(re.escape(text), re.IGNORECASE)
+        pattern: re.Pattern[str] = re.compile(re.escape(text), re.IGNORECASE)
 
-        if tag:
-            return self.soup.find_all(tag, string=pattern, limit=limit)
-        return self.soup.find_all(string=pattern, limit=limit)
+        def _matches(node_text: str | None) -> bool:
+            if node_text is None:
+                return False
+            return pattern.search(node_text) is not None
+
+        if tag is not None:
+            matches: list[Any] = []
+            tag_iter = cast(Iterable[Tag], self.soup.find_all(tag))
+            for candidate in tag_iter:
+                if _matches(candidate.get_text()):
+                    matches.append(candidate)
+                    if len(matches) >= limit:
+                        break
+            return matches
+        results_without_tag = self.soup.find_all(string=_matches, limit=limit)
+        return list(results_without_tag)
 
     def get_meta_data(self) -> dict[str, str]:
         """Extract metadata from the page.
@@ -420,9 +426,8 @@ class HTMLParser:
             meta_data["title"] = title_tag.get_text(strip=True)
 
         # Get meta tags
-        for meta in self.soup.find_all("meta"):
-            if not isinstance(meta, Tag):
-                continue
+        meta_iter = cast(Iterable[Tag], self.soup.find_all("meta"))
+        for meta in meta_iter:
             name = str(meta.get("name", "")).lower()
             property_name = str(meta.get("property", "")).lower()
             content = str(meta.get("content", ""))

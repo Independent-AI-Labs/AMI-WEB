@@ -156,9 +156,9 @@ def _resolve_global_max(config: Config) -> int:
     )
 
 
-def _coerce_positive_int(value: Any, fallback: int) -> int:
+def _coerce_positive_int(value: Any, default_value: int) -> int:
     try:
         candidate = int(value)
     except (TypeError, ValueError):
-        return fallback
-    return candidate if candidate > 0 else fallback
+        return default_value
+    return candidate if candidate > 0 else default_value
