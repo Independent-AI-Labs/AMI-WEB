@@ -17,7 +17,6 @@ from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 _DEFAULT_PRIMARY_URL = "http://127.0.0.1:8888/search?q={query}&format=json"
-_DEFAULT_FALLBACK_URL = "https://search.brave.com/search?q={query}"
 _HTTP_OK = 200
 
 type SearchResult = dict[str, str | int | None]
@@ -233,14 +232,11 @@ def _summarise_results(results: list[SearchResult]) -> str:
     return "\n".join(lines)
 
 
-def _resolve_templates(
+def _resolve_template(
     config: Any,
     primary_override: str | None,
-    fallback_override: str | None,
-) -> tuple[str, str | None]:
-    primary = primary_override or (config.get("backend.tools.web_search.primary_url") if config else None) or _DEFAULT_PRIMARY_URL
-    fallback = fallback_override or (config.get("backend.tools.web_search.fallback_url") if config else None) or _DEFAULT_FALLBACK_URL
-    return primary, fallback
+) -> str:
+    return primary_override or (config.get("backend.tools.web_search.primary_url") if config else None) or _DEFAULT_PRIMARY_URL
 
 
 def _resolve_timeout(config: Any, timeout_override: float | None) -> float:
@@ -257,13 +253,6 @@ def _resolve_max_results(config: Any, max_results_override: int | None) -> int:
 
 def _resolve_user_agent(config: Any) -> str | None:
     return config.get("backend.tools.web_search.user_agent") if config else None
-
-
-def _build_providers(primary: str, fallback: str | None) -> list[_SearchProvider]:
-    providers = [_SearchProvider(name="primary", url_template=primary)]
-    if fallback and fallback != primary:
-        providers.append(_SearchProvider(name="fallback", url_template=fallback))
-    return providers
 
 
 def _build_headers(user_agent: str | None) -> dict[str, str]:
@@ -317,40 +306,38 @@ async def browser_web_search_tool(
     *,
     max_results: int | None = None,
     search_engine_url: str | None = None,
-    fallback_search_url: str | None = None,
     timeout: float | None = None,
 ) -> BrowserResponse:
-    """Run a web search using the configured providers."""
+    """Run a web search using the configured engine."""
     cleaned_query = query.strip()
     if not cleaned_query:
         return BrowserResponse(success=False, error="Query must not be empty")
 
     config = getattr(manager, "config", None)
-    primary_template, fallback_template = _resolve_templates(config, search_engine_url, fallback_search_url)
+    primary_template = _resolve_template(config, search_engine_url)
     timeout_seconds = _resolve_timeout(config, timeout)
     effective_max = _resolve_max_results(config, max_results)
     user_agent = _resolve_user_agent(config)
 
-    providers = _build_providers(primary_template, fallback_template)
     headers = _build_headers(user_agent)
 
-    last_error: str | None = None
+    provider = _SearchProvider(name="primary", url_template=primary_template)
+
+    error_message = "No web search providers returned results"
 
     async with ClientSession(timeout=ClientTimeout(total=timeout_seconds)) as session:
-        for provider in providers:
-            try:
-                return await _execute_provider(session, provider, cleaned_query, effective_max, headers)
-            except _NoResultsError as exc:
-                last_error = str(exc)
-                logger.warning(str(exc))
-            except (ClientError, TimeoutError, RuntimeError) as exc:
-                last_error = str(exc)
-                logger.warning(f"Provider {provider.name} failed: {exc}")
-            except Exception as exc:  # pragma: no cover - hard failure path
-                last_error = str(exc)
-                logger.exception(f"Unexpected error from provider {provider.name}: {exc}")
+        try:
+            return await _execute_provider(session, provider, cleaned_query, effective_max, headers)
+        except _NoResultsError as exc:
+            logger.warning(str(exc))
+            error_message = str(exc)
+        except (ClientError, TimeoutError, RuntimeError) as exc:
+            logger.warning(f"Provider {provider.name} failed: {exc}")
+            error_message = str(exc)
+        except Exception as exc:  # pragma: no cover - hard failure path
+            logger.exception(f"Unexpected error from provider {provider.name}: {exc}")
+            error_message = str(exc)
 
-    error_message = last_error or "No web search providers returned results"
     return BrowserResponse(
         success=False,
         error=f"Web search failed: {error_message}",

@@ -92,21 +92,10 @@ def setup_chrome_if_needed() -> None:
     chrome_path, chromedriver_path = get_chrome_paths_from_config()
 
     if not chrome_path or not chromedriver_path:
-        logger.warning("[WARNING] Chrome paths not configured in config.yaml")
-        logger.info("Using default locations from config.sample.yaml")
-        # Fallback to sample config defaults
-        if sys.platform == "win32":
-            # Match installer output locations
-            chrome_path = MODULE_ROOT / "build" / "chromium-win" / "chrome.exe"
-            chromedriver_path = MODULE_ROOT / "build" / "chromedriver.exe"
-        elif sys.platform == "darwin":
-            # Our setup script installs under build/chromium-mac
-            chrome_path = MODULE_ROOT / "build" / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-            chromedriver_path = MODULE_ROOT / "build" / "chromedriver"
-        else:  # Linux
-            # Our setup script installs under build/chromium-linux
-            chrome_path = MODULE_ROOT / "build" / "chromium-linux" / "chrome"
-            chromedriver_path = MODULE_ROOT / "build" / "chromedriver"
+        raise RuntimeError(
+            "Chrome and ChromeDriver paths must be configured in browser/config.yaml before running module_setup. "
+            "Run browser/scripts/setup_chrome.py to install managed binaries and update the config with the absolute paths."
+        )
 
     # Check if both executables exist
     chrome_exists = chrome_path.exists() if chrome_path else False

@@ -241,16 +241,14 @@ class ChromeFastMCPServer:
             query: str,
             max_results: int = 10,
             search_engine_url: str | None = None,
-            fallback_search_url: str | None = None,
             timeout: float | None = None,
         ) -> BrowserResponse:
-            """Run a web search using the configured providers."""
+            """Run a web search using the configured engine."""
             return await browser_web_search_tool(
                 self.manager,
                 query,
                 max_results=max_results,
                 search_engine_url=search_engine_url,
-                fallback_search_url=fallback_search_url,
                 timeout=timeout,
             )
 

@@ -2,7 +2,7 @@
 (function() {
     'use strict';
     
-    // Default configuration (fallback if config file fails to load)
+    // Default configuration used when no external config is available
     const DEFAULT_CONFIG = {
         enabled: true,
         features: {

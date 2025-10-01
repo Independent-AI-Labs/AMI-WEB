@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import contextlib
 import os
-import shutil
 import subprocess
 import sys
 from collections.abc import AsyncIterator, Iterator
@@ -44,24 +43,21 @@ _cfg = _Config()
 
 def _has_chrome() -> bool:
     chrome_path = _cfg.get("backend.browser.chrome_binary_path")
-    if chrome_path and Path(chrome_path).exists():
-        try:
-            result = subprocess.run([str(chrome_path), "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-            return result.returncode == 0
-        except Exception:
-            return False
-    # Fallback to common system binaries
-    for name in ("google-chrome", "chromium", "chrome", "chrome-browser"):
-        exe = shutil.which(name)
-        if exe:
-            try:
-                result = subprocess.run([exe, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-                if result.returncode == 0:
-                    # Update config to use discovered system binary for this session
-                    return True
-            except Exception:
-                continue
-    return False
+    if not chrome_path:
+        logger.error("Chrome path is not configured in browser/config.yaml")
+        return False
+
+    path_obj = Path(chrome_path)
+    if not path_obj.exists():
+        logger.error(f"Configured Chrome binary does not exist: {chrome_path}")
+        return False
+
+    try:
+        result = subprocess.run([str(path_obj), "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        return result.returncode == 0
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error(f"Failed to query Chrome version at {chrome_path}: {exc}")
+        return False
 
 
 def _has_chromedriver() -> bool:
@@ -76,40 +72,15 @@ def _has_chromedriver() -> bool:
         return False
 
 
-def _attempt_auto_setup() -> bool:
-    """Run the module's setup_chrome.py to provision binaries."""
-    try:
-        module_root = Path(__file__).resolve().parents[1]
-        setup_script = module_root / "scripts" / "setup_chrome.py"
-        if not setup_script.exists():
-            logger.warning(f"setup_chrome.py not found at {setup_script}")
-            return False
-        logger.info("Attempting to auto-install Chromium/ChromeDriver...")
-        proc = subprocess.run([sys.executable, str(setup_script)], cwd=str(module_root), capture_output=True, text=True, check=False)
-        if proc.returncode != 0:
-            logger.error(proc.stdout)
-            logger.error(proc.stderr)
-            return False
-        logger.info("Auto-install completed successfully")
-        # Refresh config snapshot to pick up new paths
-        global _cfg
-        _cfg = _Config()
-        return True
-    except Exception as e:
-        logger.warning(f"Auto-install failed: {e}")
-        return False
-
-
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    # If Chrome/Driver missing, try to provision automatically
-    need_setup = not (_has_chrome() and _has_chromedriver())
-    if need_setup:
-        _attempt_auto_setup()
-    # Re-check; skip only if still unavailable
+    # If Chrome/Driver missing, surface explicit remediation steps and skip tests
     if not (_has_chrome() and _has_chromedriver()):
         import pytest as _pytest  # local import to avoid global side effects  # noqa: PLC0415
 
-        reason = "Chrome or ChromeDriver not available after auto-setup; skipping browser tests"
+        reason = (
+            "Chrome or ChromeDriver not available. Configure paths in browser/config.yaml and run "
+            "browser/scripts/setup_chrome.py before executing browser tests."
+        )
         for item in items:
             item.add_marker(_pytest.mark.skip(reason=reason))
         return
@@ -271,13 +242,7 @@ async def test_server() -> AsyncIterator[str]:
         base_url = await server.start()
         logger.info(f"Test server started at {base_url}")
     except OSError as e:
-        if "10048" in str(e) or "Address already in use" in str(e):
-            # Fallback if ephemeral bind somehow collides
-            base_url = "http://127.0.0.1:8888"
-            server = None
-            logger.info("Using fallback server at http://127.0.0.1:8888")
-        else:
-            raise
+        raise RuntimeError("Failed to bind test HTTP server to an ephemeral port") from e
 
     yield base_url
 

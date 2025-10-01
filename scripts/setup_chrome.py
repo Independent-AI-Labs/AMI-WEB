@@ -20,7 +20,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 BUILD_DIR = PROJECT_ROOT / "build"
 
-# Revision thresholds used as a fallback when the binary cannot reveal its version.
+# Revision thresholds used when the binary cannot reveal its version.
 REVISION_VERSION_HEURISTICS: list[tuple[int, str]] = [
     (1518000, "142.0.0.0"),
     (1506000, "141.0.7379.0"),

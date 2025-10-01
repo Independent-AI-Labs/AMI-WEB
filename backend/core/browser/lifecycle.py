@@ -1,8 +1,6 @@
 """Browser lifecycle management - launch, terminate, restart."""
 
 import asyncio
-import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -109,22 +107,15 @@ class BrowserLifecycle:
             else:
                 patched_driver_path = str(patcher.get_patched_path())
                 logger.info(f"Using already patched ChromeDriver: {patched_driver_path}")
-        # Create service and driver (explicit path required; no PATH fallback)
+        # Create service and driver (explicit path required; do not rely on PATH)
         if not patched_driver_path:
             raise InstanceError("ChromeDriver path is not set after patching")
         self._service = Service(executable_path=patched_driver_path)
         try:
             driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
         except WebDriverException as e:
-            logger.warning(f"Primary Chrome launch failed, applying safe flags and retrying: {e}")
-            # Add safe fallback flags for constrained/headless environments
-            for arg in ["--disable-gpu", "--use-gl=swiftshader", "--no-zygote"]:
-                try:
-                    chrome_options.add_argument(arg)
-                except Exception:
-                    pass
-            # Retry once
-            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+            logger.error(f"Chrome launch failed: {e}")
+            raise
 
         # Set timeouts
         driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
@@ -147,22 +138,15 @@ class BrowserLifecycle:
         if chrome_binary_path and Path(chrome_binary_path).exists():
             chrome_options.binary_location = str(chrome_binary_path)
 
-        # Create service and driver (explicit path required; no PATH fallback)
+        # Create service and driver (explicit path required; do not rely on PATH)
         if not chromedriver_path:
             raise InstanceError("ChromeDriver path is not set")
         self._service = Service(executable_path=chromedriver_path)
         try:
             driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
         except WebDriverException as e:
-            logger.warning(f"Primary Chrome launch failed, applying safe flags and retrying: {e}")
-            # Add safe fallback flags for constrained/headless environments
-            for arg in ["--disable-gpu", "--use-gl=swiftshader", "--no-zygote"]:
-                try:
-                    chrome_options.add_argument(arg)
-                except Exception:
-                    pass
-            # Retry once
-            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+            logger.error(f"Chrome launch failed: {e}")
+            raise
 
         # Set timeouts
         driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
@@ -173,13 +157,11 @@ class BrowserLifecycle:
     def _ensure_chrome_ready(self) -> tuple[str, str]:  # noqa: C901
         """Ensure Chrome and ChromeDriver are available and return their paths.
 
-        - Reads configured paths from Config
-        - If missing or nonexistent, runs setup script to provision correct versions
-        - Resolves to module-local build paths; never falls back to PATH
+        Paths must be configured explicitly in browser/config.yaml. This helper verifies
+        they exist and refuses to launch when binaries are missing so operators can take
+        corrective action (for example by running browser/scripts/setup_chrome.py).
         """
         # Resolve module root
-        module_root = Path(__file__).resolve().parents[3]
-
         # Load configured paths
         chrome_binary_path = self._config.get("backend.browser.chrome_binary_path")
         chromedriver_path = self._config.get("backend.browser.chromedriver_path")
@@ -187,36 +169,13 @@ class BrowserLifecycle:
         def exists(p: str | None) -> bool:
             return bool(p) and Path(str(p)).exists()
 
-        # If any are missing, attempt setup
+        # If any are missing, stop immediately so the operator can provision binaries
         if not exists(chrome_binary_path) or not exists(chromedriver_path):
-            logger.info("Chrome/ChromeDriver not configured or missing; running setup_chrome.py")
-
-            # Ensure config.yaml exists by copying platform template if needed
-            config_file = module_root / "config.yaml"
-            if not config_file.exists():
-                if sys.platform == "win32":
-                    tmpl = module_root / "configs" / "config.win.yaml"
-                elif sys.platform == "darwin":
-                    tmpl = module_root / "configs" / "config.osx.yaml"
-                else:
-                    tmpl = module_root / "configs" / "config.linux.yaml"
-                if tmpl.exists():
-                    config_file.write_text(tmpl.read_text())
-                    logger.info(f"Created default config.yaml from {tmpl.name}")
-
-            setup_script = module_root / "scripts" / "setup_chrome.py"
-            if not setup_script.exists():
-                raise InstanceError(f"setup_chrome.py not found at {setup_script}")
-
-            proc = subprocess.run([sys.executable, str(setup_script)], check=False, cwd=module_root, capture_output=True, text=True)
-            if proc.returncode != 0:
-                logger.error(proc.stdout)
-                logger.error(proc.stderr)
-                raise InstanceError("Failed to set up Chrome/ChromeDriver")
-
-            # Reload paths from config (which uses project defaults and absolute resolution)
-            chrome_binary_path = self._config.get("backend.browser.chrome_binary_path")
-            chromedriver_path = self._config.get("backend.browser.chromedriver_path")
+            raise InstanceError(
+                "Chrome or ChromeDriver path not configured. Configure 'backend.browser.chrome_binary_path' "
+                "and 'backend.browser.chromedriver_path', then run browser/scripts/setup_chrome.py if you need to "
+                "install managed binaries."
+            )
 
         # Validate final paths
         if not exists(chrome_binary_path):
