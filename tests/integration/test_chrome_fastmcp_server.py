@@ -21,7 +21,7 @@ class TestChromeFastMCPServer:
     async def test_chrome_server_with_client(self) -> None:
         """Test Chrome FastMCP server using official MCP client."""
         # Get the server script path
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
 
         # Use the module's venv python
 
@@ -55,7 +55,7 @@ class TestChromeFastMCPServer:
     @pytest.mark.integration  # Mark as integration test that requires Chrome
     async def test_browser_launch_and_terminate(self) -> None:
         """Test launching and terminating a browser instance."""
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome_fastmcp.py"
+        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
 
         venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)

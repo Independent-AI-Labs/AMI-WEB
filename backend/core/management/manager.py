@@ -6,11 +6,13 @@ from base.backend.utils.standard_imports import setup_imports
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 import json  # noqa: E402
+from contextlib import suppress  # noqa: E402
 from datetime import datetime  # noqa: E402
 from typing import Any  # noqa: E402
 
 from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
 from loguru import logger  # noqa: E402
+from selenium.common.exceptions import InvalidSessionIdException, WebDriverException  # noqa: E402
 
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
@@ -129,15 +131,30 @@ class ChromeManager:
             await self.initialize()
 
         if use_pool:
-            # Get instance from pool
             clean_extensions = [ext for ext in (extensions or []) if ext is not None]
             opts = options or ChromeOptions(headless=headless, extensions=clean_extensions)
-            # Note: anti_detect is configured at pool creation time via backend.pool.anti_detect_default
 
-            # Acquire a browser from the pool
-            instance = await self.pool.acquire_browser(opts)
-            logger.info(f"Got browser instance {instance.id} from pool")
-            return instance
+            attempts = max(1, self.pool.config.max_workers)
+            last_error: Exception | None = None
+            for _ in range(attempts):
+                try:
+                    instance = await self.pool.acquire_browser(opts)
+                except Exception as exc:  # Pool could not create/acquire a worker
+                    last_error = exc
+                    break
+
+                if self._is_instance_alive(instance):
+                    logger.info(f"Got browser instance {instance.id} from pool")
+                    return instance
+
+                await self._handle_invalid_instance(instance.id, pool_managed=True)
+                last_error = InvalidSessionIdException("Pool returned browser with invalid session")
+
+            message = "Unable to acquire healthy browser instance from pool"
+            if last_error is None:
+                raise InstanceError(message)
+            raise InstanceError(message) from last_error
+
         # Create standalone instance
         instance = BrowserInstance(
             config=self.config,
@@ -158,6 +175,11 @@ class ChromeManager:
             download_dir=download_dir,
         )
 
+        if not self._is_instance_alive(instance):
+            with suppress(Exception):
+                await instance.terminate(force=True)
+            raise InstanceError("Failed to launch standalone browser instance")
+
         self._standalone_instances[instance.id] = instance
         logger.info(f"Created standalone browser instance {instance.id}")
         return instance
@@ -172,12 +194,60 @@ class ChromeManager:
             The browser instance or None if not found
         """
         # Check pool first
-        for worker in self.pool._workers.values():
-            if worker.instance.id == instance_id:
-                return worker.instance
+        worker = self.pool._workers.get(instance_id)
+        if worker:
+            pool_instance = worker.instance
+            if self._is_instance_alive(pool_instance):
+                return pool_instance
+            await self._handle_invalid_instance(instance_id, pool_managed=True)
+            return None
 
         # Check standalone instances
-        return self._standalone_instances.get(instance_id)
+        standalone_instance = self._standalone_instances.get(instance_id)
+        if standalone_instance and self._is_instance_alive(standalone_instance):
+            return standalone_instance
+
+        if instance_id in self._standalone_instances:
+            await self._handle_invalid_instance(instance_id, pool_managed=False)
+
+        return None
+
+    def _is_instance_alive(self, instance: BrowserInstance | None) -> bool:
+        """Return True when the provided instance has an active driver session."""
+        if not instance:
+            return False
+
+        try:
+            return instance.is_alive()
+        except Exception as exc:  # Defensive: treat unknown errors as dead sessions
+            logger.debug(f"Browser instance {instance.id} reported invalid state: {exc}")
+            return False
+
+    async def _handle_invalid_instance(self, instance_id: str, *, pool_managed: bool) -> None:
+        """Retire an invalid browser session from either the pool or standalone map."""
+
+        logger.warning(f"Disposing browser instance {instance_id} after invalid session detected")
+
+        if pool_managed:
+            with suppress(Exception):
+                await self.pool.retire_invalid_browser(instance_id)
+            return
+
+        instance = self._standalone_instances.pop(instance_id, None)
+        if not instance:
+            return
+        with suppress(Exception):
+            await instance.terminate(force=True)
+
+    async def retire_instance(self, instance_id: str) -> None:
+        """Public helper to dispose a browser instance regardless of its origin."""
+
+        if instance_id in self.pool._workers:
+            await self._handle_invalid_instance(instance_id, pool_managed=True)
+            return
+
+        if instance_id in self._standalone_instances:
+            await self._handle_invalid_instance(instance_id, pool_managed=False)
 
     async def return_to_pool(self, instance_id: str) -> bool:
         """Return an instance to the pool for reuse.
@@ -252,8 +322,23 @@ class ChromeManager:
         instances = []
 
         # Get pool instances
-        for worker in self.pool._workers.values():
+        for worker_id, worker in list(self.pool._workers.items()):
             instance = worker.instance
+
+            if not self._is_instance_alive(instance):
+                await self._handle_invalid_instance(worker_id, pool_managed=True)
+                continue
+
+            active_tabs = 1
+            driver = instance.driver
+            if driver is not None:
+                try:
+                    active_tabs = len(driver.window_handles)
+                except (InvalidSessionIdException, WebDriverException) as exc:
+                    logger.debug(f"Failed to inspect windows for instance {instance.id}: {exc}")
+                    await self._handle_invalid_instance(worker_id, pool_managed=True)
+                    continue
+
             instances.append(
                 InstanceInfo(
                     id=instance.id,
@@ -262,14 +347,28 @@ class ChromeManager:
                     last_activity=worker.last_used,
                     memory_usage=0,  # Not tracked currently
                     cpu_usage=0.0,  # Not tracked currently
-                    active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
+                    active_tabs=active_tabs,
                     profile=None,
                     headless=True,
                 ),
             )
 
         # Get standalone instances
-        for instance in self._standalone_instances.values():
+        for instance_id, instance in list(self._standalone_instances.items()):
+            if not self._is_instance_alive(instance):
+                await self._handle_invalid_instance(instance_id, pool_managed=False)
+                continue
+
+            active_tabs = 1
+            driver = instance.driver
+            if driver is not None:
+                try:
+                    active_tabs = len(driver.window_handles)
+                except (InvalidSessionIdException, WebDriverException) as exc:
+                    logger.debug(f"Failed to inspect windows for standalone instance {instance.id}: {exc}")
+                    await self._handle_invalid_instance(instance_id, pool_managed=False)
+                    continue
+
             instances.append(
                 InstanceInfo(
                     id=instance.id,
@@ -278,7 +377,7 @@ class ChromeManager:
                     last_activity=datetime.now(),
                     memory_usage=0,  # Not tracked currently
                     cpu_usage=0.0,  # Not tracked currently
-                    active_tabs=len(instance.driver.window_handles) if instance.driver else 1,
+                    active_tabs=active_tabs,
                     profile=None,
                     headless=True,
                 ),

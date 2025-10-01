@@ -16,7 +16,7 @@ audit logging) and focuses on browser-specific pieces.
 1. **Launch & interact via MCP**
    ```bash
    uv run --python 3.12 --project browser \
-     python backend/mcp/chrome/run_chrome.py --transport stdio
+     python scripts/run_chrome.py --transport stdio
    ```
    Tools exposed include navigation (`browser_navigate`), interaction (`browser_click`,
    `browser_type`), and state inspection (`browser_get_text`, `browser_screenshot`).
