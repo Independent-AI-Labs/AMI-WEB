@@ -76,6 +76,10 @@ class BrowserInstance:
         """Update last activity timestamp."""
         self._monitor.update_activity()
 
+    def is_alive(self) -> bool:
+        """Return True when the underlying WebDriver session is still valid."""
+        return self._lifecycle.is_alive()
+
     async def launch(
         self,
         headless: bool = True,

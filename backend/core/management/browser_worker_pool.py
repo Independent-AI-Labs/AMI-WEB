@@ -255,3 +255,21 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             logger.debug(f"Released worker {worker.id}")
         else:
             logger.warning(f"Browser instance {instance_id} not found in pool")
+
+    async def retire_invalid_browser(self, instance_id: str) -> None:
+        """Immediately remove a browser with an invalid WebDriver session.
+
+        This is invoked when Selenium raises InvalidSessionIdException so the
+        pool can tear down the broken worker and spin up a replacement.
+        """
+
+        worker = self._workers.get(instance_id)
+        if not worker:
+            logger.debug(f"Attempted to retire unknown browser instance {instance_id}")
+            return
+
+        logger.warning(f"Retiring browser worker {instance_id} after invalid session detected")
+        await self._remove_worker(worker.id)
+
+        # Ensure we still meet the minimum warm pool size
+        await self._ensure_min_workers()

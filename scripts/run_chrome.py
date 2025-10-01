@@ -23,6 +23,12 @@ def main() -> None:
 
     ensure_module_venv(Path(__file__))
 
+    # Configure loguru to write to stderr instead of stdout (MCP uses stdout for JSON-RPC)
+    from loguru import logger  # noqa: PLC0415
+
+    logger.remove()  # Remove default handler
+    logger.add(sys.stderr, level="INFO")  # Add stderr handler
+
     from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
 
     server = ChromeFastMCPServer()

@@ -31,10 +31,10 @@ Each tool returns a Pydantic `BrowserResponse` so downstream callers receive str
 
 ```bash
 # stdio transport
-uv run --python 3.12 --project browser python backend/mcp/chrome/run_chrome.py
+uv run --python 3.12 --project browser python scripts/run_chrome.py
 
 # websocket transport
-uv run --python 3.12 --project browser python backend/mcp/chrome/run_chrome.py --transport websocket --port 9000
+uv run --python 3.12 --project browser python scripts/run_chrome.py --transport websocket --port 9000
 ```
 
 Before launching, ensure Chromium exists:

@@ -78,16 +78,14 @@ class ChromeFastMCPServer:
 
         # Browser lifecycle tools
         @self.mcp.tool(description="Launch a new browser instance")
-        async def browser_launch(headless: bool = False, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True) -> str:
+        async def browser_launch(headless: bool = False, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True) -> BrowserResponse:
             """Launch a browser instance."""
-            response = await browser_launch_tool(self.manager, headless, profile, anti_detect, use_pool)
-            return response.model_dump_json()
+            return await browser_launch_tool(self.manager, headless, profile, anti_detect, use_pool)
 
         @self.mcp.tool(description="Terminate a browser instance")
-        async def browser_terminate(instance_id: str) -> str:
+        async def browser_terminate(instance_id: str) -> BrowserResponse:
             """Terminate a browser instance."""
-            response = await browser_terminate_tool(self.manager, instance_id)
-            return response.model_dump_json()
+            return await browser_terminate_tool(self.manager, instance_id)
 
         @self.mcp.tool(description="List all browser instances")
         async def browser_list() -> BrowserResponse:

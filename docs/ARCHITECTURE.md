@@ -17,7 +17,7 @@ browser/
 
 ## Runtime Flow
 1. **Chromium provisioning** – `scripts/setup_chrome.py` fetches platform-specific binaries.
-2. **Server boot** – `backend/mcp/chrome/run_chrome.py` registers FastMCP tools and exposes
+2. **Server boot** – `scripts/run_chrome.py` registers FastMCP tools and exposes
    stdio or WebSocket transports.
 3. **Operations** – Tools call into `backend/core/*` for browser creation, navigation, and
    artifact capture. Responses are serialized Pydantic models.
