@@ -14,19 +14,27 @@ async def browser_launch_tool(
     logger.debug("Browser launch initiated")
 
     try:
-        # Ensure manager is started
+        # Ensure manager is initialized
         if not manager._initialized:
-            await manager.start()
+            logger.debug("Initializing manager...")
+            await manager.initialize()
+            logger.debug("Manager initialized")
+
+        logger.debug("Getting or creating instance...")
         instance = await manager.get_or_create_instance(
             headless=headless,
             profile=profile,
             anti_detect=anti_detect,
             use_pool=use_pool,  # Allow flexibility for testing
         )
+        logger.debug(f"Got instance: {instance.id}")
 
-        return BrowserResponse(success=True, instance_id=instance.id, data={"status": "launched"})
+        logger.debug("Creating response...")
+        response = BrowserResponse(success=True, instance_id=instance.id, data={"status": "launched"})
+        logger.debug(f"Response created: {response}")
+        return response
     except Exception as e:
-        logger.error(f"Failed to launch browser: {e}")
+        logger.error(f"Failed to launch browser: {e}", exc_info=True)
         return BrowserResponse(success=False, error=str(e), data={"status": "failed"})
 
 

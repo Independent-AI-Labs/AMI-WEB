@@ -260,6 +260,3 @@ class BrowserInstance:
         except Exception as e:
             logger.debug(f"Failed to determine headless mode: {e}")
             return False
-
-
-# For backward compatibility during migration

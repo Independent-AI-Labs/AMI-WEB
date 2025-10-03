@@ -118,7 +118,7 @@ class TestAntiDetection:
             logger.info(f"navigator.plugins prototype: {plugin_proto}")
             logger.info(f"navigator.plugins[0] prototype: {plugin_0_proto}")
 
-            # Old test for compatibility
+            # Older plugin iteration test
             old_plugin_test = driver.execute_script(
                 """
                 let count = 0;

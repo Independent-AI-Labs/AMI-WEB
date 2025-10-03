@@ -14,15 +14,37 @@ Branch policy:
 Module restrictions:
 - Do not modify ANY module directories (base, browser, compliance, domains, files, nodes, streams, ux, etc.) unless the user explicitly instructs you to.
 
+Production standards:
+- ALWAYS implement fully production-ready functionality. Stubs, shims, and placeholders are STRICTLY FORBIDDEN.
+
+BANNED WORDS POLICY (ABSOLUTE):
+- The following words/concepts are ABSOLUTELY FORBIDDEN in code, comments, and documentation:
+  - fallback, backwards, compatibility, legacy, shim/shims, stub/stubs, placeholder/placeholders
+- NEVER add code to support old formats, APIs, or field names alongside new ones
+- NEVER add aliasing, field renaming, or dual-format support
+- If old code needs updating: UPDATE THE OLD CODE, do not add compatibility layers
+- When migrating formats: MIGRATE the data/config files, do not add parsers for both formats
+- Violating this policy will result in immediate rollback and re-implementation
+
+New feature development:
+- Any new feature development that requires new dependencies MUST live in a newly created module.
+- ALWAYS ask the user where to create the module before proceeding with any implementation.
+- NEVER add dependencies to existing modules for new features.
+
 Enforcement:
 - `agent.sh` only prints an error when a detached HEAD is detected in the root repo or any submodule. It does not exit, and it does not enforce being on `main`.
 
 Commit discipline:
 - Do not bypass hooks (no `--no-verify`).
 - Commit only after linters, type checks, and tests pass.
+- NEVER commit without explicit user instruction. User must say "commit" or give clear permission.
+- When committing a module: INSPECT working tree with `git status`, STAGE ALL modified/untracked files with `git add -A`, then commit. NEVER commit with only partial files staged.
 - Land work module-by-module (skip `ux` until the user says otherwise) so CI can start verifying while you keep moving; push after each clean chunk.
 - Read the file before editing it. Open and inspect first, then apply changes with the appropriate tool (no blind scripting).
 - Never build or wire "fallback" behaviour unless the user explicitly requests it for the current task. If a storage option (like the local file config) exists, treat it as opt-in and surface its use clearly instead of silently enabling it.
+- Pre-push hooks now run `python3 scripts/launch_services.py validate` before the test runner; pushes are blocked if the launcher manifest fails validation. Fix the manifest instead of bypassing the hook.
+- Pre-push hooks also run `python3 scripts/launch_services.py metrics --format json` to ensure the telemetry snapshot stays healthy. Use the CLI to debug rather than bypassing the guard if it fails.
+- **ABSOLUTELY FORBIDDEN**: NEVER run `git pull`, `git pull --rebase`, `git rebase`, or `git merge` without EXPLICIT user instruction. If a push fails, STOP and ask the user how to proceed. DO NOT automatically rebase or merge.
 
 Testing discipline:
 - Run each module's test suite using the module's script in `scripts/` (for example, `python3 scripts/run_tests.py`).

@@ -93,11 +93,11 @@ class SimpleTabInjector:
         except Exception as e:
             logger.debug(f"Error cleaning up closed tabs: {e}")
 
-    # Compatibility methods - these do nothing now since we use CDP events
+    # These methods do nothing now since we use CDP events
     def start_monitoring(self) -> None:
-        """No-op for compatibility - CDP handles everything."""
+        """No-op - CDP handles everything."""
         logger.debug("start_monitoring called but not needed - using CDP events")
 
     def stop_monitoring(self) -> None:
-        """No-op for compatibility - CDP handles everything."""
+        """No-op - CDP handles everything."""
         logger.debug("stop_monitoring called but not needed - using CDP events")

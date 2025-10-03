@@ -62,7 +62,7 @@ from services.chrome import ChromeManager  # Now safe to import
 **Location:** Multiple files using CDP commands
 
 **Justification:**
-Selenium's Chrome DevTools Protocol (CDP) commands don't have proper type stubs. The `execute_cdp_cmd` method returns `Any`, requiring type ignores for proper type checking.
+Selenium's Chrome DevTools Protocol (CDP) commands don't have proper type hints. The `execute_cdp_cmd` method returns `Any`, requiring type ignores for proper type checking.
 
 ### Pattern:
 ```python

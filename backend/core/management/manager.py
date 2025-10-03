@@ -75,10 +75,6 @@ class ChromeManager:
         self._initialized = True
         logger.info("Chrome Manager initialized successfully")
 
-    async def start(self) -> None:
-        """Alias for initialize() for backward compatibility."""
-        await self.initialize()
-
     async def shutdown(self) -> None:
         """Shutdown the Chrome Manager."""
         logger.info("Shutting down Chrome Manager")
@@ -96,10 +92,6 @@ class ChromeManager:
         self._standalone_instances.clear()
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
-
-    async def stop(self) -> None:
-        """Alias for shutdown() for backward compatibility."""
-        await self.shutdown()
 
     async def get_or_create_instance(
         self,
@@ -434,7 +426,7 @@ class ChromeManager:
 
         Args:
             session_id: Session ID to restore
-            instance_id: Optional instance ID to restore into (ignored, for compatibility)
+            instance_id: Optional instance ID to restore into (ignored, unused)
 
         Returns:
             Browser instance with restored session
@@ -464,7 +456,7 @@ class ChromeManager:
 
         nav = Navigator(instance)
         result = await nav.navigate(url)
-        # Convert PageResult to dict for API compatibility
+        # Convert PageResult to dict for MCP API
         return {
             "url": result.url,
             "title": result.title,

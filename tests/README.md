@@ -24,6 +24,6 @@ pytest tests/unit/test_navigation.py -k awaiters
 ```
 
 ## Anti-Detection Regression (Research)
-The legacy anti-detection scenarios live under `tests/integration/test_antidetection.py`.
+The anti-detection research scenarios live under `tests/integration/test_antidetection.py`.
 They are maintained as research coverage; they may require manual updates to reflect the
 current fingerprinting strategy.

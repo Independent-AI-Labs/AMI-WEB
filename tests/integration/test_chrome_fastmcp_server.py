@@ -43,12 +43,14 @@ class TestChromeFastMCPServer:
             tools_response = await session.list_tools()
             tool_names = [tool.name for tool in tools_response.tools]
 
-            # Verify expected browser tools exist
-            assert "browser_launch" in tool_names
-            assert "browser_terminate" in tool_names
+            # Verify V02 simplified facade tools exist
+            assert "browser_session" in tool_names
             assert "browser_navigate" in tool_names
-            assert "browser_click" in tool_names
-            assert "browser_screenshot" in tool_names
+            assert "browser_interact" in tool_names
+            assert "browser_inspect" in tool_names
+            assert "browser_extract" in tool_names
+            assert "browser_capture" in tool_names
+            assert "browser_execute" in tool_names
             assert "web_search" in tool_names
 
     @pytest.mark.asyncio
@@ -64,8 +66,8 @@ class TestChromeFastMCPServer:
             # Initialize
             await session.initialize()
 
-            # Launch a browser
-            launch_result = await session.call_tool("browser_launch", arguments={"headless": True, "anti_detect": True, "use_pool": False})
+            # Launch a browser using V02 API
+            launch_result = await session.call_tool("browser_session", arguments={"action": "launch", "headless": True, "anti_detect": True, "use_pool": False})
 
             assert launch_result is not None
             assert len(launch_result.content) > 0
@@ -76,8 +78,8 @@ class TestChromeFastMCPServer:
                 assert response.get("success") is True
                 assert "instance_id" in response
 
-                # Terminate the browser
-                terminate_result = await session.call_tool("browser_terminate", arguments={"instance_id": response["instance_id"]})
+                # Terminate the browser using V02 API
+                terminate_result = await session.call_tool("browser_session", arguments={"action": "terminate", "instance_id": response["instance_id"]})
 
                 assert terminate_result is not None
                 if terminate_result.content[0].type == "text":

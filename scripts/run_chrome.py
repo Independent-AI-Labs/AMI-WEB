@@ -27,7 +27,7 @@ def main() -> None:
     from loguru import logger  # noqa: PLC0415
 
     logger.remove()  # Remove default handler
-    logger.add(sys.stderr, level="INFO")  # Add stderr handler
+    logger.add(sys.stderr, level="DEBUG")  # Add stderr handler
 
     from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
 

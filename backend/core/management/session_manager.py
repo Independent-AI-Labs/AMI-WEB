@@ -27,10 +27,21 @@ class SessionManager:
 
     def _load_metadata(self) -> dict[str, dict[str, Any]]:
         """Load session metadata."""
+        logger.debug(f"Current working directory: {Path.cwd()}")
+        logger.debug(f"Absolute metadata file path: {self.metadata_file.absolute()}")
+        logger.debug(f"Checking if metadata file exists: {self.metadata_file}")
         if self.metadata_file.exists():
+            logger.debug(f"Loading metadata from {self.metadata_file}")
+            file_size = self.metadata_file.stat().st_size
+            logger.debug(f"File size: {file_size} bytes")
             with self.metadata_file.open() as f:
-                data: dict[str, dict[str, Any]] = json.load(f)
+                content = f.read()
+                logger.debug(f"File content: {repr(content)}")
+                logger.debug("Parsing JSON...")
+                data: dict[str, dict[str, Any]] = json.loads(content)
+                logger.debug(f"Loaded {len(data)} sessions")
                 return data
+        logger.debug("No metadata file found, returning empty dict")
         return {}
 
     def _save_metadata(self) -> None:
@@ -41,7 +52,9 @@ class SessionManager:
     async def initialize(self) -> None:
         """Initialize session manager."""
         # Create directory when actually initializing
+        logger.debug(f"Creating session directory: {self.session_dir}")
         self.session_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug("Loading metadata...")
         # Load metadata after directory is created
         self.sessions = self._load_metadata()
         logger.info(f"Session manager initialized with directory: {self.session_dir}")

@@ -34,7 +34,7 @@ class MCPTestServer:
             config_file = None
 
         self.manager = ChromeManager(config_file=config_file)
-        await self.manager.start()
+        await self.manager.initialize()
 
         # TODO: Update this to use ChromeFastMCPServer when websocket support is added
         # For now, we'll skip the server initialization

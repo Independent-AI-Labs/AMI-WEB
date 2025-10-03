@@ -98,7 +98,7 @@ class Config:
             if build_dir.exists():
                 for chrome_dir in build_dir.glob("chrome-mac-*"):
                     chrome_paths.append(chrome_dir / "Google Chrome for Testing.app" / "Contents" / "MacOS" / "Google Chrome for Testing")
-            # Also check legacy paths
+            # Also check alternative install paths
             chrome_paths.extend(
                 [
                     project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",

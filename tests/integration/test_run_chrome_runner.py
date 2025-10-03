@@ -38,46 +38,26 @@ async def test_run_chrome_stdio_client_initialization() -> None:
         assert result.serverInfo.name == "ChromeMCPServer"
         assert result.protocolVersion in ["2024-11-05", "2025-06-18"]
 
-        # Ensure the server advertises the full tool surface we expect. This catches
-        # accidental regressions where the runner fails to wire modules correctly and
-        # prevents MCP clients from reconnecting because tool discovery breaks.
+        # Ensure the server advertises the V02 simplified facade tool surface.
+        # This catches accidental regressions where the runner fails to wire modules correctly.
         response = await session.list_tools()
         tool_names = {tool.name for tool in response.tools}
         expected_tools = {
-            "browser_back",
-            "browser_click",
-            "browser_element_screenshot",
-            "browser_evaluate",
-            "browser_evaluate_chunk",
-            "browser_execute",
-            "browser_execute_chunk",
-            "browser_exists",
-            "browser_forward",
-            "browser_get_active",
-            "browser_get_attribute",
-            "browser_get_cookies",
-            "browser_get_text",
-            "browser_get_text_chunk",
-            "browser_get_url",
-            "browser_hover",
-            "browser_launch",
-            "browser_list",
+            "browser_session",
             "browser_navigate",
-            "browser_press",
-            "browser_refresh",
-            "browser_screenshot",
-            "browser_scroll",
-            "browser_select",
-            "browser_terminate",
-            "browser_type",
-            "browser_wait_for",
+            "browser_interact",
+            "browser_inspect",
+            "browser_extract",
+            "browser_capture",
+            "browser_execute",
+            "browser_storage",
             "web_search",
         }
         assert tool_names == expected_tools
 
         # Call a representative tool twice to ensure the server keeps responding.
         for attempt in range(2):
-            res = await session.call_tool("browser_get_url", arguments={})
+            res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":
                 try:
