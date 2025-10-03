@@ -42,11 +42,11 @@ async def test_web_search_tool_via_fastmcp(monkeypatch: pytest.MonkeyPatch) -> N
 
     runner, port = await _start_test_server(searx_handler)
 
-    class StubChromeManager:
+    class MockChromeManager:
         def __init__(self, *_args: object, **_kwargs: object) -> None:
             self.config = Config()
 
-    monkeypatch.setattr("browser.backend.mcp.chrome.chrome_server.ChromeManager", StubChromeManager)
+    monkeypatch.setattr("browser.backend.mcp.chrome.chrome_server.ChromeManager", MockChromeManager)
 
     server = ChromeFastMCPServer()
 

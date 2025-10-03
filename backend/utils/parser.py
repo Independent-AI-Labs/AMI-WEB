@@ -303,7 +303,7 @@ class HTMLParser:
                     "name": str(input_field.get("name", "")),
                     "id": str(input_field.get("id", "")),
                     "value": str(input_field.get("value", "")),
-                    "placeholder": str(input_field.get("placeholder", "")),
+                    "hint": str(input_field.get("placeholder", "")),
                     "required": input_field.has_attr("required"),
                 }
 

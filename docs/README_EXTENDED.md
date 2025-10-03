@@ -9,7 +9,7 @@ audit logging) and focuses on browser-specific pieces.
   and CDP interactions. `backend/mcp/chrome/` exposes FastMCP tools that wrap these helpers.
 - **Shared services** – No bespoke infrastructure lives here. Storage, audit logging, and security
   all delegate to `/base` utilities.
-- **Research code** – Legacy anti-detection experiments and high-risk helpers are tagged under
+- **Research code** – Experimental anti-detection code and high-risk helpers are tagged under
   `web/` or `docs/research/`. Treat them as exploratory.
 
 ## Key Workflows

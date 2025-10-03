@@ -67,6 +67,97 @@ class ContentExtractor(BaseController):
         except Exception as e:
             raise NavigationError(f"Failed to get element text: {e}") from e
 
+    async def get_text_with_tags(
+        self,
+        selector: str | None = None,
+        ellipsize_text_after: int = 128,
+        include_tag_names: bool = True,
+        skip_hidden: bool = True,
+        max_depth: int | None = None,
+    ) -> str:
+        """Get text content with element tags and auto-ellipsization.
+
+        Args:
+            selector: CSS selector for root element (null = document.body)
+            ellipsize_text_after: Truncate each element's text after N chars
+            include_tag_names: Prefix each text with element tag name
+            skip_hidden: Skip hidden/invisible elements
+            max_depth: Maximum DOM depth to traverse
+
+        Returns:
+            Text content with tags, one line per element
+        """
+        if not self.driver:
+            raise NavigationError("Browser not initialized")
+
+        script = """
+        function getTextWithTags(element, depth, maxDepth, ellipsizeAfter, includeTags, skipHidden) {
+            // Skip script/style/noscript nodes
+            if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(element.tagName)) {
+                return '';
+            }
+
+            // Skip hidden elements (not rendered)
+            if (skipHidden && element.offsetParent === null && element.tagName !== 'BODY') {
+                return '';
+            }
+
+            // Get direct text nodes only (not from children)
+            let text = Array.from(element.childNodes)
+                .filter(n => n.nodeType === 3) // Text nodes only
+                .map(n => n.textContent.trim())
+                .filter(t => t.length > 0)
+                .join(' ');
+
+            // Ellipsize if needed
+            if (text && ellipsizeAfter && text.length > ellipsizeAfter) {
+                text = text.substring(0, ellipsizeAfter) + '...';
+            }
+
+            let result = '';
+            if (text) {
+                if (includeTags) {
+                    const tag = element.tagName.toLowerCase();
+                    const id = element.id ? `#${element.id}` : '';
+                    const cls = element.className && typeof element.className === 'string'
+                        ? `.${element.className.split(' ')[0]}`
+                        : '';
+                    result = `${tag}${id}${cls}: ${text}\n`;
+                } else {
+                    result = `${text}\n`;
+                }
+            }
+
+            // Recurse to children
+            if (!maxDepth || depth < maxDepth) {
+                for (let child of element.children) {
+                    result += getTextWithTags(child, depth + 1, maxDepth, ellipsizeAfter, includeTags, skipHidden);
+                }
+            }
+
+            return result;
+        }
+
+        const selector = arguments[0];
+        const ellipsizeAfter = arguments[1];
+        const includeTags = arguments[2];
+        const skipHidden = arguments[3];
+        const maxDepth = arguments[4];
+
+        const element = selector ? document.querySelector(selector) : document.body;
+        if (!element) {
+            return '';
+        }
+
+        return getTextWithTags(element, 0, maxDepth, ellipsizeAfter, includeTags, skipHidden);
+        """
+
+        try:
+            result = await self.execute_script(script, selector, ellipsize_text_after, include_tag_names, skip_hidden, max_depth)
+            return str(result) if result is not None else ""
+        except Exception as e:
+            raise NavigationError(f"Failed to get text with tags: {e}") from e
+
     async def execute_script(self, script: str, *args: Any, async_script: bool = False) -> Any:
         """Execute JavaScript in the page context.
 
@@ -94,12 +185,13 @@ class ContentExtractor(BaseController):
         except Exception as e:
             raise NavigationError(f"Failed to execute script: {e}") from e
 
-    async def get_html_with_depth_limit(self, max_depth: int | None = None, collapse_depth: int | None = None) -> str:
+    async def get_html_with_depth_limit(self, max_depth: int | None = None, collapse_depth: int | None = None, ellipsize_text_after: int | None = None) -> str:
         """Get HTML with depth limitations to reduce size.
 
         Args:
             max_depth: Maximum depth to traverse (stops at this depth)
-            collapse_depth: Depth at which to collapse elements to placeholders
+            collapse_depth: Depth at which to collapse elements to summaries
+            ellipsize_text_after: Truncate text content after this many characters (for structure extraction)
 
         Returns:
             HTML string with depth limitations applied
@@ -108,13 +200,13 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         script = """
-        function getHtmlWithDepth(element, currentDepth, maxDepth, collapseDepth) {
+        function getHtmlWithDepth(element, currentDepth, maxDepth, collapseDepth, ellipsizeAfter) {
             if (maxDepth && currentDepth > maxDepth) {
                 return '';
             }
 
             if (collapseDepth && currentDepth >= collapseDepth) {
-                // Collapse to placeholder
+                // Collapse to summary
                 const tag = element.tagName.toLowerCase();
                 const id = element.id ? ` id="${element.id}"` : '';
                 const className = element.className ? ` class="${element.className}"` : '';
@@ -134,10 +226,15 @@ class ContentExtractor(BaseController):
             // Add children or text content
             if (element.children.length > 0) {
                 for (let child of element.children) {
-                    html += getHtmlWithDepth(child, currentDepth + 1, maxDepth, collapseDepth);
+                    html += getHtmlWithDepth(child, currentDepth + 1, maxDepth, collapseDepth, ellipsizeAfter);
                 }
             } else if (element.textContent) {
-                html += element.textContent;
+                let text = element.textContent;
+                // Ellipsize text content if configured
+                if (ellipsizeAfter && text.length > ellipsizeAfter) {
+                    text = text.substring(0, ellipsizeAfter) + '...';
+                }
+                html += text;
             }
 
             html += '</' + element.tagName.toLowerCase() + '>';
@@ -146,11 +243,12 @@ class ContentExtractor(BaseController):
 
         const maxDepth = arguments[0];
         const collapseDepth = arguments[1];
-        return getHtmlWithDepth(document.documentElement, 0, maxDepth, collapseDepth);
+        const ellipsizeAfter = arguments[2];
+        return getHtmlWithDepth(document.documentElement, 0, maxDepth, collapseDepth, ellipsizeAfter);
         """
 
         try:
-            result = await self.execute_script(script, max_depth, collapse_depth)
+            result = await self.execute_script(script, max_depth, collapse_depth, ellipsize_text_after)
             return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get HTML with depth limit: {e}") from e
@@ -287,7 +385,7 @@ class ContentExtractor(BaseController):
                 id: el.id || '',
                 value: el.value || '',
                 required: el.required || false,
-                placeholder: el.placeholder || ''
+                hint: el.placeholder || ''
             }));
             return {
                 id: form.id || '',

@@ -10,7 +10,7 @@ The `/browser` submodule demonstrates **good overall conformity** with the `/bas
 
 | Standard | Status | Score |
 |----------|---------|--------|
-| Python 3.12 compatibility | ❌ **CRITICAL** | 0/10 |
+| Python 3.12 support | ❌ **CRITICAL** | 0/10 |
 | No hardcoded IPs/localhost | ⚠️ **MAJOR** | 6/10 |
 | No print() statements | ❌ **CRITICAL** | 2/10 |
 | Exception handling | ✅ **GOOD** | 8/10 |

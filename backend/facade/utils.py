@@ -114,7 +114,7 @@ def parameterized_js_execution(template: str, **params: Any) -> str:
     injection by properly escaping all parameters.
 
     Args:
-        template: JavaScript template with {param_name} placeholders
+        template: JavaScript template with {param_name} markers
         **params: Parameters to substitute into the template
 
     Returns:

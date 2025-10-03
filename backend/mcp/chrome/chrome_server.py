@@ -11,44 +11,15 @@ from mcp.server import FastMCP  # noqa: E402
 
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.backend.mcp.chrome.response import BrowserResponse  # noqa: E402
-from browser.backend.mcp.chrome.tools.browser_tools import (  # noqa: E402
-    browser_get_active_tool,
-    browser_launch_tool,
-    browser_list_tool,
-    browser_terminate_tool,
-)
-from browser.backend.mcp.chrome.tools.extraction_tools import (  # noqa: E402
-    browser_exists_tool,
-    browser_get_attribute_tool,
-    browser_get_cookies_tool,
-    browser_get_text_chunk_tool,
-    browser_get_text_tool,
-    browser_wait_for_tool,
-)
-from browser.backend.mcp.chrome.tools.input_tools import (  # noqa: E402
-    browser_click_tool,
-    browser_hover_tool,
-    browser_press_tool,
-    browser_scroll_tool,
-    browser_select_tool,
-    browser_type_tool,
-)
-from browser.backend.mcp.chrome.tools.javascript_tools import (  # noqa: E402
-    browser_evaluate_chunk_tool,
-    browser_evaluate_tool,
-    browser_execute_chunk_tool,
+from browser.backend.mcp.chrome.tools.facade import (  # noqa: E402
+    browser_capture_tool,
     browser_execute_tool,
-)
-from browser.backend.mcp.chrome.tools.navigation_tools import (  # noqa: E402
-    browser_back_tool,
-    browser_forward_tool,
-    browser_get_url_tool,
+    browser_extract_tool,
+    browser_inspect_tool,
+    browser_interact_tool,
     browser_navigate_tool,
-    browser_refresh_tool,
-)
-from browser.backend.mcp.chrome.tools.screenshot_tools import (  # noqa: E402
-    browser_element_screenshot_tool,
-    browser_screenshot_tool,
+    browser_session_tool,
+    browser_storage_tool,
 )
 from browser.backend.mcp.chrome.tools.search_tools import browser_web_search_tool  # noqa: E402
 
@@ -73,167 +44,126 @@ class ChromeFastMCPServer:
         # Register tools
         self._register_tools()
 
-    def _register_tools(self) -> None:  # noqa: C901
-        """Register Chrome tools with FastMCP."""
+    def _register_tools(self) -> None:
+        """Register V02 simplified facade tools with FastMCP."""
 
-        # Browser lifecycle tools
-        @self.mcp.tool(description="Launch a new browser instance")
-        async def browser_launch(headless: bool = False, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True) -> BrowserResponse:
-            """Launch a browser instance."""
-            return await browser_launch_tool(self.manager, headless, profile, anti_detect, use_pool)
-
-        @self.mcp.tool(description="Terminate a browser instance")
-        async def browser_terminate(instance_id: str) -> BrowserResponse:
-            """Terminate a browser instance."""
-            return await browser_terminate_tool(self.manager, instance_id)
-
-        @self.mcp.tool(description="List all browser instances")
-        async def browser_list() -> BrowserResponse:
-            """List all browser instances."""
-            return await browser_list_tool(self.manager)
-
-        @self.mcp.tool(description="Get the currently active browser instance")
-        async def browser_get_active() -> BrowserResponse:
-            """Get active browser instance."""
-            return await browser_get_active_tool(self.manager)
-
-        # Navigation tools
-        @self.mcp.tool(description="Navigate to a URL")
-        async def browser_navigate(url: str, wait_for: str | None = None, timeout: float = 30) -> BrowserResponse:
-            """Navigate to URL."""
-            return await browser_navigate_tool(self.manager, url, wait_for, timeout)
-
-        @self.mcp.tool(description="Navigate back in browser history")
-        async def browser_back() -> BrowserResponse:
-            """Navigate back."""
-            return await browser_back_tool(self.manager)
-
-        @self.mcp.tool(description="Navigate forward in browser history")
-        async def browser_forward() -> BrowserResponse:
-            """Navigate forward."""
-            return await browser_forward_tool(self.manager)
-
-        @self.mcp.tool(description="Refresh the current page")
-        async def browser_refresh() -> BrowserResponse:
-            """Refresh page."""
-            return await browser_refresh_tool(self.manager)
-
-        @self.mcp.tool(description="Get the current page URL")
-        async def browser_get_url() -> BrowserResponse:
-            """Get current URL."""
-            return await browser_get_url_tool(self.manager)
-
-        # Input tools
-        @self.mcp.tool(description="Click on an element")
-        async def browser_click(selector: str, button: str = "left", click_count: int = 1) -> BrowserResponse:
-            """Click element."""
-            return await browser_click_tool(self.manager, selector, button, click_count)
-
-        @self.mcp.tool(description="Type text into an element")
-        async def browser_type(selector: str, text: str, clear: bool = False, delay: float = 0) -> BrowserResponse:
-            """Type text."""
-            return await browser_type_tool(self.manager, selector, text, clear, delay)
-
-        @self.mcp.tool(description="Select an option from a dropdown")
-        async def browser_select(selector: str, value: str | None = None, index: int | None = None, label: str | None = None) -> BrowserResponse:
-            """Select option."""
-            return await browser_select_tool(self.manager, selector, value, index, label)
-
-        @self.mcp.tool(description="Hover over an element")
-        async def browser_hover(selector: str) -> BrowserResponse:
-            """Hover over element."""
-            return await browser_hover_tool(self.manager, selector)
-
-        @self.mcp.tool(description="Scroll page or element")
-        async def browser_scroll(direction: str = "down", amount: int = 100) -> BrowserResponse:
-            """Scroll page."""
-            return await browser_scroll_tool(self.manager, direction, amount)
-
-        @self.mcp.tool(description="Press keyboard keys")
-        async def browser_press(key: str, modifiers: list[str | None] | None = None) -> BrowserResponse:
-            """Press keys."""
-            return await browser_press_tool(self.manager, key, modifiers)
-
-        # Extraction tools
-        @self.mcp.tool(description="Get text content of an element")
-        async def browser_get_text(selector: str) -> BrowserResponse:
-            """Get element text."""
-            return await browser_get_text_tool(self.manager, selector)
-
-        @self.mcp.tool(description="Stream text content of an element in deterministic chunks")
-        async def browser_get_text_chunk(
-            selector: str,
-            offset: int = 0,
-            length: int | None = None,
-            snapshot_checksum: str | None = None,
+        # V02 Facade Tool 1: browser_session - Instance lifecycle management
+        @self.mcp.tool(description="Manage browser instance lifecycle (launch, terminate, list, get_active)")
+        async def browser_session(
+            action: Literal["launch", "terminate", "list", "get_active"],
+            instance_id: str | None = None,
+            headless: bool = True,
+            profile: str | None = None,
+            anti_detect: bool = False,
+            use_pool: bool = True,
         ) -> BrowserResponse:
-            """Get element text chunk."""
-            return await browser_get_text_chunk_tool(self.manager, selector, offset, length, snapshot_checksum)
+            """Manage browser sessions."""
+            return await browser_session_tool(self.manager, action, instance_id, headless, profile, anti_detect, use_pool)
 
-        @self.mcp.tool(description="Get attribute value of an element")
-        async def browser_get_attribute(selector: str, attribute: str) -> BrowserResponse:
-            """Get element attribute."""
-            return await browser_get_attribute_tool(self.manager, selector, attribute)
+        # V02 Facade Tool 2: browser_navigate - Page navigation and history
+        @self.mcp.tool(description="Navigate pages and manage browser history (goto, back, forward, refresh, get_url)")
+        async def browser_navigate(
+            action: Literal["goto", "back", "forward", "refresh", "get_url"],
+            url: str | None = None,
+            wait_for: str | None = None,
+            timeout: float = 30,
+        ) -> BrowserResponse:
+            """Navigate pages."""
+            return await browser_navigate_tool(self.manager, action, url, wait_for, timeout)
 
-        @self.mcp.tool(description="Check if an element exists")
-        async def browser_exists(selector: str) -> BrowserResponse:
-            """Check element exists."""
-            return await browser_exists_tool(self.manager, selector)
+        # V02 Facade Tool 3: browser_interact - Element interaction and waiting
+        @self.mcp.tool(description="Interact with page elements (click, type, select, hover, scroll, press, wait)")
+        async def browser_interact(
+            action: Literal["click", "type", "select", "hover", "scroll", "press", "wait"],
+            selector: str | None = None,
+            text: str | None = None,
+            clear: bool = False,
+            delay: float = 0,
+            button: str = "left",
+            click_count: int = 1,
+            value: str | None = None,
+            index: int | None = None,
+            label: str | None = None,
+            direction: str = "down",
+            amount: int = 100,
+            key: str | None = None,
+            modifiers: list[str | None] | None = None,
+            state: str = "visible",
+            timeout: float = 30,
+        ) -> BrowserResponse:
+            """Interact with elements."""
+            return await browser_interact_tool(
+                self.manager, action, selector, text, clear, delay, button, click_count, value, index, label, direction, amount, key, modifiers, state, timeout
+            )
 
-        @self.mcp.tool(description="Wait for an element to appear")
-        async def browser_wait_for(selector: str, state: str = "visible", timeout: float = 30) -> BrowserResponse:
-            """Wait for element."""
-            return await browser_wait_for_tool(self.manager, selector, state, timeout)
+        # V02 Facade Tool 4: browser_inspect - DOM structure inspection
+        @self.mcp.tool(description="Inspect DOM structure and element properties (get_html, exists, get_attribute)")
+        async def browser_inspect(
+            action: Literal["get_html", "exists", "get_attribute"],
+            selector: str | None = None,
+            max_depth: int | None = None,
+            collapse_depth: int | None = None,
+            ellipsize_text_after: int | None = None,
+            attribute: str | None = None,
+        ) -> BrowserResponse:
+            """Inspect DOM."""
+            return await browser_inspect_tool(self.manager, action, selector, max_depth, collapse_depth, ellipsize_text_after, attribute)
 
-        @self.mcp.tool(description="Get browser cookies")
-        async def browser_get_cookies() -> BrowserResponse:
-            """Get cookies."""
-            return await browser_get_cookies_tool(self.manager)
-
-        # Screenshot tools
-        @self.mcp.tool(description="Take a screenshot of the page")
-        async def browser_screenshot(full_page: bool = False) -> BrowserResponse:
-            """Take screenshot."""
-            return await browser_screenshot_tool(self.manager, full_page)
-
-        @self.mcp.tool(description="Take a screenshot of an element")
-        async def browser_element_screenshot(selector: str) -> BrowserResponse:
-            """Take element screenshot."""
-            return await browser_element_screenshot_tool(self.manager, selector)
-
-        # JavaScript tools
-        @self.mcp.tool(description="Execute JavaScript code")
-        async def browser_execute(script: str, args: list[Any | None] | None = None) -> BrowserResponse:
-            """Execute JavaScript."""
-            return await browser_execute_tool(self.manager, script, args)
-
-        @self.mcp.tool(description="Execute JavaScript and stream string result in chunks")
-        async def browser_execute_chunk(
-            script: str,
+        # V02 Facade Tool 5: browser_extract - Content extraction
+        @self.mcp.tool(description="Extract text content with tags and cookies (get_text, get_cookies)")
+        async def browser_extract(
+            action: Literal["get_text", "get_cookies"],
+            selector: str | None = None,
+            use_chunking: bool = False,
             offset: int = 0,
             length: int | None = None,
             snapshot_checksum: str | None = None,
+            ellipsize_text_after: int = 128,
+            include_tag_names: bool = True,
+            skip_hidden: bool = True,
+            max_depth: int | None = None,
+        ) -> BrowserResponse:
+            """Extract content."""
+            return await browser_extract_tool(
+                self.manager,
+                action,
+                selector,
+                use_chunking,
+                offset,
+                length,
+                snapshot_checksum,
+                ellipsize_text_after,
+                include_tag_names,
+                skip_hidden,
+                max_depth,
+            )
+
+        # V02 Facade Tool 6: browser_capture - Visual capture
+        @self.mcp.tool(description="Capture screenshots (screenshot, element_screenshot)")
+        async def browser_capture(
+            action: Literal["screenshot", "element_screenshot"],
+            selector: str | None = None,
+            full_page: bool = False,
+            save_to_disk: bool = True,
+        ) -> BrowserResponse:
+            """Capture screenshots."""
+            return await browser_capture_tool(self.manager, action, selector, full_page, save_to_disk)
+
+        # V02 Facade Tool 7: browser_execute - JavaScript execution
+        @self.mcp.tool(description="Execute JavaScript code or evaluate expressions (execute, evaluate)")
+        async def browser_execute(
+            action: Literal["execute", "evaluate"],
+            code: str,
             args: list[Any | None] | None = None,
-        ) -> BrowserResponse:
-            """Execute JavaScript with chunked response."""
-            return await browser_execute_chunk_tool(self.manager, script, offset, length, snapshot_checksum, args)
-
-        @self.mcp.tool(description="Evaluate JavaScript expression")
-        async def browser_evaluate(expression: str) -> BrowserResponse:
-            """Evaluate JavaScript."""
-            return await browser_evaluate_tool(self.manager, expression)
-
-        @self.mcp.tool(description="Evaluate JavaScript and stream string result in chunks")
-        async def browser_evaluate_chunk(
-            expression: str,
+            use_chunking: bool = False,
             offset: int = 0,
             length: int | None = None,
             snapshot_checksum: str | None = None,
         ) -> BrowserResponse:
-            """Evaluate JavaScript with chunked response."""
-            return await browser_evaluate_chunk_tool(self.manager, expression, offset, length, snapshot_checksum)
+            """Execute JavaScript."""
+            return await browser_execute_tool(self.manager, action, code, args, use_chunking, offset, length, snapshot_checksum)
 
-        # Search tools
+        # V02 Tool 8: web_search - Web search (unchanged from V01)
         @self.mcp.tool(description="Run a web search using the configured engine")
         async def web_search(
             query: str,
@@ -241,7 +171,7 @@ class ChromeFastMCPServer:
             search_engine_url: str | None = None,
             timeout: float | None = None,
         ) -> BrowserResponse:
-            """Run a web search using the configured engine."""
+            """Run web search."""
             return await browser_web_search_tool(
                 self.manager,
                 query,
@@ -249,6 +179,25 @@ class ChromeFastMCPServer:
                 search_engine_url=search_engine_url,
                 timeout=timeout,
             )
+
+        # V02 Tool 9: browser_storage - Download and screenshot storage management
+        @self.mcp.tool(description="Manage downloads and screenshots (list, clear, wait, set behavior)")
+        async def browser_storage(
+            action: Literal[
+                "list_downloads",
+                "clear_downloads",
+                "wait_for_download",
+                "list_screenshots",
+                "clear_screenshots",
+                "set_download_behavior",
+            ],
+            filename: str | None = None,
+            timeout: int = 30,
+            behavior: str = "allow",
+            download_path: str | None = None,
+        ) -> BrowserResponse:
+            """Manage storage."""
+            return await browser_storage_tool(self.manager, action, filename, timeout, behavior, download_path)
 
     def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
         """Run the server.

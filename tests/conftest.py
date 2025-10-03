@@ -95,16 +95,16 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
             async def _run() -> bool:
                 try:
-                    await mgr.start()
+                    await mgr.initialize()
                     inst = await mgr.get_or_create_instance(headless=True, use_pool=True)
                     # Simple health check
                     ok = inst.driver is not None and len(inst.driver.window_handles) >= 1
                     await mgr.return_to_pool(inst.id)
-                    await mgr.stop()
+                    await mgr.shutdown()
                     return bool(ok)
                 except Exception:
                     with contextlib.suppress(Exception):
-                        await mgr.stop()
+                        await mgr.shutdown()
                     return False
 
             return _asyncio.get_event_loop().run_until_complete(_run())
@@ -145,14 +145,14 @@ async def session_manager() -> AsyncIterator[ChromeManager]:
     manager = ChromeManager(config_file=test_config)
     # Pool is configured through the manager's constructor using config file
     # No need to modify pool settings directly - they're set via PoolConfig
-    await manager.start()
+    await manager.initialize()
     logger.info("Created ChromeManager for test")
 
     yield manager
 
     # Cleanup after test
     try:
-        await manager.stop()
+        await manager.shutdown()
         logger.info("Stopped ChromeManager after test")
     except Exception as e:
         logger.warning(f"Error stopping manager: {e}")
@@ -293,11 +293,11 @@ async def backend() -> AsyncIterator[ChromeManager]:
     # Use test config for all tests
     test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
     manager = ChromeManager(config_file=test_config)
-    await manager.start()
+    await manager.initialize()
 
     yield manager
 
-    await manager.stop()
+    await manager.shutdown()
 
 
 @pytest.fixture

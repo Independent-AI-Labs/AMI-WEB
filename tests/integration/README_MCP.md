@@ -20,5 +20,5 @@ uv run --python 3.12 --project browser \
 - **Chrome binary missing** – Re-run `scripts/setup_chrome.py` or point `BROWSER_CHROME_PATH`
   to an existing binary.
 
-Legacy Windows-only instructions have been removed. Tests now work cross-platform
+Previous Windows-only instructions have been removed. Tests now work cross-platform
 as long as the commands above are used.
