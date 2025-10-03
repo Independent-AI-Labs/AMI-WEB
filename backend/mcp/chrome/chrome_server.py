@@ -18,6 +18,7 @@ from browser.backend.mcp.chrome.tools.facade import (  # noqa: E402
     browser_inspect_tool,
     browser_interact_tool,
     browser_navigate_tool,
+    browser_react_tool,
     browser_session_tool,
     browser_storage_tool,
 )
@@ -44,21 +45,28 @@ class ChromeFastMCPServer:
         # Register tools
         self._register_tools()
 
-    def _register_tools(self) -> None:
+    def _register_tools(self) -> None:  # noqa: C901
         """Register V02 simplified facade tools with FastMCP."""
 
-        # V02 Facade Tool 1: browser_session - Instance lifecycle management
-        @self.mcp.tool(description="Manage browser instance lifecycle (launch, terminate, list, get_active)")
+        # V02 Facade Tool 1: browser_session - Instance lifecycle and session persistence
+        @self.mcp.tool(
+            description=(
+                "Manage browser instance lifecycle (launch, terminate, list, get_active) "
+                "and session persistence (save, restore, list_sessions, delete_session)"
+            )
+        )
         async def browser_session(
-            action: Literal["launch", "terminate", "list", "get_active"],
+            action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session"],
             instance_id: str | None = None,
             headless: bool = True,
             profile: str | None = None,
             anti_detect: bool = False,
             use_pool: bool = True,
+            session_id: str | None = None,
+            session_name: str | None = None,
         ) -> BrowserResponse:
             """Manage browser sessions."""
-            return await browser_session_tool(self.manager, action, instance_id, headless, profile, anti_detect, use_pool)
+            return await browser_session_tool(self.manager, action, instance_id, headless, profile, anti_detect, use_pool, session_id, session_name)
 
         # V02 Facade Tool 2: browser_navigate - Page navigation and history
         @self.mcp.tool(description="Navigate pages and manage browser history (goto, back, forward, refresh, get_url)")
@@ -198,6 +206,19 @@ class ChromeFastMCPServer:
         ) -> BrowserResponse:
             """Manage storage."""
             return await browser_storage_tool(self.manager, action, filename, timeout, behavior, download_path)
+
+        # V02 Tool 10: browser_react - React-specific interactions
+        @self.mcp.tool(description="React-specific helpers for triggering handlers and inspecting components")
+        async def browser_react(
+            action: Literal["trigger_handler", "get_props", "get_state", "find_component", "get_fiber_tree"],
+            selector: str | None = None,
+            handler_name: str | None = None,
+            event_data: dict[str, Any] | None = None,
+            component_name: str | None = None,
+            max_depth: int = 10,
+        ) -> BrowserResponse:
+            """React-specific interactions."""
+            return await browser_react_tool(self.manager, action, selector, handler_name, event_data, component_name, max_depth)
 
     def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
         """Run the server.

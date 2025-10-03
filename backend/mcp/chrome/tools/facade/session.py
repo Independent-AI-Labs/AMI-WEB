@@ -14,40 +14,153 @@ from browser.backend.mcp.chrome.tools.browser_tools import (
 )
 
 
+async def _terminate_with_autosave(manager: ChromeManager, instance_id: str | None, session_name: str | None) -> BrowserResponse:
+    """Terminate instance with automatic session save."""
+    if not instance_id:
+        return BrowserResponse(success=False, error="instance_id required for terminate action")
+
+    instance = await manager.get_instance(instance_id)
+    if not instance:
+        return BrowserResponse(success=False, error=f"Instance {instance_id} not found")
+
+    try:
+        auto_name = session_name or f"autosave_{instance_id[:8]}"
+        saved_id = await manager.session_manager.save_session(instance, auto_name)
+        await browser_terminate_tool(manager, instance_id)
+        return BrowserResponse(
+            success=True,
+            data={
+                "status": "terminated",
+                "session_id": saved_id,
+                "message": f"Instance terminated and session saved as {saved_id}",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to save session during terminate: {e}")
+        await browser_terminate_tool(manager, instance_id)
+        return BrowserResponse(
+            success=True,
+            data={
+                "status": "terminated",
+                "session_id": None,
+                "message": f"Instance terminated but session save failed: {e}",
+            },
+        )
+
+
+async def _save_session(manager: ChromeManager, instance_id: str | None, session_name: str | None) -> BrowserResponse:
+    """Save browser session."""
+    if not instance_id:
+        return BrowserResponse(success=False, error="instance_id required for save action")
+
+    instance = await manager.get_instance(instance_id)
+    if not instance:
+        return BrowserResponse(success=False, error=f"Instance {instance_id} not found")
+
+    try:
+        saved_id = await manager.session_manager.save_session(instance, session_name)
+        return BrowserResponse(
+            success=True,
+            data={"session_id": saved_id, "message": f"Session saved as {saved_id}"},
+        )
+    except Exception as e:
+        logger.error(f"Failed to save session: {e}")
+        return BrowserResponse(success=False, error=f"Failed to save session: {e}")
+
+
+async def _restore_session(manager: ChromeManager, session_id: str | None) -> BrowserResponse:
+    """Restore browser session."""
+    if not session_id:
+        return BrowserResponse(success=False, error="session_id required for restore action")
+
+    try:
+        instance = await manager.session_manager.restore_session(session_id, manager)
+        return BrowserResponse(
+            success=True,
+            data={
+                "instance_id": instance.id,
+                "session_id": session_id,
+                "message": f"Session {session_id} restored",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to restore session: {e}")
+        return BrowserResponse(success=False, error=f"Failed to restore session: {e}")
+
+
+async def _list_sessions(manager: ChromeManager) -> BrowserResponse:
+    """List all saved sessions."""
+    try:
+        sessions = await manager.session_manager.list_sessions()
+        return BrowserResponse(
+            success=True,
+            data={"sessions": sessions, "count": len(sessions)},
+        )
+    except Exception as e:
+        logger.error(f"Failed to list sessions: {e}")
+        return BrowserResponse(success=False, error=f"Failed to list sessions: {e}")
+
+
+async def _delete_session(manager: ChromeManager, session_id: str | None) -> BrowserResponse:
+    """Delete a saved session."""
+    if not session_id:
+        return BrowserResponse(success=False, error="session_id required for delete_session action")
+
+    try:
+        deleted = manager.session_manager.delete_session(session_id)
+        if deleted:
+            return BrowserResponse(
+                success=True,
+                data={"session_id": session_id, "message": f"Session {session_id} deleted"},
+            )
+        return BrowserResponse(success=False, error=f"Session {session_id} not found")
+    except Exception as e:
+        logger.error(f"Failed to delete session: {e}")
+        return BrowserResponse(success=False, error=f"Failed to delete session: {e}")
+
+
 async def browser_session_tool(
     manager: ChromeManager,
-    action: Literal["launch", "terminate", "list", "get_active"],
+    action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session"],
     instance_id: str | None = None,
     headless: bool = True,
     profile: str | None = None,
     anti_detect: bool = False,
     use_pool: bool = True,
+    session_id: str | None = None,
+    session_name: str | None = None,
 ) -> BrowserResponse:
-    """Manage browser instance lifecycle.
+    """Manage browser instance lifecycle and session persistence.
 
     Args:
         manager: Chrome manager instance
-        action: Action to perform (launch, terminate, list, get_active)
-        instance_id: Browser instance ID (required for terminate)
+        action: Action to perform
+        instance_id: Browser instance ID (required for terminate, save)
         headless: Run in headless mode (for launch)
         profile: Profile name (for launch)
         anti_detect: Enable anti-detection (for launch)
         use_pool: Use instance pool (for launch)
+        session_id: Session ID (required for restore, delete_session)
+        session_name: Session name (optional for save)
 
     Returns:
         BrowserResponse with action-specific data
     """
     logger.debug(f"browser_session: action={action}")
 
-    if action == "launch":
-        return await browser_launch_tool(manager, headless, profile, anti_detect, use_pool)
+    # Instance lifecycle actions (no params needed)
+    if action in ("launch", "list", "get_active"):
+        if action == "launch":
+            return await browser_launch_tool(manager, headless, profile, anti_detect, use_pool)
+        return await browser_list_tool(manager) if action == "list" else await browser_get_active_tool(manager)
 
-    if action == "terminate":
-        if not instance_id:
-            return BrowserResponse(success=False, error="instance_id required for terminate action")
-        return await browser_terminate_tool(manager, instance_id)
+    # Instance-based actions (require instance_id)
+    if action in ("terminate", "save"):
+        if action == "terminate":
+            return await _terminate_with_autosave(manager, instance_id, session_name)
+        return await _save_session(manager, instance_id, session_name)
 
-    if action == "list":
-        return await browser_list_tool(manager)
-
-    return await browser_get_active_tool(manager)
+    # Session-based actions (require session_id)
+    if action == "list_sessions":
+        return await _list_sessions(manager)
+    return await _restore_session(manager, session_id) if action == "restore" else await _delete_session(manager, session_id)
