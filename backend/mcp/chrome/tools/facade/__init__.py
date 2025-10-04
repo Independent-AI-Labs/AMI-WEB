@@ -6,6 +6,7 @@ from browser.backend.mcp.chrome.tools.facade.extraction import browser_extract_t
 from browser.backend.mcp.chrome.tools.facade.inspection import browser_inspect_tool
 from browser.backend.mcp.chrome.tools.facade.interaction import browser_interact_tool
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
+from browser.backend.mcp.chrome.tools.facade.profile import browser_profile_tool
 from browser.backend.mcp.chrome.tools.facade.react import browser_react_tool
 from browser.backend.mcp.chrome.tools.facade.session import browser_session_tool
 from browser.backend.mcp.chrome.tools.facade.storage import browser_storage_tool
@@ -20,4 +21,5 @@ __all__ = [
     "browser_execute_tool",
     "browser_storage_tool",
     "browser_react_tool",
+    "browser_profile_tool",
 ]

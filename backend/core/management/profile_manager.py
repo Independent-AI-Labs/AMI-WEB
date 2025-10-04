@@ -40,6 +40,17 @@ class ProfileManager:
         if not self.profiles and self.metadata_file.exists():
             self.profiles = self._load_metadata()
 
+    def ensure_default_profile(self) -> Path:
+        """Ensure default profile exists and return its path."""
+        self._ensure_initialized()
+        default_name = "default"
+
+        if default_name not in self.profiles:
+            logger.info("Creating default profile for session persistence")
+            return self.create_profile(default_name, "Default profile for session persistence with HTTPS certificate exceptions")
+
+        return self.base_dir / default_name
+
     def create_profile(self, name: str, description: str = "") -> Path:
         self._ensure_initialized()
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +74,8 @@ class ProfileManager:
 
     def get_profile_dir(self, name: str) -> Path:
         """Get the directory path for a profile."""
+        self._ensure_initialized()
+
         if name not in self.profiles:
             # Auto-create if doesn't exist
             return self.create_profile(name)
@@ -75,6 +88,8 @@ class ProfileManager:
 
     def delete_profile(self, name: str) -> bool:
         """Delete a profile and its data."""
+        self._ensure_initialized()
+
         if name not in self.profiles:
             return False
 
@@ -90,6 +105,8 @@ class ProfileManager:
 
     def list_profiles(self) -> list[dict[str, Any]]:
         """List all profiles."""
+        self._ensure_initialized()
+
         result = []
         for name, metadata in self.profiles.items():
             profile_dir = self.base_dir / name
@@ -106,6 +123,8 @@ class ProfileManager:
 
     def copy_profile(self, source: str, dest: str) -> Path:
         """Copy a profile to a new name."""
+        self._ensure_initialized()
+
         if source not in self.profiles:
             raise ProfileError(f"Source profile {source} not found")
         if dest in self.profiles:

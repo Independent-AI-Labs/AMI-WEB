@@ -52,6 +52,7 @@ async def test_run_chrome_stdio_client_initialization() -> None:
             "browser_execute",
             "browser_storage",
             "browser_react",
+            "browser_profile",
             "web_search",
         }
         assert tool_names == expected_tools

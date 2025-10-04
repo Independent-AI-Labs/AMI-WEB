@@ -68,13 +68,17 @@ async def _save_session(manager: ChromeManager, instance_id: str | None, session
         return BrowserResponse(success=False, error=f"Failed to save session: {e}")
 
 
-async def _restore_session(manager: ChromeManager, session_id: str | None) -> BrowserResponse:
+async def _restore_session(manager: ChromeManager, session_id: str | None, profile: str | None) -> BrowserResponse:
     """Restore browser session."""
     if not session_id:
         return BrowserResponse(success=False, error="session_id required for restore action")
 
     try:
-        instance = await manager.session_manager.restore_session(session_id, manager)
+        # Ensure manager is initialized so session metadata is loaded
+        if not manager._initialized:
+            await manager.initialize()
+
+        instance = await manager.session_manager.restore_session(session_id, manager, profile_override=profile)
         return BrowserResponse(
             success=True,
             data={
@@ -91,6 +95,10 @@ async def _restore_session(manager: ChromeManager, session_id: str | None) -> Br
 async def _list_sessions(manager: ChromeManager) -> BrowserResponse:
     """List all saved sessions."""
     try:
+        # Ensure manager is initialized so session metadata is loaded
+        if not manager._initialized:
+            await manager.initialize()
+
         sessions = await manager.session_manager.list_sessions()
         return BrowserResponse(
             success=True,
@@ -107,6 +115,10 @@ async def _delete_session(manager: ChromeManager, session_id: str | None) -> Bro
         return BrowserResponse(success=False, error="session_id required for delete_session action")
 
     try:
+        # Ensure manager is initialized so session metadata is loaded
+        if not manager._initialized:
+            await manager.initialize()
+
         deleted = manager.session_manager.delete_session(session_id)
         if deleted:
             return BrowserResponse(
@@ -127,6 +139,10 @@ async def _rename_session(manager: ChromeManager, session_id: str | None, sessio
         return BrowserResponse(success=False, error="session_name required for rename_session action")
 
     try:
+        # Ensure manager is initialized so session metadata is loaded
+        if not manager._initialized:
+            await manager.initialize()
+
         renamed = manager.rename_session(session_id, session_name)
         if renamed:
             return BrowserResponse(
@@ -157,7 +173,7 @@ async def browser_session_tool(
         action: Action to perform
         instance_id: Browser instance ID (required for terminate, save)
         headless: Run in headless mode (for launch)
-        profile: Profile name (for launch)
+        profile: Profile name (for launch and restore - overrides saved profile)
         anti_detect: Enable anti-detection (for launch)
         use_pool: Use instance pool (for launch)
         session_id: Session ID (required for restore, delete_session)
@@ -183,7 +199,7 @@ async def browser_session_tool(
     # Session-based actions (require session_id)
     action_handlers = {
         "list_sessions": lambda: _list_sessions(manager),
-        "restore": lambda: _restore_session(manager, session_id),
+        "restore": lambda: _restore_session(manager, session_id, profile),
         "delete_session": lambda: _delete_session(manager, session_id),
         "rename_session": lambda: _rename_session(manager, session_id, session_name),
     }

@@ -86,28 +86,24 @@ class BrowserOptionsBuilder:
             self._debug_port = None
 
     def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
-        """Set up temporary profile directory for Chrome instance."""
+        """Set up profile directory for Chrome instance."""
 
         if profile and self._profile_manager:
+            # Named profiles: use actual profile directory directly for persistence
             profile_dir = self._profile_manager.get_profile_dir(profile)
             if profile_dir:
-                # Create a temporary directory for this instance with profile name
-                temp_dir = Path(tempfile.gettempdir()) / f"chrome_profile_{profile}_{uuid.uuid4().hex[:8]}"
+                # Ensure directory exists
+                profile_dir.mkdir(parents=True, exist_ok=True)
 
-                # Copy the profile directory if it exists and has content
-                if profile_dir.exists() and any(profile_dir.iterdir()):
-                    shutil.copytree(profile_dir, temp_dir, dirs_exist_ok=True)
-                else:
-                    temp_dir.mkdir(parents=True, exist_ok=True)
+                # Use the actual profile directory - no copying
+                logger.info(f"Using profile directory: {profile_dir} with debug port: {self._debug_port}")
+                chrome_options.add_argument(f"--user-data-dir={profile_dir}")
 
-                # Store both directories for proper sync
-                self._temp_profile_dir = temp_dir
-                self._original_profile_dir = profile_dir
-
-                logger.info(f"Using temporary profile directory: {temp_dir} with debug port: {self._debug_port}")
-                chrome_options.add_argument(f"--user-data-dir={temp_dir}")
+                # No temp directory for named profiles
+                self._temp_profile_dir = None
+                self._original_profile_dir = None
         else:
-            # Even without a profile, create a unique temp directory to avoid conflicts
+            # No profile: create a unique temp directory to avoid conflicts
             temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid.uuid4().hex[:8]}"
             temp_dir.mkdir(parents=True, exist_ok=True)
             self._temp_profile_dir = temp_dir

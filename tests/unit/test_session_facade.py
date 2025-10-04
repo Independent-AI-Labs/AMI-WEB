@@ -22,6 +22,7 @@ class TestSessionFacadePersistence:
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
         manager.session_manager.save_session = AsyncMock(return_value="session-abc")
+        manager.profile_manager = Mock()
 
         response = await browser_session_tool(
             manager=manager,
@@ -71,6 +72,7 @@ class TestSessionFacadePersistence:
     async def test_restore_session_success(self) -> None:
         """Test restoring a session successfully."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         instance = Mock()
         instance.id = "inst-restored"
 
@@ -88,7 +90,7 @@ class TestSessionFacadePersistence:
         assert response.data["instance_id"] == "inst-restored"
         assert response.data["session_id"] == "session-abc"
         assert "restored" in response.data["message"].lower()
-        manager.session_manager.restore_session.assert_called_once_with("session-abc", manager)
+        manager.session_manager.restore_session.assert_called_once_with("session-abc", manager, profile_override=None)
 
     @pytest.mark.asyncio
     async def test_restore_session_no_session_id(self) -> None:
@@ -108,6 +110,7 @@ class TestSessionFacadePersistence:
     async def test_list_sessions_success(self) -> None:
         """Test listing sessions successfully."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         sessions = [
             {"id": "session-1", "name": "Session 1", "created_at": "2024-01-01"},
             {"id": "session-2", "name": "Session 2", "created_at": "2024-01-02"},
@@ -132,6 +135,7 @@ class TestSessionFacadePersistence:
     async def test_list_sessions_empty(self) -> None:
         """Test listing sessions when none exist."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         manager.session_manager = Mock()
         manager.session_manager.list_sessions = AsyncMock(return_value=[])
 
@@ -149,6 +153,7 @@ class TestSessionFacadePersistence:
     async def test_delete_session_success(self) -> None:
         """Test deleting a session successfully."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         manager.session_manager = Mock()
         manager.session_manager.delete_session = Mock(return_value=True)
 
@@ -168,6 +173,7 @@ class TestSessionFacadePersistence:
     async def test_delete_session_not_found(self) -> None:
         """Test deleting a non-existent session."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         manager.session_manager = Mock()
         manager.session_manager.delete_session = Mock(return_value=False)
 
@@ -205,6 +211,7 @@ class TestSessionFacadePersistence:
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
         manager.session_manager.save_session = AsyncMock(side_effect=Exception("Save failed"))
+        manager.profile_manager = Mock()
 
         response = await browser_session_tool(
             manager=manager,
@@ -220,6 +227,7 @@ class TestSessionFacadePersistence:
     async def test_restore_session_error_handling(self) -> None:
         """Test error handling when restore_session fails."""
         manager = Mock(spec=ChromeManager)
+        manager._initialized = True
         manager.session_manager = Mock()
         manager.session_manager.restore_session = AsyncMock(side_effect=Exception("Restore failed"))
 
@@ -247,6 +255,7 @@ class TestTerminateWithAutoSave:
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
         manager.session_manager.save_session = AsyncMock(return_value="session-autosaved")
+        manager.profile_manager = Mock()
         manager.terminate_instance = AsyncMock()
 
         response = await browser_session_tool(
@@ -272,6 +281,7 @@ class TestTerminateWithAutoSave:
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
         manager.session_manager.save_session = AsyncMock(return_value="session-custom")
+        manager.profile_manager = Mock()
         manager.terminate_instance = AsyncMock()
 
         response = await browser_session_tool(
@@ -296,6 +306,7 @@ class TestTerminateWithAutoSave:
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
         manager.session_manager.save_session = AsyncMock(return_value="session-xyz")
+        manager.profile_manager = Mock()
         manager.terminate_instance = AsyncMock()
 
         response = await browser_session_tool(

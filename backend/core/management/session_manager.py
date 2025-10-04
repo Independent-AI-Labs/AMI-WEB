@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 from loguru import logger
 
@@ -108,12 +109,13 @@ class SessionManager:
         logger.info(f"Saved session {session_id}")
         return session_id
 
-    async def restore_session(self, session_id: str, manager: "ChromeManager") -> "BrowserInstance":
+    async def restore_session(self, session_id: str, manager: "ChromeManager", profile_override: str | None = None) -> "BrowserInstance":
         """Restore a browser session.
 
         Args:
             session_id: The session ID to restore
             manager: The ChromeManager instance to create the browser with
+            profile_override: Optional profile to use instead of saved profile
 
         Returns:
             A new browser instance with the restored session
@@ -131,8 +133,11 @@ class SessionManager:
         with session_file.open() as f:
             session_data = json.load(f)
 
-        # Create new instance with the saved profile
-        profile_name = session_data.get("profile")
+        # Use override profile if provided, otherwise use saved profile
+        profile_name = profile_override if profile_override is not None else session_data.get("profile")
+        if profile_override is not None:
+            logger.info(f"Overriding saved profile with '{profile_override}' for session {session_id}")
+
         instance = await manager.get_or_create_instance(
             profile=profile_name,
             headless=False,  # Sessions are typically for interactive use
@@ -140,21 +145,45 @@ class SessionManager:
 
         # Restore the session state
         if instance.driver:
-            # Navigate to the saved URL
-            if session_data.get("url"):
-                instance.driver.get(session_data["url"])
+            saved_url = session_data.get("url")
 
-            # Restore cookies
-            if session_data.get("cookies"):
-                for cookie in session_data["cookies"]:
-                    try:
-                        instance.driver.add_cookie(cookie)
-                    except Exception as e:
-                        logger.warning(f"Failed to restore cookie: {e}")
+            # If we have cookies, navigate to domain root first to set them
+            if session_data.get("cookies") and saved_url:
+                parsed = urlparse(saved_url)
+                domain_url = f"{parsed.scheme}://{parsed.netloc}/"
+                instance.driver.get(domain_url)
 
-            # Refresh to apply cookies
-            if session_data.get("url"):
-                instance.driver.refresh()
+                # Check if we're on an error page (certificate warning, etc.)
+                current_url = instance.driver.current_url
+                page_source = instance.driver.page_source.lower() if instance.driver.page_source else ""
+
+                is_error_page = (
+                    "data:text/html,chromewebdata" in current_url
+                    or "chrome-error:" in current_url
+                    or "net::err_cert" in page_source
+                    or "your connection is not private" in page_source
+                )
+
+                if is_error_page:
+                    logger.warning(
+                        f"Cannot restore cookies - browser is on error page. "
+                        f"Profile '{profile_name or 'default'}' doesn't have certificate exception. "
+                        f"Cookies will not be restored."
+                    )
+                else:
+                    # Add cookies to the domain
+                    cookies_restored = 0
+                    for cookie in session_data["cookies"]:
+                        try:
+                            instance.driver.add_cookie(cookie)
+                            cookies_restored += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
+                    logger.info(f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies")
+
+            # Now navigate to the saved URL with cookies present
+            if saved_url:
+                instance.driver.get(saved_url)
 
         logger.info(f"Restored session {session_id} with profile {profile_name}")
         return instance

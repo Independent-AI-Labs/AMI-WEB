@@ -133,6 +133,11 @@ class ChromeManager:
         if not self._initialized:
             await self.initialize()
 
+        # Profiles require standalone instances (not pooled) for persistence
+        if profile and use_pool:
+            logger.info(f"Profile '{profile}' specified - disabling pool to use standalone instance")
+            use_pool = False
+
         if use_pool:
             clean_extensions = [ext for ext in (extensions or []) if ext is not None]
             opts = options or ChromeOptions(headless=headless, extensions=clean_extensions)

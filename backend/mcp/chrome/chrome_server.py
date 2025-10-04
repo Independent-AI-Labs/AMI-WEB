@@ -19,6 +19,7 @@ from browser.backend.mcp.chrome.tools.facade import (  # noqa: E402
     browser_inspect_tool,
     browser_interact_tool,
     browser_navigate_tool,
+    browser_profile_tool,
     browser_react_tool,
     browser_session_tool,
     browser_storage_tool,
@@ -231,6 +232,18 @@ class ChromeFastMCPServer:
         ) -> BrowserResponse:
             """React-specific interactions."""
             return await browser_react_tool(self.manager, action, selector, handler_name, event_data, component_name, max_depth)
+
+        # V02 Tool 11: browser_profile - Profile management
+        @self.mcp.tool(description="Manage browser profiles (create, delete, list, copy)")
+        async def browser_profile(
+            action: Literal["create", "delete", "list", "copy"],
+            profile_name: str | None = None,
+            description: str | None = None,
+            source_profile: str | None = None,
+            dest_profile: str | None = None,
+        ) -> BrowserResponse:
+            """Manage browser profiles."""
+            return await browser_profile_tool(self.manager, action, profile_name, description, source_profile, dest_profile)
 
     def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
         """Run the server.
