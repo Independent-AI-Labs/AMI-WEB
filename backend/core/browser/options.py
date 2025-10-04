@@ -85,6 +85,59 @@ class BrowserOptionsBuilder:
                     self._used_ports.discard(self._debug_port)
             self._debug_port = None
 
+    def _cleanup_stale_locks(self, profile_dir: Path) -> None:
+        """Remove stale Chrome lock files if no process is using the profile."""
+        lock_files = [
+            profile_dir / "SingletonLock",
+            profile_dir / "SingletonSocket",
+            profile_dir / "SingletonCookie",
+        ]
+
+        # Check if any lock files exist
+        existing_locks = [f for f in lock_files if f.exists()]
+        if not existing_locks:
+            return
+
+        # Check if any Chrome process is using this directory
+        import subprocess
+
+        try:
+            # Use fuser to check if any process has files open in this directory
+            result = subprocess.run(
+                ["fuser", str(profile_dir)],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            # If fuser returns processes, the directory is in use
+            if result.returncode == 0 and result.stdout.strip():
+                logger.debug(f"Profile directory {profile_dir} is in use by process, keeping locks")
+                return
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # fuser not available or timed out, check via ps
+            try:
+                ps_result = subprocess.run(
+                    ["ps", "aux"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                    check=False,
+                )
+                if str(profile_dir) in ps_result.stdout:
+                    logger.debug(f"Profile directory {profile_dir} found in process list, keeping locks")
+                    return
+            except subprocess.TimeoutExpired:
+                pass
+
+        # No process using the directory - locks are stale, remove them
+        for lock_file in existing_locks:
+            try:
+                lock_file.unlink()
+                logger.info(f"Removed stale lock file: {lock_file}")
+            except Exception as e:
+                logger.warning(f"Failed to remove stale lock {lock_file}: {e}")
+
     def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
         """Set up profile directory for Chrome instance."""
 
@@ -94,6 +147,9 @@ class BrowserOptionsBuilder:
             if profile_dir:
                 # Ensure directory exists
                 profile_dir.mkdir(parents=True, exist_ok=True)
+
+                # Clean up stale lock files from previous crashed instances
+                self._cleanup_stale_locks(profile_dir)
 
                 # Use the actual profile directory - no copying
                 logger.info(f"Using profile directory: {profile_dir} with debug port: {self._debug_port}")
