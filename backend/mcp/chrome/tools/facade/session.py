@@ -119,9 +119,29 @@ async def _delete_session(manager: ChromeManager, session_id: str | None) -> Bro
         return BrowserResponse(success=False, error=f"Failed to delete session: {e}")
 
 
+async def _rename_session(manager: ChromeManager, session_id: str | None, session_name: str | None) -> BrowserResponse:
+    """Rename a saved session."""
+    if not session_id:
+        return BrowserResponse(success=False, error="session_id required for rename_session action")
+    if not session_name:
+        return BrowserResponse(success=False, error="session_name required for rename_session action")
+
+    try:
+        renamed = manager.rename_session(session_id, session_name)
+        if renamed:
+            return BrowserResponse(
+                success=True,
+                data={"session_id": session_id, "name": session_name, "message": f"Session {session_id} renamed to '{session_name}'"},
+            )
+        return BrowserResponse(success=False, error=f"Session {session_id} not found")
+    except Exception as e:
+        logger.error(f"Failed to rename session: {e}")
+        return BrowserResponse(success=False, error=f"Failed to rename session: {e}")
+
+
 async def browser_session_tool(
     manager: ChromeManager,
-    action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session"],
+    action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session", "rename_session"],
     instance_id: str | None = None,
     headless: bool = True,
     profile: str | None = None,
@@ -161,6 +181,15 @@ async def browser_session_tool(
         return await _save_session(manager, instance_id, session_name)
 
     # Session-based actions (require session_id)
-    if action == "list_sessions":
-        return await _list_sessions(manager)
-    return await _restore_session(manager, session_id) if action == "restore" else await _delete_session(manager, session_id)
+    action_handlers = {
+        "list_sessions": lambda: _list_sessions(manager),
+        "restore": lambda: _restore_session(manager, session_id),
+        "delete_session": lambda: _delete_session(manager, session_id),
+        "rename_session": lambda: _rename_session(manager, session_id, session_name),
+    }
+
+    handler = action_handlers.get(action)
+    if handler:
+        return await handler()
+
+    return BrowserResponse(success=False, error=f"Unknown action: {action}")

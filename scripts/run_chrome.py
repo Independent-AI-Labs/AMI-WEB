@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -31,8 +32,34 @@ def main() -> None:
 
     from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
 
-    server = ChromeFastMCPServer()
-    server.run(transport="stdio")
+    parser = argparse.ArgumentParser(description="Chrome MCP Server")
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default=None,
+        help="Root directory for browser data (sessions, profiles, downloads, screenshots). Defaults to browser/data",
+    )
+    parser.add_argument(
+        "--transport",
+        type=str,
+        default="stdio",
+        choices=["stdio", "sse", "streamable-http"],
+        help="Transport type",
+    )
+
+    args = parser.parse_args()
+
+    # Resolve data root
+    if args.data_root:
+        data_root = Path(args.data_root).resolve()
+    else:
+        # Default: find browser module and use browser/data
+        script_path = Path(__file__).resolve()
+        browser_root = script_path.parent.parent
+        data_root = browser_root / "data"
+
+    server = ChromeFastMCPServer(data_root=data_root)
+    server.run(transport=args.transport)
 
 
 if __name__ == "__main__":

@@ -177,6 +177,36 @@ class SessionManager:
             )
         return sorted(result, key=lambda x: x["created_at"] or "", reverse=True)
 
+    def rename_session(self, session_id: str, new_name: str) -> bool:
+        """Rename a saved session.
+
+        Args:
+            session_id: The session ID to rename
+            new_name: The new name for the session
+
+        Returns:
+            True if renamed, False if not found
+        """
+        if session_id not in self.sessions:
+            return False
+
+        # Update metadata
+        self.sessions[session_id]["name"] = new_name
+        self._save_metadata()
+
+        # Update session file
+        session_dir = self.session_dir / session_id
+        session_file = session_dir / "session.json"
+        if session_file.exists():
+            with session_file.open() as f:
+                session_data = json.load(f)
+            session_data["name"] = new_name
+            with session_file.open("w") as f:
+                json.dump(session_data, f, indent=2)
+
+        logger.info(f"Renamed session {session_id} to '{new_name}'")
+        return True
+
     def delete_session(self, session_id: str) -> bool:
         """Delete a saved session.
 
