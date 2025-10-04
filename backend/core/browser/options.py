@@ -93,8 +93,9 @@ class BrowserOptionsBuilder:
             profile_dir / "SingletonCookie",
         ]
 
-        # Check if any lock files exist
-        existing_locks = [f for f in lock_files if f.exists()]
+        # Check if any lock files exist (including broken symlinks)
+        # Use lexists() instead of exists() to detect broken symlinks
+        existing_locks = [f for f in lock_files if f.exists() or f.is_symlink()]
         if not existing_locks:
             return
 
