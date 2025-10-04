@@ -31,8 +31,19 @@ from browser.backend.utils.exceptions import InstanceError  # noqa: E402
 class ChromeManager:
     """Chrome Manager using the base worker pool system."""
 
-    def __init__(self, config_file: str | None = None):
+    def __init__(self, config_file: str | None = None, config_overrides: dict[str, Any] | None = None):
         self.config = Config.load(config_file) if config_file else Config()
+        # Apply config overrides (for absolute storage paths from runner)
+        if config_overrides:
+            for key, value in config_overrides.items():
+                # Split dotted key and set nested dictionary value
+                keys = key.split(".")
+                current = self.config._data
+                for k in keys[:-1]:
+                    if k not in current:
+                        current[k] = {}
+                    current = current[k]
+                current[keys[-1]] = value
         self.properties_manager = PropertiesManager(self.config)
         self.profile_manager = ProfileManager(base_dir=self.config.get("backend.storage.profiles_dir", "./data/browser_profiles"))
 
@@ -439,6 +450,18 @@ class ChromeManager:
 
         logger.info(f"Restored session {session_id} to instance {instance.id}")
         return instance
+
+    def rename_session(self, session_id: str, new_name: str) -> bool:
+        """Rename a saved session.
+
+        Args:
+            session_id: Session ID to rename
+            new_name: New session name
+
+        Returns:
+            True if renamed successfully
+        """
+        return self.session_manager.rename_session(session_id, new_name)
 
     async def navigate(self, instance_id: str, url: str) -> dict[str, Any]:
         """Navigate to URL.

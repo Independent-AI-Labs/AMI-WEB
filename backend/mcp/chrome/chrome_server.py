@@ -5,6 +5,7 @@ from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
+from pathlib import Path  # noqa: E402
 from typing import Any, Literal  # noqa: E402
 
 from mcp.server import FastMCP  # noqa: E402
@@ -28,16 +29,27 @@ from browser.backend.mcp.chrome.tools.search_tools import browser_web_search_too
 class ChromeFastMCPServer:
     """Chrome MCP server using FastMCP."""
 
-    def __init__(self, config: dict[str, Any | None] | None = None):
+    def __init__(self, data_root: Path | None = None, config: dict[str, Any | None] | None = None):
         """Initialize Chrome FastMCP server."""
+
         self.config = config or {}
+        self.data_root = data_root
 
         # Create FastMCP server
         self.mcp = FastMCP(name="ChromeMCPServer")
 
-        # Initialize Chrome manager
+        # Initialize Chrome manager with absolute storage paths
         config_file = self.config.get("config_file") if self.config else None
-        self.manager = ChromeManager(config_file=config_file)
+        storage_config = {}
+        if self.data_root:
+            storage_config = {
+                "backend.storage.session_dir": str(self.data_root / "sessions"),
+                "backend.storage.profiles_dir": str(self.data_root / "profiles"),
+                "backend.storage.downloads_dir": str(self.data_root / "downloads"),
+                "backend.storage.screenshots_dir": str(self.data_root / "screenshots"),
+            }
+
+        self.manager = ChromeManager(config_file=config_file, config_overrides=storage_config)
 
         # Manager will be started when needed, not in __init__
         # This avoids event loop issues when the server is already in an async context
@@ -52,11 +64,11 @@ class ChromeFastMCPServer:
         @self.mcp.tool(
             description=(
                 "Manage browser instance lifecycle (launch, terminate, list, get_active) "
-                "and session persistence (save, restore, list_sessions, delete_session)"
+                "and session persistence (save, restore, list_sessions, delete_session, rename_session)"
             )
         )
         async def browser_session(
-            action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session"],
+            action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session", "rename_session"],
             instance_id: str | None = None,
             headless: bool = True,
             profile: str | None = None,
