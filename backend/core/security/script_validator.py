@@ -161,16 +161,25 @@ class ScriptValidator:
             raise ValueError(f"Script validation failed with {len(result.errors)} error(s):\n" + "\n".join(error_msgs))
 
 
-# Global instance for easy access
-_validator: ScriptValidator | None = None
+class _ValidatorRegistry:
+    """Registry for global validator instance without using global statement."""
+
+    def __init__(self) -> None:
+        self._instance: ScriptValidator | None = None
+
+    def get(self) -> ScriptValidator:
+        """Get or create validator instance."""
+        if self._instance is None:
+            self._instance = ScriptValidator()
+        return self._instance
+
+
+_registry = _ValidatorRegistry()
 
 
 def get_validator() -> ScriptValidator:
     """Get or create global script validator instance."""
-    global _validator  # noqa: PLW0603
-    if _validator is None:
-        _validator = ScriptValidator()
-    return _validator
+    return _registry.get()
 
 
 def validate_script(script: str) -> ValidationResult:

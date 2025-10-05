@@ -25,13 +25,19 @@ repos:
         require_serial: true
         stages: [ pre-commit ]
         pass_filenames: false
+      # - id: no-lint-suppressions
+      #   name: no-lint-suppressions
+      #   entry: bash -c "cd .. && .venv/bin/python scripts/list_noqas.py browser"
+      #   language: system
+      #   pass_filenames: false
+      #   stages: [ pre-commit ]
 
   # Run tests on pre-push
   - repo: local
     hooks:
       - id: pytest
         name: pytest
-        entry: bash -c "if [ -f scripts/run_tests.py ]; then python3 scripts/run_tests.py; else ./.venv/bin/python -m pytest -q; fi"
+        entry: bash -c "if [ -f scripts/run_tests.py ]; then .venv/bin/python scripts/run_tests.py; else ./.venv/bin/python -m pytest -q; fi"
         language: system
         pass_filenames: false
         always_run: true
