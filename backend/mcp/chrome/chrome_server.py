@@ -65,9 +65,10 @@ class ChromeFastMCPServer:
         @self.mcp.tool(
             description=(
                 "Manage browser instance lifecycle (launch, terminate, list, get_active) "
-                "and session persistence (save, restore, list_sessions, delete_session, "
-                "rename_session). Use kill_orphaned=True when restoring sessions to automatically "
-                "kill orphaned Chrome processes holding profile locks."
+                "and session persistence (save, restore, list_sessions, delete_session, rename_session). "
+                "Session save captures all open tabs, cookies, and active tab state. "
+                "Session restore recreates the exact browser state including all tabs. "
+                "Use kill_orphaned=True when restoring to clear stale Chrome processes holding profile locks."
             )
         )
         async def browser_session(
@@ -136,7 +137,13 @@ class ChromeFastMCPServer:
             return await browser_inspect_tool(self.manager, action, selector, max_depth, collapse_depth, ellipsize_text_after, attribute)
 
         # V02 Facade Tool 5: browser_extract - Content extraction
-        @self.mcp.tool(description="Extract text content with tags and cookies (get_text, get_cookies)")
+        @self.mcp.tool(
+            description=(
+                "Extract text content with tags and cookies (get_text, get_cookies). "
+                "Supports chunking for large text extractions with deterministic byte-offset pagination. "
+                "Use snapshot_checksum to ensure consistency across chunks."
+            )
+        )
         async def browser_extract(
             action: Literal["get_text", "get_cookies"],
             selector: str | None = None,
@@ -175,8 +182,16 @@ class ChromeFastMCPServer:
             """Capture screenshots."""
             return await browser_capture_tool(self.manager, action, selector, full_page, save_to_disk)
 
-        # V02 Facade Tool 7: browser_execute - JavaScript execution
-        @self.mcp.tool(description="Execute JavaScript code or evaluate expressions (execute, evaluate)")
+        # V02 Facade Tool 7: browser_execute - JavaScript execution with validation
+        @self.mcp.tool(
+            description=(
+                "Execute JavaScript code or evaluate expressions (execute, evaluate). "
+                "All scripts are validated against forbidden patterns before execution. "
+                "Dangerous operations like window.open('url', '_blank') and window.close() "
+                "are blocked to prevent tab corruption and state loss. "
+                "Use proper browser tools (browser_session, browser_navigate) instead of direct DOM manipulation."
+            )
+        )
         async def browser_execute(
             action: Literal["execute", "evaluate"],
             code: str,
@@ -186,7 +201,7 @@ class ChromeFastMCPServer:
             length: int | None = None,
             snapshot_checksum: str | None = None,
         ) -> BrowserResponse:
-            """Execute JavaScript."""
+            """Execute JavaScript with validation."""
             return await browser_execute_tool(self.manager, action, code, args, use_chunking, offset, length, snapshot_checksum)
 
         # V02 Tool 8: web_search - Web search (unchanged from V01)

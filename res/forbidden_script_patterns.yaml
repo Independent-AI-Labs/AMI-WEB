@@ -1,0 +1,83 @@
+# Forbidden JavaScript patterns for browser execution
+# These patterns are checked against JavaScript code before execution to prevent
+# dangerous operations that could corrupt browser state or cause data loss.
+
+# Each pattern has:
+# - pattern: regex pattern to match
+# - reason: explanation of why it's forbidden
+# - severity: error (blocks execution) or warning (logs but allows)
+# - category: type of issue (tab_management, navigation, etc.)
+
+patterns:
+  # Tab Management - window.open with target parameter
+  - pattern: 'window\.open\s*\([^)]*[''"]_blank[''"]'
+    reason: "window.open with '_blank' target can corrupt original tab state. Use TabController.create_tab() instead."
+    severity: error
+    category: tab_management
+
+  - pattern: 'window\.open\s*\([^)]*[''"]_self[''"]'
+    reason: "window.open with '_self' target can corrupt current tab state. Use navigation tools instead."
+    severity: error
+    category: tab_management
+
+  # Direct window.open without proper tab management
+  - pattern: 'window\.open\s*\('
+    reason: "Direct window.open() bypasses tab state management. Use TabController.create_tab() instead."
+    severity: warning
+    category: tab_management
+
+  # Location manipulation that bypasses navigation tracking
+  - pattern: 'window\.location\s*=\s*[''"]'
+    reason: "Direct window.location assignment bypasses navigation tracking. Use navigation tools instead."
+    severity: warning
+    category: navigation
+
+  - pattern: 'window\.location\.href\s*='
+    reason: "Direct location.href assignment bypasses navigation tracking. Use navigation tools instead."
+    severity: warning
+    category: navigation
+
+  - pattern: 'window\.location\.replace\s*\('
+    reason: "location.replace bypasses navigation tracking. Use navigation tools instead."
+    severity: warning
+    category: navigation
+
+  # History manipulation
+  - pattern: 'history\.pushState\s*\('
+    reason: "Direct history.pushState can desync browser state. Consider if navigation tools are more appropriate."
+    severity: warning
+    category: navigation
+
+  - pattern: 'history\.replaceState\s*\('
+    reason: "Direct history.replaceState can desync browser state. Consider if navigation tools are more appropriate."
+    severity: warning
+    category: navigation
+
+  # Window/tab closing that bypasses cleanup
+  - pattern: 'window\.close\s*\('
+    reason: "Direct window.close() bypasses tab management. Use TabController.close_tab() instead."
+    severity: error
+    category: tab_management
+
+  # Dangerous eval patterns
+  - pattern: '\beval\s*\('
+    reason: "eval() is dangerous and can execute arbitrary code. Refactor to avoid eval."
+    severity: warning
+    category: security
+
+  # Function constructor abuse
+  - pattern: 'new\s+Function\s*\('
+    reason: "Function constructor can execute arbitrary code. Prefer standard function definitions."
+    severity: warning
+    category: security
+
+# Configuration
+config:
+  # Whether to enforce forbidden patterns (false = log only)
+  enforce: true
+
+  # Whether to log all pattern checks
+  log_checks: false
+
+  # Whether warnings should fail execution
+  warnings_are_errors: false

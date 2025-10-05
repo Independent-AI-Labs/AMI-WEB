@@ -1,67 +1,407 @@
 # AMI Browser Module
 
-Browser keeps agents connected to the real web with compliant, auditable Chromium automation. It delivers a ready-to-run FastMCP server so teams can add browsing superpowers without hand-rolling driver logic or compromising security controls.
+Production-grade Chromium automation with security-first JavaScript execution, session persistence, and comprehensive MCP tooling for AI agents.
 
-## What You Get
+## Overview
 
-This module packages the Chromium lifecycle manager, FastMCP tooling, and setup scripts that are used across the orchestrator. The sections below describe the components that ship today.
+The Browser module provides a fully-featured Chrome automation platform built on Selenium with anti-detection capabilities, profile isolation, session management, and a FastMCP server exposing 11 tool families. Every JavaScript execution is validated against configurable forbidden patterns to prevent tab corruption and unsafe operations.
 
-## What Exists Now
+## Key Features
 
-- `backend/core/` – Chrome lifecycle management (`ChromeManager`), profile isolation, and tool implementations.
-- `backend/mcp/chrome/` – FastMCP server exposing launch/navigation/input/extraction/screenshot tools.
-- `scripts/setup_chrome.py` – Installs Chromium/ChromeDriver binaries per platform with minimal sudo usage.
-- `module_setup.py` – Delegates to Base `EnvironmentSetup`, ensuring dependencies install after the venv is created. Uses stdlib logging only.
+- **Script Validation**: Regex-based pattern matching blocks dangerous JavaScript (e.g., `window.open('url', '_blank')`) before execution
+- **Session Persistence**: Save and restore complete browser states including multiple tabs, cookies, and active tab tracking
+- **Profile Management**: Isolated browser profiles with copy, create, delete, and list operations
+- **Anti-Detection**: Stealth mode with fingerprint randomization and webdriver flag removal
+- **Tab State Protection**: Improved session save logic prevents tab URL corruption during capture
+- **React DevTools**: Trigger handlers, inspect props/state, and navigate fiber trees
+- **Chunked Responses**: Stream large text extractions with deterministic byte-offset chunking
+- **FastMCP Integration**: 11 tool families exposing all browser capabilities via MCP
+
+## What's New
+
+### Script Validation System
+
+All JavaScript execution now goes through pattern validation to prevent dangerous operations:
+
+```yaml
+# res/forbidden_script_patterns.yaml
+patterns:
+  - pattern: 'window\.open\s*\([^)]*[''"]_blank[''"]'
+    reason: "window.open with '_blank' corrupts tab state. Use TabController.create_tab() instead."
+    severity: error
+    category: tab_management
+```
+
+**Blocked patterns include:**
+- `window.open()` with `_blank` or `_self` targets (error)
+- `window.close()` (error)
+- Direct `window.location` assignment (warning)
+- `eval()` and `Function()` constructor (warning)
+- History manipulation without tracking (warning)
+
+Configure enforcement in `res/forbidden_script_patterns.yaml`:
+```yaml
+config:
+  enforce: true
+  warnings_are_errors: false
+```
+
+### Improved Tab Management
+
+Session save now captures tab state correctly even when switching between tabs:
+
+- **Before**: Tab URLs could become "about:blank" after `window.open()`
+- **After**: Handle states are captured in a single pass, preventing corruption
+
+## Architecture
+
+```
+browser/
+├── backend/
+│   ├── core/
+│   │   ├── browser/          # Instance lifecycle, options, tab management
+│   │   ├── management/       # ChromeManager, session/profile managers
+│   │   ├── security/         # Anti-detect, tab injection, script validator
+│   │   └── storage/          # Storage configuration
+│   ├── mcp/chrome/
+│   │   ├── chrome_server.py  # FastMCP server with 11 tools
+│   │   ├── tools/            # Tool implementations
+│   │   │   ├── facade/       # V02 unified facades
+│   │   │   ├── browser_tools.py
+│   │   │   ├── javascript_tools.py  # Script validation here
+│   │   │   ├── navigation_tools.py
+│   │   │   ├── input_tools.py
+│   │   │   ├── extraction_tools.py
+│   │   │   ├── screenshot_tools.py
+│   │   │   ├── react_tools.py
+│   │   │   └── search_tools.py
+│   │   └── utils/            # Response limits, chunking
+│   └── facade/context/       # TabController, NavigationController
+├── res/
+│   ├── forbidden_script_patterns.yaml  # Script validation rules
+│   └── notbot.png            # Anti-bot CAPTCHA solver asset
+├── scripts/
+│   ├── run_chrome.py         # MCP server entry point
+│   ├── setup_chrome.py       # Install Chromium/ChromeDriver
+│   └── run_tests.py          # Test runner
+├── tests/
+│   ├── unit/                 # Unit tests including script validation
+│   └── integration/          # Full browser automation tests
+└── web/scripts/              # Anti-detect JavaScript injection
+```
 
 ## MCP Tools
 
-`ChromeFastMCPServer` registers the following tool families (see `backend/mcp/chrome/tools/`):
+The `ChromeFastMCPServer` exposes 11 tool families:
 
-- **Lifecycle** – `browser_launch`, `browser_list`, `browser_get_active`, `browser_terminate`.
-- **Navigation** – `browser_navigate`, `browser_back`, `browser_forward`, `browser_refresh`, `browser_get_url`.
-- **Input** – `browser_click`, `browser_type`, `browser_select`, `browser_hover`, `browser_scroll`, `browser_press`.
-- **Extraction** – `browser_get_text`, `browser_exists`, `browser_wait_for`, `browser_get_attribute`, `browser_get_cookies`.
-- **JavaScript** – `browser_evaluate`, `browser_execute`.
-- **Screenshots** – `browser_screenshot`, `browser_element_screenshot`.
-- **Search** – `web_search` issues trusted queries through the Browser MCP server, defaulting to the local SearXNG instance (`http://127.0.0.1:8888`). Override the search template explicitly in `config.yaml` when a different provider is required.
+### 1. `browser_session` - Instance Lifecycle & Session Persistence
 
-Each tool returns a Pydantic `BrowserResponse` so downstream callers receive structured results (status, payload, metadata).
+**Actions:**
+- `launch` - Create browser instance (headless, profile, anti_detect, use_pool)
+- `terminate` - Shut down instance
+- `list` - List all instances
+- `get_active` - Get currently active instance
+- `save` - Save current session (all tabs, cookies, active tab)
+- `restore` - Restore saved session (supports `kill_orphaned` to clear profile locks)
+- `list_sessions` - List all saved sessions
+- `delete_session` - Delete a session
+- `rename_session` - Rename a session
+
+**Example:**
+```python
+# Launch browser
+await browser_session(action="launch", headless=False, profile="default")
+
+# Save session
+await browser_session(action="save", session_name="my-work-session")
+
+# Restore session
+await browser_session(action="restore", session_id="<uuid>", kill_orphaned=True)
+```
+
+### 2. `browser_navigate` - Navigation & History
+
+**Actions:** `goto`, `back`, `forward`, `refresh`, `get_url`
+
+**Example:**
+```python
+await browser_navigate(action="goto", url="https://example.com", wait_for="body", timeout=30)
+```
+
+### 3. `browser_interact` - Element Interaction
+
+**Actions:** `click`, `type`, `select`, `hover`, `scroll`, `press`, `wait`
+
+**Example:**
+```python
+await browser_interact(action="click", selector="button.submit", timeout=10)
+await browser_interact(action="type", selector="input[name='q']", text="search query", clear=True)
+await browser_interact(action="scroll", direction="down", amount=500)
+```
+
+### 4. `browser_inspect` - DOM Inspection
+
+**Actions:** `get_html`, `exists`, `get_attribute`
+
+**Example:**
+```python
+await browser_inspect(action="get_html", selector="div.content", max_depth=5)
+await browser_inspect(action="exists", selector="button#login")
+await browser_inspect(action="get_attribute", selector="img", attribute="src")
+```
+
+### 5. `browser_extract` - Content Extraction
+
+**Actions:** `get_text`, `get_cookies`
+
+**Supports chunking** for large text extractions:
+```python
+# First chunk
+result = await browser_extract(
+    action="get_text",
+    selector="article",
+    use_chunking=True,
+    offset=0,
+    length=10000
+)
+# Next chunk
+result = await browser_extract(
+    action="get_text",
+    selector="article",
+    use_chunking=True,
+    offset=result.next_offset,
+    length=10000,
+    snapshot_checksum=result.snapshot_checksum
+)
+```
+
+### 6. `browser_capture` - Screenshots
+
+**Actions:** `screenshot`, `element_screenshot`
+
+**Example:**
+```python
+await browser_capture(action="screenshot", full_page=True, save_to_disk=True)
+await browser_capture(action="element_screenshot", selector="div.chart")
+```
+
+### 7. `browser_execute` - JavaScript Execution (Validated)
+
+**Actions:** `execute`, `evaluate`
+
+**All scripts are validated before execution.**
+
+**Example:**
+```python
+# This will succeed
+await browser_execute(action="execute", code="document.querySelector('button').click()")
+
+# This will FAIL with validation error
+await browser_execute(action="execute", code="window.open('url', '_blank')")
+# Error: Script validation failed: [tab_management] window.open with '_blank' corrupts tab state
+```
+
+**Use TabController instead:**
+```python
+# Correct way to create tabs
+from browser.backend.facade.context.tabs import TabController
+tab_controller = TabController(instance)
+await tab_controller.create_tab(url="https://reddit.com")
+```
+
+### 8. `web_search` - Web Search
+
+Query the configured search engine (defaults to local SearXNG at `http://127.0.0.1:8888`).
+
+**Example:**
+```python
+await web_search(query="python typing best practices", max_results=10)
+```
+
+### 9. `browser_storage` - Downloads & Screenshots Management
+
+**Actions:**
+- `list_downloads`, `clear_downloads`, `wait_for_download`
+- `list_screenshots`, `clear_screenshots`
+- `set_download_behavior`
+
+**Example:**
+```python
+await browser_storage(action="set_download_behavior", behavior="allow", download_path="/tmp/downloads")
+await browser_storage(action="wait_for_download", filename="report.pdf", timeout=60)
+```
+
+### 10. `browser_react` - React DevTools Integration
+
+**Actions:** `trigger_handler`, `get_props`, `get_state`, `find_component`, `get_fiber_tree`
+
+**Example:**
+```python
+await browser_react(action="trigger_handler", selector="button", handler_name="onClick")
+await browser_react(action="get_props", selector="div[data-testid='user-card']")
+```
+
+### 11. `browser_profile` - Profile Management
+
+**Actions:** `create`, `delete`, `list`, `copy`
+
+**Example:**
+```python
+await browser_profile(action="create", profile_name="work", description="Work browsing profile")
+await browser_profile(action="copy", source_profile="default", dest_profile="work-backup")
+```
 
 ## Running the Server
 
+### Setup Chromium
+
+```bash
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/setup_chrome.py
+```
+
+Respects `AMI_COMPUTE_PROFILE` for driver selection (`cpu`, `nvidia`, `intel`, `amd`).
+
+### Start MCP Server
+
 ```bash
 # stdio transport
-uv run --python 3.12 --project browser python scripts/run_chrome.py
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_chrome.py
 
 # websocket transport
-uv run --python 3.12 --project browser python scripts/run_chrome.py --transport websocket --port 9000
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_chrome.py --transport websocket --port 9000
 ```
-
-Before launching, ensure Chromium exists:
-
-```bash
-uv run --python 3.12 --project browser python scripts/setup_chrome.py
-```
-
-`setup_chrome.py` respects `AMI_COMPUTE_PROFILE` (`cpu`, `nvidia`, `intel`, `amd`) when choosing driver bundles.
 
 ## Testing
 
 ```bash
-uv run --python 3.12 --project browser python scripts/run_tests.py
+# Run all tests
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py
+
+# Run specific test
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py tests/unit/test_script_validator.py -v
+
+# Run integration tests
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py tests/integration/ -v
 ```
 
-The test runner executes Base’s Python suite followed by optional npm-based checks when present. Browser integration tests require Chromium; they will skip gracefully if the binary is missing.
+**Test Coverage:**
+- `tests/unit/test_script_validator.py` - Script validation pattern matching
+- `tests/integration/test_script_validation_integration.py` - End-to-end validation blocking
+- `tests/integration/test_window_open_tab_url_bug.py` - Tab state preservation
+- `tests/integration/test_multiple_tabs_session_persistence.py` - Multi-tab session save/restore
+- `tests/integration/test_session_persistence_e2e.py` - Full session persistence flow
 
 ## Configuration
 
-- `config.yaml` – Created from the platform template on first setup. Controls binary paths, headless options, proxy settings, and profile locations.
-- `backend.tools.web_search.*` – Configure the search URL template, timeout, and optional User-Agent. The primary template defaults to the local persistent SearXNG instance so this MCP server remains the single trusted source of remote content. Override the URL directly if you need a different provider.
-- Environment hints inherit from the orchestrator (`AMI_HOST`, compute profiles, etc.).
+### `config.yaml`
 
-## Compliance & Roadmap Notes
+Generated from platform template on first setup:
 
-- The module’s audit hooks integrate with Base logging utilities; map them to the compliance backend once `compliance/backend` is implemented.
-- Future work: surface generated session artefacts (screenshots, logs) through the compliance MCP server so evidence can be attached to controls.
+```yaml
+backend:
+  tools:
+    web_search:
+      url_template: "http://127.0.0.1:8888/search?q={query}&format=json"
+      timeout: 30
+  storage:
+    session_dir: "./data/sessions"
+    profiles_dir: "./data/profiles"
+    downloads_dir: "./data/downloads"
+    screenshots_dir: "./data/screenshots"
+  browser:
+    headless: true
+    binary_location: null  # Auto-detected
+    driver_path: null      # Auto-detected
+```
 
-Refer to `docs/Architecture-Map.md` at the repository root for module relationships, and `compliance/docs/research/COMPLIANCE_BACKEND_SPEC.md` for the upcoming compliance integration requirements.
+### Script Validation Config
+
+Edit `res/forbidden_script_patterns.yaml` to customize forbidden patterns:
+
+```yaml
+patterns:
+  # Add custom patterns
+  - pattern: 'dangerous\.api\('
+    reason: "This API is forbidden"
+    severity: error
+    category: custom
+
+config:
+  enforce: true                # Block scripts with errors
+  warnings_are_errors: false   # Allow warnings
+  log_checks: false            # Log all validation checks
+```
+
+## Best Practices
+
+### DO ✅
+
+1. **Use TabController for tab management:**
+   ```python
+   from browser.backend.facade.context.tabs import TabController
+   await TabController(instance).create_tab(url="https://example.com")
+   ```
+
+2. **Save sessions with descriptive names:**
+   ```python
+   await browser_session(action="save", session_name="github-pr-review-session")
+   ```
+
+3. **Use chunking for large text:**
+   ```python
+   result = await browser_extract(action="get_text", use_chunking=True, length=10000)
+   ```
+
+4. **Restore sessions with orphan cleanup:**
+   ```python
+   await browser_session(action="restore", session_id=sid, kill_orphaned=True)
+   ```
+
+### DON'T ❌
+
+1. **Never use `window.open()` with targets in execute:**
+   ```python
+   # WRONG - will be blocked
+   await browser_execute(action="execute", code="window.open('url', '_blank')")
+   ```
+
+2. **Don't bypass script validation:**
+   - Validation exists to prevent tab corruption and data loss
+   - Use proper APIs instead of low-level DOM manipulation
+
+3. **Don't assume tab order is stable:**
+   - Use tab handles/IDs, not indices
+   - Session save captures all tabs but restore may reorder
+
+4. **Don't suppress warnings in production:**
+   - Keep `warnings_are_errors: false` but review warnings
+   - Warnings indicate risky patterns that may cause issues
+
+## Compliance & Audit
+
+- All browser operations are logged via `loguru`
+- Session files stored in `data/sessions/<uuid>/session.json`
+- Screenshots saved to `data/screenshots/` with timestamps
+- Script validation violations logged with matched patterns
+
+Future integration with `compliance/` module will surface:
+- Session artifacts as audit evidence
+- Script validation denials
+- Profile usage tracking
+- Search query logs
+
+## Roadmap
+
+- [ ] Multi-window session support
+- [ ] CDP raw command passthrough
+- [ ] HAR file export
+- [ ] Network request interception
+- [ ] Custom certificate injection
+- [ ] Playwright backend option
+
+## See Also
+
+- `docs/Architecture-Map.md` - Module relationships
+- `compliance/docs/research/COMPLIANCE_BACKEND_SPEC.md` - Compliance integration spec
+- `res/forbidden_script_patterns.yaml` - Script validation configuration
+- `tests/integration/` - Integration test examples

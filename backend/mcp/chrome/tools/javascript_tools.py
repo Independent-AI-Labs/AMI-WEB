@@ -5,6 +5,7 @@ from typing import Any
 from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
+from browser.backend.core.security.script_validator import validate_script_or_raise
 from browser.backend.mcp.chrome.response import BrowserResponse
 from browser.backend.mcp.chrome.utils.limits import (
     ChunkComputationError,
@@ -16,6 +17,13 @@ from browser.backend.mcp.chrome.utils.limits import (
 async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None) -> BrowserResponse:
     """Execute JavaScript code."""
     logger.debug(f"Executing JavaScript: {script[:100]}...")
+
+    # Validate script against forbidden patterns
+    try:
+        validate_script_or_raise(script)
+    except ValueError as e:
+        logger.error(f"Script validation failed: {e}")
+        return BrowserResponse(success=False, error=f"Script validation failed: {e}")
 
     instances = await manager.list_instances()
     if not instances:
@@ -45,6 +53,13 @@ async def browser_execute_tool(manager: ChromeManager, script: str, args: list[A
 async def browser_evaluate_tool(manager: ChromeManager, expression: str) -> BrowserResponse:
     """Evaluate JavaScript expression."""
     logger.debug(f"Evaluating JavaScript: {expression[:100]}...")
+
+    # Validate expression against forbidden patterns
+    try:
+        validate_script_or_raise(expression)
+    except ValueError as e:
+        logger.error(f"Expression validation failed: {e}")
+        return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
     instances = await manager.list_instances()
     if not instances:
@@ -83,6 +98,13 @@ async def browser_execute_chunk_tool(
     """Execute JavaScript and stream the string result in deterministic chunks."""
 
     logger.debug("Executing chunked JavaScript result")
+
+    # Validate script against forbidden patterns
+    try:
+        validate_script_or_raise(script)
+    except ValueError as e:
+        logger.error(f"Script validation failed: {e}")
+        return BrowserResponse(success=False, error=f"Script validation failed: {e}")
 
     instances = await manager.list_instances()
     if not instances:
@@ -134,6 +156,13 @@ async def browser_evaluate_chunk_tool(
     """Evaluate JavaScript and stream the string result in deterministic chunks."""
 
     logger.debug("Evaluating chunked JavaScript expression")
+
+    # Validate expression against forbidden patterns
+    try:
+        validate_script_or_raise(expression)
+    except ValueError as e:
+        logger.error(f"Expression validation failed: {e}")
+        return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
     instances = await manager.list_instances()
     if not instances:

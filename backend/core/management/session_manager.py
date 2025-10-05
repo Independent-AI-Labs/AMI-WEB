@@ -65,9 +65,137 @@ class SessionManager:
         self._save_metadata()
         logger.info("Session manager shutdown complete")
 
-    async def save_session(  # noqa: C901, PLR0912
-        self, instance: "BrowserInstance", name: str | None = None, profile_override: str | None = None
-    ) -> str:
+    def _is_real_page(self, url: str) -> bool:
+        """Check if URL is a real page (not chrome:// or about:blank)."""
+        return not ("chrome://" in url or "about:blank" in url or url == "data:,")
+
+    def _collect_tab_cookies(self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]) -> None:
+        """Collect cookies from a tab if it's a real page."""
+        if not tab_url.startswith(("http://", "https://")):
+            return
+
+        try:
+            tab_cookies = driver.get_cookies()
+            for cookie in tab_cookies:
+                cookie_key = (cookie.get("name"), cookie.get("domain"))
+                if not any((c.get("name"), c.get("domain")) == cookie_key for c in all_cookies):
+                    all_cookies.append(cookie)
+        except Exception as e:
+            logger.warning(f"Failed to get cookies from tab {tab_url}: {e}")
+
+    def _determine_active_tab(self, tabs: list[dict[str, str]], current_handle: str | None, last_real_tab: str | None) -> str | None:
+        """Determine which tab is actually active based on current handle and real pages."""
+        if not tabs:
+            return None
+
+        current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None) if current_handle else None
+
+        if current_tab_data:
+            if self._is_real_page(current_tab_data["url"]):
+                return str(current_handle)
+            if last_real_tab:
+                return last_real_tab
+            return str(current_handle)
+
+        return last_real_tab if last_real_tab else (tabs[0]["handle"] if tabs else None)
+
+    def _get_active_tab_data(self, tabs: list[dict[str, str]], actual_active_tab: str | None) -> dict[str, str] | None:
+        """Get tab data for the active tab, with fallback to first real tab."""
+        if actual_active_tab and tabs:
+            tab_data = next((t for t in tabs if t["handle"] == actual_active_tab), None)
+            if tab_data:
+                return tab_data
+
+        # Fallback: use first non-chrome tab, or first tab
+        if tabs:
+            real_tabs = [t for t in tabs if self._is_real_page(t["url"])]
+            return real_tabs[0] if real_tabs else tabs[0]
+
+        return None
+
+    def _is_error_page(self, current_url: str, page_source: str) -> bool:
+        """Check if we're on an error page."""
+        return (
+            "data:text/html,chromewebdata" in current_url
+            or "chrome-error:" in current_url
+            or "net::err_cert" in page_source
+            or "your connection is not private" in page_source
+        )
+
+    def _restore_cookies_to_tab(self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]) -> int:
+        """Restore cookies to a single tab. Returns count of cookies restored."""
+        # Navigate to domain root for cookie setting
+        domain_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+        driver.get(domain_url)
+
+        # Check if we're on an error page
+        current_url = driver.current_url
+        page_source = driver.page_source.lower() if driver.page_source else ""
+
+        if self._is_error_page(current_url, page_source):
+            return 0
+
+        # Try to restore cookies that match this domain
+        count = 0
+        for cookie in cookies:
+            cookie_domain = cookie.get("domain", "")
+            if cookie_domain and (
+                parsed_url.netloc == cookie_domain.lstrip(".") or parsed_url.netloc.endswith(cookie_domain) or cookie_domain.lstrip(".") in parsed_url.netloc
+            ):
+                try:
+                    driver.add_cookie(cookie)
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
+
+        # Navigate back to the actual tab URL
+        driver.get(tab_url)
+        return count
+
+    def _restore_all_tabs(self, driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
+        """Restore all tabs from session data. Returns mapping of old handles to new handles."""
+        handle_mapping = {}
+
+        # First tab: use existing tab and navigate
+        first_tab = tabs[0]
+        driver.get(first_tab["url"])
+        first_handle = driver.current_window_handle
+        handle_mapping[tabs[0]["handle"]] = first_handle
+
+        # Restore remaining tabs (if any)
+        for tab in tabs[1:]:
+            driver.execute_script("window.open('');")
+            new_handle = driver.window_handles[-1]
+            handle_mapping[tab["handle"]] = new_handle
+            driver.switch_to.window(new_handle)
+            driver.get(tab["url"])
+
+        return handle_mapping
+
+    def _restore_all_cookies(self, driver: Any, tabs: list[dict[str, str]], handle_mapping: dict[str, str], cookies: list[dict[str, Any]]) -> int:
+        """Restore cookies to all tabs. Returns total count of cookies restored."""
+        total = 0
+        for tab in tabs:
+            tab_url = tab["url"]
+
+            if not tab_url.startswith(("http://", "https://")):
+                continue
+
+            parsed = urlparse(tab_url)
+            if not (parsed.scheme and parsed.netloc):
+                continue
+
+            tab_handle = handle_mapping.get(tab["handle"])
+            if not tab_handle:
+                continue
+
+            driver.switch_to.window(tab_handle)
+            count = self._restore_cookies_to_tab(driver, tab_url, parsed, cookies)
+            total += count
+
+        return total
+
+    async def save_session(self, instance: "BrowserInstance", name: str | None = None, profile_override: str | None = None) -> str:
         """Save a browser session.
 
         Args:
@@ -93,80 +221,59 @@ class SessionManager:
         all_cookies: list[dict[str, Any]] = []  # Collect cookies from ALL tabs
         if instance.driver:
             try:
+                # Store the original current handle BEFORE switching tabs
                 current_handle = instance.driver.current_window_handle
+                original_handle = current_handle
 
-                # Iterate through all tabs and capture their state
-                for handle in instance.driver.window_handles:
-                    instance.driver.switch_to.window(handle)
-                    tab_url = instance.driver.current_url
-                    tab_title = instance.driver.title
+                # Build a mapping of handles to their state BEFORE switching
+                # This prevents tab state corruption during iteration
+                handle_states: dict[str, tuple[str, str]] = {}  # handle -> (url, title)
 
-                    tabs.append(
-                        {
-                            "handle": str(handle),
-                            "url": tab_url,
-                            "title": tab_title,
-                        }
-                    )
+                # First pass: just get the handles
+                all_handles = list(instance.driver.window_handles)
 
-                    # Collect cookies from this tab (only from http/https pages)
-                    if tab_url.startswith(("http://", "https://")):
-                        try:
-                            tab_cookies = instance.driver.get_cookies()
-                            # Add cookies we don't already have (avoid duplicates)
-                            for cookie in tab_cookies:
-                                cookie_key = (cookie.get("name"), cookie.get("domain"))
-                                if not any((c.get("name"), c.get("domain")) == cookie_key for c in all_cookies):
-                                    all_cookies.append(cookie)
-                        except Exception as e:
-                            logger.warning(f"Failed to get cookies from tab {tab_url}: {e}")
+                # Second pass: collect state from each tab
+                for handle in all_handles:
+                    try:
+                        instance.driver.switch_to.window(handle)
+                        tab_url = instance.driver.current_url
+                        tab_title = instance.driver.title
+                        handle_states[handle] = (tab_url, tab_title)
 
-                    # Track the last real page we see (for fallback)
-                    is_real_page = not ("chrome://" in tab_url or "about:blank" in tab_url or tab_url == "data:,")
-                    if is_real_page:
-                        last_real_tab = str(handle)
+                        # Collect cookies from this tab
+                        self._collect_tab_cookies(instance.driver, tab_url, all_cookies)
 
-                # Now determine which tab is actually active
-                # First, check if current_handle points to a real page
-                current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None) if current_handle else None
-                if current_tab_data:
-                    current_is_real = not (
-                        "chrome://" in current_tab_data["url"] or "about:blank" in current_tab_data["url"] or current_tab_data["url"] == "data:,"
-                    )
+                        # Track the last real page we see (for fallback)
+                        if self._is_real_page(tab_url):
+                            last_real_tab = str(handle)
 
-                    if current_is_real:
-                        # Current handle points to a real page - use it
-                        actual_active_tab = str(current_handle)
-                    elif last_real_tab:
-                        # Current handle points to chrome://new-tab-page, use last real tab instead
-                        actual_active_tab = last_real_tab
-                    else:
-                        # No real tabs found, use current_handle anyway
-                        actual_active_tab = str(current_handle)
-                else:
-                    # No current_handle (shouldn't happen), use last real tab or first tab
-                    actual_active_tab = last_real_tab if last_real_tab else (tabs[0]["handle"] if tabs else None)
+                    except Exception as e:
+                        logger.warning(f"Failed to capture tab {handle}: {e}")
+                        # Use fallback values if we couldn't get tab state
+                        handle_states[handle] = ("about:blank", "")
 
-                # Switch back to the actual active tab we identified
-                if actual_active_tab and actual_active_tab in [str(h) for h in instance.driver.window_handles]:
+                # Build tabs list from captured state
+                for handle in all_handles:
+                    url, title = handle_states.get(handle, ("about:blank", ""))
+                    tabs.append({"handle": str(handle), "url": url, "title": title})
+
+                # Determine which tab is actually active
+                actual_active_tab = self._determine_active_tab(tabs, original_handle, last_real_tab)
+
+                # Switch back to the original active tab
+                if original_handle and original_handle in all_handles:
+                    instance.driver.switch_to.window(original_handle)
+                elif actual_active_tab and actual_active_tab in [str(h) for h in all_handles]:
                     instance.driver.switch_to.window(actual_active_tab)
-                elif current_handle:
-                    instance.driver.switch_to.window(current_handle)
 
             except Exception as e:
                 logger.warning(f"Failed to capture all tabs: {e}. Falling back to single tab capture.")
                 # If something goes wrong, use current handle
                 actual_active_tab = str(current_handle) if current_handle else None
 
-        # Determine URL and title from the actual active tab
-        active_tab_data = None
-        if actual_active_tab and tabs:
-            active_tab_data = next((t for t in tabs if t["handle"] == actual_active_tab), None)
-
-        # Fallback: if no active tab identified, use first non-chrome tab, or first tab
-        if not active_tab_data and tabs:
-            real_tabs = [t for t in tabs if not ("chrome://" in t["url"] or "about:blank" in t["url"])]
-            active_tab_data = real_tabs[0] if real_tabs else tabs[0]
+        # Get active tab data
+        active_tab_data = self._get_active_tab_data(tabs, actual_active_tab)
+        if active_tab_data:
             actual_active_tab = active_tab_data["handle"]
 
         # Save session data
@@ -201,7 +308,7 @@ class SessionManager:
         logger.info(f"Saved session {session_id}")
         return session_id
 
-    async def restore_session(  # noqa: C901, PLR0912
+    async def restore_session(  # noqa: C901
         self,
         session_id: str,
         manager: "ChromeManager",
@@ -255,79 +362,12 @@ class SessionManager:
             active_tab_handle = session_data.get("active_tab_handle")
 
             if tabs:
-                # Restore all tabs first, then set cookies on each
-                handle_mapping = {}
-
-                # First tab: use existing tab and navigate
-                first_tab = tabs[0]
-                instance.driver.get(first_tab["url"])
-                first_handle = instance.driver.current_window_handle
-                handle_mapping[tabs[0]["handle"]] = first_handle
-
-                # Restore remaining tabs (if any)
-                for tab in tabs[1:]:
-                    instance.driver.execute_script("window.open('');")
-                    new_handle = instance.driver.window_handles[-1]
-                    handle_mapping[tab["handle"]] = new_handle
-                    instance.driver.switch_to.window(new_handle)
-                    instance.driver.get(tab["url"])
+                # Restore all tabs first
+                handle_mapping = self._restore_all_tabs(instance.driver, tabs)
 
                 # Now restore cookies to ALL tabs that can accept them
                 if session_data.get("cookies"):
-                    cookies_restored_total = 0
-
-                    for tab in tabs:
-                        tab_url = tab["url"]
-
-                        # Skip chrome:// and other non-http(s) URLs
-                        if not tab_url.startswith(("http://", "https://")):
-                            continue
-
-                        parsed = urlparse(tab_url)
-                        if not (parsed.scheme and parsed.netloc):
-                            continue
-
-                        # Switch to this tab
-                        tab_handle = handle_mapping.get(tab["handle"])
-                        if not tab_handle:
-                            continue
-
-                        instance.driver.switch_to.window(tab_handle)
-
-                        # Navigate to domain root for cookie setting
-                        domain_url = f"{parsed.scheme}://{parsed.netloc}/"
-                        instance.driver.get(domain_url)
-
-                        # Check if we're on an error page
-                        current_url = instance.driver.current_url
-                        page_source = instance.driver.page_source.lower() if instance.driver.page_source else ""
-
-                        is_error_page = (
-                            "data:text/html,chromewebdata" in current_url
-                            or "chrome-error:" in current_url
-                            or "net::err_cert" in page_source
-                            or "your connection is not private" in page_source
-                        )
-
-                        if not is_error_page:
-                            # Try to restore cookies that match this domain
-                            for cookie in session_data["cookies"]:
-                                cookie_domain = cookie.get("domain", "")
-                                # Check if cookie domain matches this tab's domain
-                                if cookie_domain and (
-                                    parsed.netloc == cookie_domain.lstrip(".")
-                                    or parsed.netloc.endswith(cookie_domain)
-                                    or cookie_domain.lstrip(".") in parsed.netloc
-                                ):
-                                    try:
-                                        instance.driver.add_cookie(cookie)
-                                        cookies_restored_total += 1
-                                    except Exception as e:
-                                        logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
-
-                            # Navigate back to the actual tab URL after setting cookies
-                            instance.driver.get(tab_url)
-
+                    cookies_restored_total = self._restore_all_cookies(instance.driver, tabs, handle_mapping, session_data["cookies"])
                     logger.info(f"Restored {cookies_restored_total}/{len(session_data['cookies'])} cookies")
 
                 # Switch to the originally active tab
