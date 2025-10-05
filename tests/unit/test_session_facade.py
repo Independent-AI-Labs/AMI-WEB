@@ -36,7 +36,7 @@ class TestSessionFacadePersistence:
         assert response.data["session_id"] == "session-abc"
         assert "saved" in response.data["message"].lower()
         manager.get_instance.assert_called_once_with("inst-123")
-        manager.session_manager.save_session.assert_called_once_with(instance, "my_session")
+        manager.session_manager.save_session.assert_called_once_with(instance, "my_session", profile_override=None)
 
     @pytest.mark.asyncio
     async def test_save_session_no_instance_id(self) -> None:
@@ -90,7 +90,7 @@ class TestSessionFacadePersistence:
         assert response.data["instance_id"] == "inst-restored"
         assert response.data["session_id"] == "session-abc"
         assert "restored" in response.data["message"].lower()
-        manager.session_manager.restore_session.assert_called_once_with("session-abc", manager, profile_override=None)
+        manager.session_manager.restore_session.assert_called_once_with("session-abc", manager, profile_override=None, headless=True, kill_orphaned=False)
 
     @pytest.mark.asyncio
     async def test_restore_session_no_session_id(self) -> None:

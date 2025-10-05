@@ -1,5 +1,6 @@
 """E2E tests for session save/restore that validate actual Chrome state persistence."""
 
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -35,21 +36,34 @@ async def test_session_save_and_restore_validates_actual_chrome_state() -> None:
         use_pool=False,
     )
 
-    # Navigate to google.com and set a test cookie
+    # REPRODUCE THE BUG: Simulate real user workflow with background tabs
     assert instance1.driver is not None
-    instance1.driver.get("https://www.google.com/")
+    instance1.driver.set_page_load_timeout(30)
+
+    # Browser starts with initial tab (might be new tab page)
+    await asyncio.sleep(0.5)
+    initial_url = instance1.driver.current_url
+    print(f"DEBUG: Browser started with: {initial_url}")
+
+    # Open a new tab (simulates clicking through UI)
+    instance1.driver.execute_script("window.open('');")
+    await asyncio.sleep(0.5)
+
+    # Switch to new tab and navigate to example.com
+    all_handles = instance1.driver.window_handles
+    instance1.driver.switch_to.window(all_handles[-1])
+
+    test_url = "https://example.com/"
+    instance1.driver.get(test_url)
     instance1.driver.add_cookie(
         {
             "name": "e2e_test_cookie",
             "value": "session_data_123",
-            "domain": ".google.com",
+            "domain": ".example.com",
             "path": "/",
         }
     )
-
-    # Navigate to a specific URL
-    test_url = "https://www.google.com/search?q=session+persistence+test"
-    instance1.driver.get(test_url)
+    instance1.driver.get(test_url)  # Navigate again after setting cookie
 
     # Verify cookie is set
     cookies_before = instance1.driver.get_cookies()
@@ -57,8 +71,46 @@ async def test_session_save_and_restore_validates_actual_chrome_state() -> None:
     assert test_cookie_before is not None, "Test cookie should be set before save"
     assert test_cookie_before["value"] == "session_data_123"
 
+    # Check all tabs (should have background new tab + example.com tab)
+    all_handles_before = instance1.driver.window_handles
+    current_handle_before = instance1.driver.current_window_handle
+    print(f"DEBUG: Found {len(all_handles_before)} tabs before save")
+    for i, handle in enumerate(all_handles_before):
+        instance1.driver.switch_to.window(handle)
+        url = instance1.driver.current_url
+        print(f"DEBUG: Tab {i}: {url}")
+
+    # Make sure we're on example.com tab
+    instance1.driver.switch_to.window(current_handle_before)
+    final_url_before_save = instance1.driver.current_url
+    final_handle_before_save = instance1.driver.current_window_handle
+    print(f"DEBUG: Active tab before save: {final_url_before_save}")
+    print(f"DEBUG: Active handle before save: {final_handle_before_save}")
+
+    assert "example.com" in final_url_before_save, f"Should be on example.com, got {final_url_before_save}"
+
     # STEP 2: Save session
     session_id = await manager1.save_session(instance1.id, "e2e-test-session")
+
+    # Verify what was saved
+    session_file = session_dir / session_id / "session.json"
+    import json
+
+    with session_file.open() as f:
+        saved_data = json.load(f)
+
+    saved_url = saved_data.get("url")
+    saved_tabs = saved_data.get("tabs", [])
+    saved_active_handle = saved_data.get("active_tab_handle")
+
+    print(f"DEBUG: Saved URL: {saved_url}")
+    print(f"DEBUG: Saved {len(saved_tabs)} tabs")
+    print(f"DEBUG: Saved active handle: {saved_active_handle}")
+
+    assert "chrome://new-tab-page" not in saved_url, (
+        f"BUG: Saved chrome://new-tab-page instead of example.com! " f"Active was {final_url_before_save} but saved {saved_url}"
+    )
+    assert "example.com" in saved_url, f"BUG: Saved URL {saved_url} doesn't contain example.com"
 
     # STEP 3: TERMINATE Chrome completely (this is the critical part)
     await manager1.terminate_instance(instance1.id)
@@ -76,8 +128,9 @@ async def test_session_save_and_restore_validates_actual_chrome_state() -> None:
     # STEP 5: VERIFY actual Chrome state was restored
     # Verify we're on the same URL
     assert instance2.driver is not None
+    instance2.driver.set_page_load_timeout(30)
     current_url = instance2.driver.current_url
-    assert "session+persistence+test" in current_url, f"URL not restored. Expected query in URL, got: {current_url}"
+    assert "example.com" in current_url, f"URL not restored. Expected example.com in URL, got: {current_url}"
 
     # Verify cookies were actually restored in Chrome
     cookies_after = instance2.driver.get_cookies()

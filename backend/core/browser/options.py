@@ -116,7 +116,8 @@ class BrowserOptionsBuilder:
         try:
             result = subprocess.run(["ps", "-p", str(pid), "-ww", "-o", "cmd="], capture_output=True, text=True, check=False)
             if result.returncode != 0:
-                return False
+                logger.debug(f"Process {pid} no longer exists, can remove locks")
+                return True
 
             cmd = result.stdout.strip()
             logger.debug(f"Process {pid} detected, checking if it uses profile {profile_dir.name}")
@@ -124,16 +125,16 @@ class BrowserOptionsBuilder:
             if "chrome" in cmd.lower() and str(profile_dir) in cmd:
                 if kill_orphaned:
                     self._kill_orphaned_process(pid, profile_dir, lock_files)
-                    return False
+                    return True
                 raise RuntimeError(
                     f"Profile '{profile_dir.name}' is locked by Chrome process {pid}. "
                     f"This appears to be an orphaned/zombie process. "
-                    f"Set BROWSER_KILL_ORPHANED=true to automatically kill it, or manually kill process {pid}"
+                    f"Pass kill_orphaned=True when launching or restoring to automatically kill it, or manually kill process {pid}"
                 )
-            logger.debug(f"Profile {profile_dir} is locked by process {pid}, keeping locks")
-            return False
+            logger.debug(f"Process {pid} exists but doesn't use profile, can remove locks")
+            return True
         except subprocess.SubprocessError:
-            logger.debug(f"Cannot get info for process {pid}, keeping locks")
+            logger.debug(f"Cannot get info for process {pid}, keeping locks to be safe")
             return False
 
     def _cleanup_stale_locks(self, profile_dir: Path, kill_orphaned: bool = False) -> None:
@@ -165,7 +166,12 @@ class BrowserOptionsBuilder:
                 return
 
             _, pid_str = link_target.rsplit("-", 1)
-            pid = int(pid_str)
+            try:
+                pid = int(pid_str)
+            except ValueError:
+                logger.warning(f"Cannot parse PID from SingletonLock target: {link_target}, removing locks")
+                self._remove_lock_files(lock_files)
+                return
 
             try:
                 os.kill(pid, 0)
@@ -178,8 +184,11 @@ class BrowserOptionsBuilder:
                 logger.debug(f"Cannot verify process {pid}, keeping locks to be safe")
                 return
 
+        except RuntimeError:
+            raise
         except Exception as e:
-            logger.warning(f"Error checking SingletonLock: {e}, keeping locks to be safe")
+            logger.warning(f"Error reading SingletonLock: {e}, removing locks")
+            self._remove_lock_files(lock_files)
             return
 
         self._remove_lock_files(lock_files)

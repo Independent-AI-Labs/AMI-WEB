@@ -66,7 +66,8 @@ class ChromeFastMCPServer:
             description=(
                 "Manage browser instance lifecycle (launch, terminate, list, get_active) "
                 "and session persistence (save, restore, list_sessions, delete_session, "
-                "rename_session)"
+                "rename_session). Use kill_orphaned=True when restoring sessions to automatically "
+                "kill orphaned Chrome processes holding profile locks."
             )
         )
         async def browser_session(
