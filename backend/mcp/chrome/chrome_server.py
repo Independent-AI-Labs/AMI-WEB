@@ -65,7 +65,8 @@ class ChromeFastMCPServer:
         @self.mcp.tool(
             description=(
                 "Manage browser instance lifecycle (launch, terminate, list, get_active) "
-                "and session persistence (save, restore, list_sessions, delete_session, rename_session)"
+                "and session persistence (save, restore, list_sessions, delete_session, "
+                "rename_session)"
             )
         )
         async def browser_session(
@@ -77,9 +78,12 @@ class ChromeFastMCPServer:
             use_pool: bool = True,
             session_id: str | None = None,
             session_name: str | None = None,
+            kill_orphaned: bool = False,
         ) -> BrowserResponse:
             """Manage browser sessions."""
-            return await browser_session_tool(self.manager, action, instance_id, headless, profile, anti_detect, use_pool, session_id, session_name)
+            return await browser_session_tool(
+                self.manager, action, instance_id, headless, profile, anti_detect, use_pool, session_id, session_name, kill_orphaned
+            )
 
         # V02 Facade Tool 2: browser_navigate - Page navigation and history
         @self.mcp.tool(description="Navigate pages and manage browser history (goto, back, forward, refresh, get_url)")

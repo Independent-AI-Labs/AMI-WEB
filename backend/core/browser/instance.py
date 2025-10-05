@@ -90,6 +90,7 @@ class BrowserInstance:
         browser_properties: BrowserProperties | None = None,
         download_dir: str | None = None,
         security_config: SecurityConfig | None = None,
+        kill_orphaned: bool = False,
     ) -> WebDriver:
         """Launch the browser with specified configuration."""
         try:
@@ -123,6 +124,7 @@ class BrowserInstance:
                 browser_properties=browser_properties,
                 download_dir=self._storage.get_download_directory(),
                 security_config=security_config,
+                kill_orphaned=kill_orphaned,
             )
 
             # Launch browser
@@ -151,6 +153,35 @@ class BrowserInstance:
 
     async def terminate(self, force: bool = False) -> None:
         """Terminate the browser instance."""
+        # Kill Chrome process tree if tracked
+        if self.process:
+            try:
+                # Kill all children first (Chrome browser, GPU, renderer, etc.)
+                children = self.process.children(recursive=True)
+                for child in children:
+                    with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                        child.terminate()
+
+                # Wait for children to terminate
+                gone, alive = psutil.wait_procs(children, timeout=3)
+
+                # Force kill any remaining processes
+                for proc in alive:
+                    with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                        proc.kill()
+
+                # Terminate ChromeDriver process itself
+                try:
+                    self.process.terminate()
+                    self.process.wait(timeout=3)
+                except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                    with suppress(psutil.NoSuchProcess):
+                        self.process.kill()
+
+                logger.debug(f"Killed process tree for instance {self.id}")
+            except Exception as e:
+                logger.warning(f"Error killing process tree: {e}")
+
         await self._lifecycle.terminate(force)
         self.process = None
         self._monitor.clear_logs()

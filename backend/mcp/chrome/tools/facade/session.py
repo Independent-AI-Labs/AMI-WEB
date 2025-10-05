@@ -48,7 +48,7 @@ async def _terminate_with_autosave(manager: ChromeManager, instance_id: str | No
         )
 
 
-async def _save_session(manager: ChromeManager, instance_id: str | None, session_name: str | None) -> BrowserResponse:
+async def _save_session(manager: ChromeManager, instance_id: str | None, session_name: str | None, profile: str | None) -> BrowserResponse:
     """Save browser session."""
     if not instance_id:
         return BrowserResponse(success=False, error="instance_id required for save action")
@@ -58,7 +58,7 @@ async def _save_session(manager: ChromeManager, instance_id: str | None, session
         return BrowserResponse(success=False, error=f"Instance {instance_id} not found")
 
     try:
-        saved_id = await manager.session_manager.save_session(instance, session_name)
+        saved_id = await manager.session_manager.save_session(instance, session_name, profile_override=profile)
         return BrowserResponse(
             success=True,
             data={"session_id": saved_id, "message": f"Session saved as {saved_id}"},
@@ -68,7 +68,13 @@ async def _save_session(manager: ChromeManager, instance_id: str | None, session
         return BrowserResponse(success=False, error=f"Failed to save session: {e}")
 
 
-async def _restore_session(manager: ChromeManager, session_id: str | None, profile: str | None) -> BrowserResponse:
+async def _restore_session(
+    manager: ChromeManager,
+    session_id: str | None,
+    profile: str | None,
+    headless: bool | None,
+    kill_orphaned: bool,
+) -> BrowserResponse:
     """Restore browser session."""
     if not session_id:
         return BrowserResponse(success=False, error="session_id required for restore action")
@@ -78,7 +84,13 @@ async def _restore_session(manager: ChromeManager, session_id: str | None, profi
         if not manager._initialized:
             await manager.initialize()
 
-        instance = await manager.session_manager.restore_session(session_id, manager, profile_override=profile)
+        instance = await manager.session_manager.restore_session(
+            session_id,
+            manager,
+            profile_override=profile,
+            headless=headless,
+            kill_orphaned=kill_orphaned,
+        )
         return BrowserResponse(
             success=True,
             data={
@@ -165,6 +177,7 @@ async def browser_session_tool(
     use_pool: bool = True,
     session_id: str | None = None,
     session_name: str | None = None,
+    kill_orphaned: bool = False,
 ) -> BrowserResponse:
     """Manage browser instance lifecycle and session persistence.
 
@@ -194,12 +207,12 @@ async def browser_session_tool(
     if action in ("terminate", "save"):
         if action == "terminate":
             return await _terminate_with_autosave(manager, instance_id, session_name)
-        return await _save_session(manager, instance_id, session_name)
+        return await _save_session(manager, instance_id, session_name, profile)
 
     # Session-based actions (require session_id)
     action_handlers = {
         "list_sessions": lambda: _list_sessions(manager),
-        "restore": lambda: _restore_session(manager, session_id, profile),
+        "restore": lambda: _restore_session(manager, session_id, profile, headless, kill_orphaned),
         "delete_session": lambda: _delete_session(manager, session_id),
         "rename_session": lambda: _rename_session(manager, session_id, session_name),
     }

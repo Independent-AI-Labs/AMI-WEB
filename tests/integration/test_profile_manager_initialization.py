@@ -65,17 +65,13 @@ def test_get_profile_dir_loads_existing_metadata(profile_dir: Path, existing_met
     assert manager.profiles["test_profile"]["description"] == "Test profile"
 
 
-def test_get_profile_dir_creates_if_not_in_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
-    """Test that get_profile_dir creates profile if not found in metadata."""
+def test_get_profile_dir_raises_for_nonexistent(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+    """Test that get_profile_dir raises error if profile not found in metadata."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
-    # Profile doesn't exist in metadata
-    result = manager.get_profile_dir("new_profile")
-
-    # Should create new profile
-    assert result == profile_dir / "new_profile"
-    assert result.exists()
-    assert "new_profile" in manager.profiles
+    # Profile doesn't exist in metadata - should raise error, not auto-create
+    with pytest.raises(ProfileError, match="Profile 'new_profile' not found"):
+        manager.get_profile_dir("new_profile")
 
 
 def test_delete_profile_loads_existing_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:

@@ -65,12 +65,13 @@ class SessionManager:
         self._save_metadata()
         logger.info("Session manager shutdown complete")
 
-    async def save_session(self, instance: "BrowserInstance", name: str | None = None) -> str:
+    async def save_session(self, instance: "BrowserInstance", name: str | None = None, profile_override: str | None = None) -> str:
         """Save a browser session.
 
         Args:
             instance: The browser instance to save
             name: Optional name for the session
+            profile_override: Optional profile to associate with the session (overrides instance profile)
 
         Returns:
             The session ID
@@ -79,12 +80,15 @@ class SessionManager:
         session_dir = self.session_dir / session_id
         session_dir.mkdir(exist_ok=True)
 
+        # Use profile_override if provided, otherwise use instance profile
+        session_profile = profile_override if profile_override is not None else instance._profile_name
+
         # Save session data
         session_data = {
             "id": session_id,
             "name": name or f"session_{session_id[:8]}",
             "created_at": datetime.now().isoformat(),
-            "profile": instance._profile_name,
+            "profile": session_profile,
             "url": instance.driver.current_url if instance.driver else None,
             "title": instance.driver.title if instance.driver else None,
             "cookies": instance.driver.get_cookies() if instance.driver else [],
@@ -109,13 +113,22 @@ class SessionManager:
         logger.info(f"Saved session {session_id}")
         return session_id
 
-    async def restore_session(self, session_id: str, manager: "ChromeManager", profile_override: str | None = None) -> "BrowserInstance":
+    async def restore_session(
+        self,
+        session_id: str,
+        manager: "ChromeManager",
+        profile_override: str | None = None,
+        headless: bool | None = None,
+        kill_orphaned: bool = False,
+    ) -> "BrowserInstance":
         """Restore a browser session.
 
         Args:
             session_id: The session ID to restore
             manager: The ChromeManager instance to create the browser with
             profile_override: Optional profile to use instead of saved profile
+            headless: Optional headless mode override (defaults to False for interactive use)
+            kill_orphaned: Kill orphaned Chrome processes holding profile locks
 
         Returns:
             A new browser instance with the restored session
@@ -138,9 +151,13 @@ class SessionManager:
         if profile_override is not None:
             logger.info(f"Overriding saved profile with '{profile_override}' for session {session_id}")
 
+        # Use headless override if provided, otherwise default to False (interactive)
+        use_headless = headless if headless is not None else False
+
         instance = await manager.get_or_create_instance(
             profile=profile_name,
-            headless=False,  # Sessions are typically for interactive use
+            headless=use_headless,
+            kill_orphaned=kill_orphaned,
         )
 
         # Restore the session state
@@ -165,9 +182,10 @@ class SessionManager:
                 )
 
                 if is_error_page:
+                    profile_msg = f"Profile '{profile_name}'" if profile_name else "Temp profile"
                     logger.warning(
                         f"Cannot restore cookies - browser is on error page. "
-                        f"Profile '{profile_name or 'default'}' doesn't have certificate exception. "
+                        f"{profile_msg} doesn't have certificate exception. "
                         f"Cookies will not be restored."
                     )
                 else:

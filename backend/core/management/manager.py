@@ -81,6 +81,10 @@ class ChromeManager:
             return
 
         logger.info("Initializing Chrome Manager")
+
+        # Ensure default profile exists for session persistence
+        self.profile_manager.ensure_default_profile()
+
         await self.pool.initialize()
         await self.session_manager.initialize()
         self._initialized = True
@@ -104,6 +108,84 @@ class ChromeManager:
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
 
+    async def _try_reuse_profile_instance(self, profile: str) -> BrowserInstance | None:
+        """Check if we can reuse an existing instance with the given profile."""
+        for instance_id, instance in list(self._standalone_instances.items()):
+            if instance._profile_name == profile and self._is_instance_alive(instance):
+                logger.info(f"Reusing existing standalone instance {instance_id} with profile '{profile}'")
+                return instance
+            if not self._is_instance_alive(instance):
+                await self._handle_invalid_instance(instance_id, pool_managed=False)
+        return None
+
+    async def _acquire_from_pool(self, extensions: list[str | None] | None, options: ChromeOptions | None, headless: bool) -> BrowserInstance:
+        """Acquire a browser instance from the pool."""
+        clean_extensions = [ext for ext in (extensions or []) if ext is not None]
+        opts = options or ChromeOptions(headless=headless, extensions=clean_extensions)
+
+        attempts = max(1, self.pool.config.max_workers)
+        last_error: Exception | None = None
+        for _ in range(attempts):
+            try:
+                instance = await self.pool.acquire_browser(opts)
+            except Exception as exc:
+                last_error = exc
+                break
+
+            if self._is_instance_alive(instance):
+                logger.info(f"Got browser instance {instance.id} from pool")
+                return instance
+
+            await self._handle_invalid_instance(instance.id, pool_managed=True)
+            last_error = InvalidSessionIdException("Pool returned browser with invalid session")
+
+        message = "Unable to acquire healthy browser instance from pool"
+        if last_error is None:
+            raise InstanceError(message)
+        raise InstanceError(message) from last_error
+
+    async def _create_standalone_instance(
+        self,
+        headless: bool,
+        profile: str | None,
+        extensions: list[str | None] | None,
+        options: ChromeOptions | None,
+        anti_detect: bool,
+        security_config: SecurityConfig | None,
+        download_dir: str | None,
+        kill_orphaned: bool,
+    ) -> BrowserInstance:
+        """Create a new standalone browser instance."""
+        instance = BrowserInstance(
+            config=self.config,
+            properties_manager=self.properties_manager,
+            profile_manager=self.profile_manager,
+        )
+        standalone_extensions: list[str] | None = None
+        if extensions:
+            clean_list = [ext for ext in extensions if ext is not None]
+            standalone_extensions = clean_list if clean_list else None
+
+        await instance.launch(
+            headless=headless,
+            profile=profile,
+            extensions=standalone_extensions,
+            options=options,
+            anti_detect=anti_detect,
+            security_config=security_config,
+            download_dir=download_dir,
+            kill_orphaned=kill_orphaned,
+        )
+
+        if not self._is_instance_alive(instance):
+            with suppress(Exception):
+                await instance.terminate(force=True)
+            raise InstanceError("Failed to launch standalone browser instance")
+
+        self._standalone_instances[instance.id] = instance
+        logger.info(f"Created standalone browser instance {instance.id}")
+        return instance
+
     async def get_or_create_instance(
         self,
         headless: bool = True,
@@ -114,6 +196,7 @@ class ChromeManager:
         anti_detect: bool = True,
         security_config: "SecurityConfig | None" = None,
         download_dir: str | None = None,
+        kill_orphaned: bool = False,
     ) -> BrowserInstance:
         """Get or create a browser instance.
 
@@ -133,64 +216,19 @@ class ChromeManager:
         if not self._initialized:
             await self.initialize()
 
-        # Profiles require standalone instances (not pooled) for persistence
         if profile and use_pool:
             logger.info(f"Profile '{profile}' specified - disabling pool to use standalone instance")
             use_pool = False
 
+        if profile:
+            existing = await self._try_reuse_profile_instance(profile)
+            if existing:
+                return existing
+
         if use_pool:
-            clean_extensions = [ext for ext in (extensions or []) if ext is not None]
-            opts = options or ChromeOptions(headless=headless, extensions=clean_extensions)
+            return await self._acquire_from_pool(extensions, options, headless)
 
-            attempts = max(1, self.pool.config.max_workers)
-            last_error: Exception | None = None
-            for _ in range(attempts):
-                try:
-                    instance = await self.pool.acquire_browser(opts)
-                except Exception as exc:  # Pool could not create/acquire a worker
-                    last_error = exc
-                    break
-
-                if self._is_instance_alive(instance):
-                    logger.info(f"Got browser instance {instance.id} from pool")
-                    return instance
-
-                await self._handle_invalid_instance(instance.id, pool_managed=True)
-                last_error = InvalidSessionIdException("Pool returned browser with invalid session")
-
-            message = "Unable to acquire healthy browser instance from pool"
-            if last_error is None:
-                raise InstanceError(message)
-            raise InstanceError(message) from last_error
-
-        # Create standalone instance
-        instance = BrowserInstance(
-            config=self.config,
-            properties_manager=self.properties_manager,
-            profile_manager=self.profile_manager,
-        )
-        standalone_extensions: list[str] | None = None
-        if extensions:
-            clean_list = [ext for ext in extensions if ext is not None]
-            standalone_extensions = clean_list if clean_list else None
-        await instance.launch(
-            headless=headless,
-            profile=profile,
-            extensions=standalone_extensions,
-            options=options,
-            anti_detect=anti_detect,
-            security_config=security_config,
-            download_dir=download_dir,
-        )
-
-        if not self._is_instance_alive(instance):
-            with suppress(Exception):
-                await instance.terminate(force=True)
-            raise InstanceError("Failed to launch standalone browser instance")
-
-        self._standalone_instances[instance.id] = instance
-        logger.info(f"Created standalone browser instance {instance.id}")
-        return instance
+        return await self._create_standalone_instance(headless, profile, extensions, options, anti_detect, security_config, download_dir, kill_orphaned)
 
     async def get_instance(self, instance_id: str) -> BrowserInstance | None:
         """Get an instance by ID.

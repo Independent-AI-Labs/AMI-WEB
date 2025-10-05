@@ -9,7 +9,6 @@ import pytest
 from aiohttp import web
 
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer
-from browser.backend.utils.config import Config
 
 
 async def _start_test_server(
@@ -30,7 +29,7 @@ async def _start_test_server(
 
 
 @pytest.mark.asyncio
-async def test_web_search_tool_via_fastmcp(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_web_search_tool_via_fastmcp() -> None:
     async def searx_handler(request: web.Request) -> web.Response:
         return web.json_response(
             {
@@ -41,12 +40,6 @@ async def test_web_search_tool_via_fastmcp(monkeypatch: pytest.MonkeyPatch) -> N
         )
 
     runner, port = await _start_test_server(searx_handler)
-
-    class MockChromeManager:
-        def __init__(self, *_args: object, **_kwargs: object) -> None:
-            self.config = Config()
-
-    monkeypatch.setattr("browser.backend.mcp.chrome.chrome_server.ChromeManager", MockChromeManager)
 
     server = ChromeFastMCPServer()
 

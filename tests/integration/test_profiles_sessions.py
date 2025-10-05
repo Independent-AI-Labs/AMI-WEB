@@ -76,13 +76,18 @@ def temp_profiles_dir() -> Iterator[Path]:
 
 @pytest.fixture(autouse=True)
 async def cleanup_test_profiles(backend: ChromeManager) -> AsyncIterator[None]:
-    """Clean up test profiles before and after each test."""
+    """Clean up and create test profiles before and after each test."""
     # Clean up any leftover profiles before test
     profile_names = ["cookie_test", "download_test", "download1", "download2", "profile1", "profile2", "persistent_test", "login_test"]
 
     for name in profile_names:
         with suppress(Exception):
             backend.profile_manager.delete_profile(name)
+
+    # CREATE the profiles that tests need (profiles must be explicitly created, no auto-creation)
+    for name in profile_names:
+        with suppress(Exception):
+            backend.profile_manager.create_profile(name, f"Test profile: {name}")
 
     yield
 

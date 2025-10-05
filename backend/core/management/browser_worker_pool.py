@@ -158,6 +158,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
                     worker.instance.driver.close()
                 worker.instance.driver.switch_to.window(handles[0])
 
+            # Clean up temporary profile directory to prevent resource leaks
+            worker.instance._options_builder.cleanup_temp_profile()
+
             worker.state = WorkerState.HIBERNATING
             logger.debug(f"Hibernated browser worker {worker.id}")
         except Exception as e:

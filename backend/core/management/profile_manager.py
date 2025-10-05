@@ -52,9 +52,9 @@ class ProfileManager:
         return self.base_dir / default_name
 
     def create_profile(self, name: str, description: str = "") -> Path:
+        """Create a new browser profile directory."""
         self._ensure_initialized()
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        """Create a new browser profile directory."""
         if name in self.profiles:
             raise ProfileError(f"Profile {name} already exists")
 
@@ -77,8 +77,7 @@ class ProfileManager:
         self._ensure_initialized()
 
         if name not in self.profiles:
-            # Auto-create if doesn't exist
-            return self.create_profile(name)
+            raise ProfileError(f"Profile '{name}' not found. Available profiles: {list(self.profiles.keys())}")
 
         # Update last used
         self.profiles[name]["last_used"] = datetime.now().isoformat()

@@ -207,12 +207,13 @@ class BrowserLifecycle:
                     logger.warning(f"Graceful quit failed: {e}, forcing termination")
                     force = True
 
-            # Force kill if needed
-            if force and self._service:
+            # ALWAYS stop the ChromeDriver service to terminate the process
+            if self._service:
                 try:
                     self._service.stop()
+                    logger.debug(f"ChromeDriver service stopped for instance {self.instance_id}")
                 except Exception as e:
-                    logger.error(f"Failed to stop service: {e}")
+                    logger.error(f"Failed to stop ChromeDriver service: {e}")
 
         except Exception as e:
             logger.error(f"Error during termination: {e}")

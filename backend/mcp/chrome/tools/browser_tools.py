@@ -7,7 +7,7 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_launch_tool(
-    manager: ChromeManager, headless: bool = False, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True
+    manager: ChromeManager, headless: bool = True, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True
 ) -> BrowserResponse:
     """Launch a new browser instance."""
     logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}, use_pool={use_pool}")

@@ -14,7 +14,7 @@ The V02 facade simplifies the Browser MCP tool surface from **29 granular tools*
 
 - **Tool Count:** 29 → 9 (69% reduction)
 - **Action-Based:** Unified interfaces with action dispatch
-- **Backward Incompatible:** V01 tools are retired (no compatibility layer)
+- **Breaking Change:** V01 tools are retired (no migration layer)
 - **Feature Complete:** 100% feature parity with V01 + new storage management
 
 ---
@@ -550,7 +550,7 @@ class BrowserResponse:
 1. **Tool names changed** - All granular tool names replaced with 8 action-based tools
 2. **Action parameter required** - All tools (except `web_search`) require `action` parameter
 3. **Parameter consolidation** - Some parameters renamed or restructured
-4. **No compatibility layer** - V01 tools completely removed
+4. **No migration layer** - V01 tools completely removed
 
 ### Migration Examples
 

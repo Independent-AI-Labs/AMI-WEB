@@ -85,63 +85,107 @@ class BrowserOptionsBuilder:
                     self._used_ports.discard(self._debug_port)
             self._debug_port = None
 
-    def _cleanup_stale_locks(self, profile_dir: Path) -> None:
-        """Remove stale Chrome lock files if no process is using the profile."""
+    def _remove_lock_files(self, lock_files: list[Path]) -> None:
+        """Remove lock files."""
+        for lock_file in lock_files:
+            if lock_file.exists() or lock_file.is_symlink():
+                try:
+                    lock_file.unlink()
+                    logger.info(f"Removed lock file: {lock_file}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove lock {lock_file}: {e}")
+
+    def _kill_orphaned_process(self, pid: int, profile_dir: Path, lock_files: list[Path]) -> None:
+        """Kill an orphaned Chrome process and remove locks."""
+        import os
+
+        logger.warning(f"Profile {profile_dir} is locked by orphaned Chrome process {pid}. Killing process and removing locks...")
+        try:
+            os.kill(pid, 9)
+            logger.info(f"Killed orphaned Chrome process {pid}")
+            self._remove_lock_files(lock_files)
+            logger.info(f"Removed locks for {profile_dir}")
+        except Exception as e:
+            logger.error(f"Failed to kill orphaned process {pid}: {e}")
+            raise RuntimeError(f"Profile '{profile_dir.name}' is locked by orphaned Chrome process {pid}. Failed to kill it: {e}") from e
+
+    def _check_process_using_profile(self, pid: int, profile_dir: Path, lock_files: list[Path], kill_orphaned: bool) -> bool:
+        """Check if process is using the profile and handle accordingly. Returns True if locks should be removed."""
+        import subprocess
+
+        try:
+            result = subprocess.run(["ps", "-p", str(pid), "-ww", "-o", "cmd="], capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                return False
+
+            cmd = result.stdout.strip()
+            logger.debug(f"Process {pid} detected, checking if it uses profile {profile_dir.name}")
+
+            if "chrome" in cmd.lower() and str(profile_dir) in cmd:
+                if kill_orphaned:
+                    self._kill_orphaned_process(pid, profile_dir, lock_files)
+                    return False
+                raise RuntimeError(
+                    f"Profile '{profile_dir.name}' is locked by Chrome process {pid}. "
+                    f"This appears to be an orphaned/zombie process. "
+                    f"Set BROWSER_KILL_ORPHANED=true to automatically kill it, or manually kill process {pid}"
+                )
+            logger.debug(f"Profile {profile_dir} is locked by process {pid}, keeping locks")
+            return False
+        except subprocess.SubprocessError:
+            logger.debug(f"Cannot get info for process {pid}, keeping locks")
+            return False
+
+    def _cleanup_stale_locks(self, profile_dir: Path, kill_orphaned: bool = False) -> None:
+        """Remove stale Chrome lock files and optionally kill orphaned Chrome processes.
+
+        Args:
+            profile_dir: Profile directory to check for locks
+            kill_orphaned: If True, kill orphaned Chrome processes holding the lock
+        """
+        import os
+
         lock_files = [
             profile_dir / "SingletonLock",
             profile_dir / "SingletonSocket",
             profile_dir / "SingletonCookie",
         ]
 
-        # Check if any lock files exist (including broken symlinks)
-        # Use lexists() instead of exists() to detect broken symlinks
-        existing_locks = [f for f in lock_files if f.exists() or f.is_symlink()]
-        if not existing_locks:
+        singleton_lock = profile_dir / "SingletonLock"
+
+        if not singleton_lock.is_symlink():
+            self._remove_lock_files(lock_files)
             return
 
-        # Check if any Chrome process is using this directory
-        import subprocess
-
         try:
-            # Use fuser to check if any process has files open in this directory
-            result = subprocess.run(
-                ["fuser", str(profile_dir)],
-                capture_output=True,
-                text=True,
-                timeout=2,
-                check=False,
-            )
-            # If fuser returns processes, the directory is in use
-            if result.returncode == 0 and result.stdout.strip():
-                logger.debug(f"Profile directory {profile_dir} is in use by process, keeping locks")
+            link_target = str(singleton_lock.readlink())
+            if "-" not in link_target:
+                logger.warning(f"Malformed SingletonLock target: {link_target}, removing locks")
+                self._remove_lock_files(lock_files)
                 return
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            # fuser not available or timed out, check via ps
-            try:
-                ps_result = subprocess.run(
-                    ["ps", "aux"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2,
-                    check=False,
-                )
-                if str(profile_dir) in ps_result.stdout:
-                    logger.debug(f"Profile directory {profile_dir} found in process list, keeping locks")
-                    return
-            except subprocess.TimeoutExpired:
-                pass
 
-        # No process using the directory - locks are stale, remove them
-        for lock_file in existing_locks:
-            try:
-                lock_file.unlink()
-                logger.info(f"Removed stale lock file: {lock_file}")
-            except Exception as e:
-                logger.warning(f"Failed to remove stale lock {lock_file}: {e}")
+            _, pid_str = link_target.rsplit("-", 1)
+            pid = int(pid_str)
 
-    def _setup_profile_directory(self, chrome_options: Options, profile: str | None) -> None:
+            try:
+                os.kill(pid, 0)
+                if self._check_process_using_profile(pid, profile_dir, lock_files, kill_orphaned):
+                    self._remove_lock_files(lock_files)
+                return
+            except ProcessLookupError:
+                logger.info(f"Process {pid} from SingletonLock no longer exists, removing stale locks")
+            except PermissionError:
+                logger.debug(f"Cannot verify process {pid}, keeping locks to be safe")
+                return
+
+        except Exception as e:
+            logger.warning(f"Error checking SingletonLock: {e}, keeping locks to be safe")
+            return
+
+        self._remove_lock_files(lock_files)
+
+    def _setup_profile_directory(self, chrome_options: Options, profile: str | None, kill_orphaned: bool = False) -> None:
         """Set up profile directory for Chrome instance."""
-
         if profile and self._profile_manager:
             # Named profiles: use actual profile directory directly for persistence
             profile_dir = self._profile_manager.get_profile_dir(profile)
@@ -150,7 +194,7 @@ class BrowserOptionsBuilder:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
                 # Clean up stale lock files from previous crashed instances
-                self._cleanup_stale_locks(profile_dir)
+                self._cleanup_stale_locks(profile_dir, kill_orphaned=kill_orphaned)
 
                 # Use the actual profile directory - no copying
                 logger.info(f"Using profile directory: {profile_dir} with debug port: {self._debug_port}")
@@ -178,6 +222,7 @@ class BrowserOptionsBuilder:
         browser_properties: BrowserProperties | None = None,
         download_dir: Path | None = None,
         security_config: SecurityConfig | None = None,
+        kill_orphaned: bool = False,
     ) -> Options:
         """Build Chrome options based on configuration."""
         chrome_options = Options()
@@ -190,7 +235,7 @@ class BrowserOptionsBuilder:
         chrome_options.add_argument(f"--remote-debugging-port={self._debug_port}")
 
         # Set up profile directory
-        self._setup_profile_directory(chrome_options, profile)
+        self._setup_profile_directory(chrome_options, profile, kill_orphaned)
 
         # Configure based on mode
         if anti_detect:
@@ -231,11 +276,15 @@ class BrowserOptionsBuilder:
 
     def _add_basic_options(self, chrome_options: Options, headless: bool) -> None:
         """Add basic Chrome options."""
+        import os
+
         compute_profile = get_compute_profile()
+
+        # Always add --no-sandbox to ensure consistent singleton detection across headless/non-headless modes
+        chrome_options.add_argument("--no-sandbox")
 
         if headless:
             chrome_options.add_argument("--headless=new")
-            chrome_options.add_argument("--no-sandbox")
             # KEEP GPU ENABLED for WebGL support!
             chrome_options.add_argument("--enable-webgl")
             if compute_profile == "cpu":
@@ -248,6 +297,13 @@ class BrowserOptionsBuilder:
             chrome_options.add_argument("--log-level=3")  # Only show fatal errors
             chrome_options.add_argument("--disable-logging")  # Disable Chrome logging
             chrome_options.add_argument("--silent")  # Suppress all Chrome output
+        elif not os.environ.get("DISPLAY"):
+            # Non-headless mode requires DISPLAY for X11/Wayland
+            logger.warning(
+                "DISPLAY environment variable not set. Non-headless Chrome requires X11 display. "
+                "Falling back to headless mode. Set DISPLAY or use xvfb-run to enable headed mode."
+            )
+            chrome_options.add_argument("--headless=new")
 
     def _add_conditional_options(self, chrome_options: Options) -> None:
         """Add conditional options based on configuration."""
