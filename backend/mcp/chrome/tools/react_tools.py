@@ -9,7 +9,7 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_react_trigger_handler_tool(
-    manager: ChromeManager, selector: str, handler_name: str, event_data: dict[str, Any] | None = None
+    manager: ChromeManager, selector: str, handler_name: str, event_data: dict[str, Any] | None = None, instance_id: str | None = None
 ) -> BrowserResponse:
     """Trigger React event handler on an element.
 
@@ -18,18 +18,14 @@ async def browser_react_trigger_handler_tool(
         selector: CSS selector for target element
         handler_name: Handler name (e.g., "onClick", "onDoubleClick", "onChange")
         event_data: Optional event data to pass to the handler
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with execution result
     """
-    logger.debug(f"Triggering React handler: {handler_name} on {selector}")
+    logger.debug(f"Triggering React handler: {handler_name} on {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -84,25 +80,21 @@ async def browser_react_trigger_handler_tool(
     return BrowserResponse(success=True, result="Handler triggered")
 
 
-async def browser_react_get_props_tool(manager: ChromeManager, selector: str, max_depth: int = 10) -> BrowserResponse:
+async def browser_react_get_props_tool(manager: ChromeManager, selector: str, max_depth: int = 10, instance_id: str | None = None) -> BrowserResponse:
     """Get React component props.
 
     Args:
         manager: Chrome manager instance
         selector: CSS selector for target element
         max_depth: Maximum fiber tree depth to traverse
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with component props
     """
-    logger.debug(f"Getting React props for: {selector}")
+    logger.debug(f"Getting React props for: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -152,25 +144,21 @@ async def browser_react_get_props_tool(manager: ChromeManager, selector: str, ma
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_get_state_tool(manager: ChromeManager, selector: str, max_depth: int = 10) -> BrowserResponse:
+async def browser_react_get_state_tool(manager: ChromeManager, selector: str, max_depth: int = 10, instance_id: str | None = None) -> BrowserResponse:
     """Get React component state.
 
     Args:
         manager: Chrome manager instance
         selector: CSS selector for target element
         max_depth: Maximum fiber tree depth to traverse
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with component state
     """
-    logger.debug(f"Getting React state for: {selector}")
+    logger.debug(f"Getting React state for: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -211,24 +199,20 @@ async def browser_react_get_state_tool(manager: ChromeManager, selector: str, ma
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_find_component_tool(manager: ChromeManager, component_name: str) -> BrowserResponse:
+async def browser_react_find_component_tool(manager: ChromeManager, component_name: str, instance_id: str | None = None) -> BrowserResponse:
     """Find React component by type or displayName.
 
     Args:
         manager: Chrome manager instance
         component_name: Component name to search for
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with component information
     """
-    logger.debug(f"Finding React component: {component_name}")
+    logger.debug(f"Finding React component: {component_name}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -286,25 +270,21 @@ async def browser_react_find_component_tool(manager: ChromeManager, component_na
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_get_fiber_tree_tool(manager: ChromeManager, selector: str, max_depth: int = 5) -> BrowserResponse:
+async def browser_react_get_fiber_tree_tool(manager: ChromeManager, selector: str, max_depth: int = 5, instance_id: str | None = None) -> BrowserResponse:
     """Get React fiber tree structure.
 
     Args:
         manager: Chrome manager instance
         selector: CSS selector for target element
         max_depth: Maximum tree depth to traverse
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with fiber tree structure
     """
-    logger.debug(f"Getting React fiber tree for: {selector}")
+    logger.debug(f"Getting React fiber tree for: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 

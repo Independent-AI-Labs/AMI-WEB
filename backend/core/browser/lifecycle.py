@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from browser.backend.core.browser.tab_manager import TabManager
 from browser.backend.core.security.antidetect import ChromeDriverPatcher, execute_anti_detection_scripts
 from browser.backend.core.security.tab_injector import SimpleTabInjector
 from browser.backend.models.browser import BrowserStatus
@@ -40,6 +41,7 @@ class BrowserLifecycle:
         self._service: Service | None = None
         self._launch_options: dict[str, Any] = {}
         self.window_monitor: SimpleTabInjector | None = None
+        self.tab_manager: TabManager | None = None
 
     def set_security_config(self, config: SecurityConfig | None = None) -> None:
         """Set or update security configuration."""
@@ -66,6 +68,11 @@ class BrowserLifecycle:
 
             self.driver = driver
             self.status = BrowserStatus.READY
+
+            # Setup tab manager
+            if driver:
+                self.tab_manager = TabManager(driver, self.instance_id)
+                logger.debug(f"Tab manager initialized for instance {self.instance_id}")
 
             # Setup tab injection monitor if anti-detect
             if anti_detect and driver:

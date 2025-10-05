@@ -47,6 +47,9 @@ class ChromeManager:
         self.properties_manager = PropertiesManager(self.config)
         self.profile_manager = ProfileManager(base_dir=self.config.get("backend.storage.profiles_dir", "./data/browser_profiles"))
 
+        # Instance context tracking for multi-instance support
+        self._current_instance_id: str | None = None
+
         # Create pool configuration
         pool_config = PoolConfig(
             name="browser_pool",
@@ -58,7 +61,9 @@ class ChromeManager:
             health_check_interval=self.config.get("backend.pool.health_check_interval", 30),
             acquire_timeout=self.config.get("backend.pool.acquire_timeout", 30),
             enable_hibernation=self.config.get("backend.pool.enable_hibernation", True),
-            hibernation_delay=self.config.get("backend.pool.hibernation_delay", 60),
+            # Increased from 60s to 300s (5 minutes) to prevent premature hibernation during active use
+            # Users can override this in config with backend.pool.hibernation_delay
+            hibernation_delay=self.config.get("backend.pool.hibernation_delay", 300),
         )
 
         # Create the browser worker pool
@@ -105,8 +110,36 @@ class ChromeManager:
             await instance.terminate()
 
         self._standalone_instances.clear()
+        self._current_instance_id = None
         self._initialized = False
         logger.info("Chrome Manager shutdown complete")
+
+    def set_current_instance(self, instance_id: str) -> None:
+        """Set the current instance context."""
+        self._current_instance_id = instance_id
+        logger.debug(f"Current instance set to {instance_id}")
+
+    async def get_current_instance(self) -> BrowserInstance | None:
+        """Get the current instance, or fallback to first available."""
+        if self._current_instance_id:
+            instance = await self.get_instance(self._current_instance_id)
+            if instance:
+                return instance
+            # Current instance is dead, clear it
+            self._current_instance_id = None
+
+        # Fallback: get first available instance
+        instances = await self.list_instances()
+        if instances:
+            return await self.get_instance(instances[0].id)
+
+        return None
+
+    async def get_instance_or_current(self, instance_id: str | None = None) -> BrowserInstance | None:
+        """Get specific instance by ID, or current instance if not specified."""
+        if instance_id:
+            return await self.get_instance(instance_id)
+        return await self.get_current_instance()
 
     async def _try_reuse_profile_instance(self, profile: str) -> BrowserInstance | None:
         """Check if we can reuse an existing instance with the given profile."""

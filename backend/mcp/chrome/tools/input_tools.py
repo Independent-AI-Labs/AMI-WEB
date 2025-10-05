@@ -10,18 +10,15 @@ from browser.backend.facade.navigation.scroller import Scroller
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 
-async def browser_click_tool(manager: ChromeManager, selector: str, button: str = "left", click_count: int = 1) -> BrowserResponse:
+async def browser_click_tool(
+    manager: ChromeManager, selector: str, button: str = "left", click_count: int = 1, instance_id: str | None = None
+) -> BrowserResponse:
     """Click on an element."""
-    logger.debug(f"Clicking element: {selector} with button={button}, count={click_count}")
+    logger.debug(f"Clicking element: {selector} with button={button}, count={click_count}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     mouse = MouseController(instance)
     await mouse.click(selector)
@@ -29,18 +26,15 @@ async def browser_click_tool(manager: ChromeManager, selector: str, button: str 
     return BrowserResponse(success=True, data={"status": "clicked"})
 
 
-async def browser_type_tool(manager: ChromeManager, selector: str, text: str, clear: bool = False, delay: float = 0) -> BrowserResponse:
+async def browser_type_tool(
+    manager: ChromeManager, selector: str, text: str, clear: bool = False, delay: float = 0, instance_id: str | None = None
+) -> BrowserResponse:
     """Type text into an element."""
-    logger.debug(f"Typing into element: {selector}")
+    logger.debug(f"Typing into element: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     keyboard = KeyboardController(instance)
 
@@ -50,19 +44,14 @@ async def browser_type_tool(manager: ChromeManager, selector: str, text: str, cl
 
 
 async def browser_select_tool(
-    manager: ChromeManager, selector: str, value: str | None = None, index: int | None = None, label: str | None = None
+    manager: ChromeManager, selector: str, value: str | None = None, index: int | None = None, label: str | None = None, instance_id: str | None = None
 ) -> BrowserResponse:
     """Select an option from a dropdown."""
-    logger.debug(f"Selecting from dropdown: {selector}")
+    logger.debug(f"Selecting from dropdown: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     forms = FormsController(instance)
 
@@ -78,18 +67,13 @@ async def browser_select_tool(
     return BrowserResponse(success=True, data={"status": "selected"})
 
 
-async def browser_hover_tool(manager: ChromeManager, selector: str) -> BrowserResponse:
+async def browser_hover_tool(manager: ChromeManager, selector: str, instance_id: str | None = None) -> BrowserResponse:
     """Hover over an element."""
-    logger.debug(f"Hovering over element: {selector}")
+    logger.debug(f"Hovering over element: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     mouse = MouseController(instance)
     await mouse.hover(selector)
@@ -97,18 +81,13 @@ async def browser_hover_tool(manager: ChromeManager, selector: str) -> BrowserRe
     return BrowserResponse(success=True, data={"status": "hovered"})
 
 
-async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", amount: int = 100) -> BrowserResponse:
+async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", amount: int = 100, instance_id: str | None = None) -> BrowserResponse:
     """Scroll page or element."""
-    logger.debug(f"Scrolling {direction} by {amount}")
+    logger.debug(f"Scrolling {direction} by {amount}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     scroller = Scroller(instance)
 
@@ -122,18 +101,13 @@ async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", a
     return BrowserResponse(success=True, data={"status": "scrolled"})
 
 
-async def browser_press_tool(manager: ChromeManager, key: str, modifiers: list[str | None] | None = None) -> BrowserResponse:
+async def browser_press_tool(manager: ChromeManager, key: str, modifiers: list[str | None] | None = None, instance_id: str | None = None) -> BrowserResponse:
     """Press keyboard keys."""
-    logger.debug(f"Pressing key: {key} with modifiers: {modifiers}")
+    logger.debug(f"Pressing key: {key} with modifiers: {modifiers}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     keyboard = KeyboardController(instance)
 

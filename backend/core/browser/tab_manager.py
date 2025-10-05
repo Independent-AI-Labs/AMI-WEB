@@ -1,5 +1,7 @@
 """Tab management with anti-detection injection for new tabs."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
 class TabManager:
     """Manages browser tabs and ensures anti-detection is applied to all tabs."""
 
-    def __init__(self, driver: WebDriver, instance_id: str | None = None, properties_manager: "PropertiesManager | None" = None):
+    def __init__(self, driver: WebDriver, instance_id: str | None = None, properties_manager: PropertiesManager | None = None):
         self.driver = driver
         self.instance_id = instance_id
         self.properties_manager = properties_manager
@@ -64,7 +66,7 @@ class TabManager:
             except Exception as e:
                 logger.error(f"Failed to inject anti-detect into tab {current_handle}: {e}")
 
-    def open_new_tab(self, url: str | None = None, properties: "BrowserProperties | None" = None) -> str:
+    def open_new_tab(self, url: str | None = None, properties: BrowserProperties | None = None) -> str:
         """Open a new tab with anti-detection and optionally custom properties."""
         # Open new tab
         self.driver.switch_to.new_window("tab")
@@ -90,12 +92,12 @@ class TabManager:
         self.driver.switch_to.window(window_handle)
         self.ensure_antidetect_on_current_tab()
 
-    def open_link_in_new_tab(self, url: str, properties: "BrowserProperties | None" = None) -> str:
+    def open_link_in_new_tab(self, url: str, properties: BrowserProperties | None = None) -> str:
         """Open a link in a new tab with anti-detection and optionally custom properties."""
         # Open new tab with properties
         return self.open_new_tab(url, properties)
 
-    def set_tab_properties(self, tab_id: str, properties: "BrowserProperties" | dict[str, Any]) -> None:
+    def set_tab_properties(self, tab_id: str, properties: BrowserProperties | dict[str, Any]) -> None:
         """Set properties for a specific tab."""
         if self.properties_manager and self.instance_id:
             self.properties_manager.set_tab_properties(self.instance_id, tab_id, properties)

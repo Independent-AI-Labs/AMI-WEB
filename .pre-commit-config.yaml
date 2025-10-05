@@ -27,7 +27,7 @@ repos:
         pass_filenames: false
       # - id: no-lint-suppressions
       #   name: no-lint-suppressions
-      #   entry: bash -c "cd .. && .venv/bin/python scripts/list_noqas.py browser"
+      #   entry: bash -c "cd .. && .venv/bin/python scripts/list_noqas.py {{MODULE}}"
       #   language: system
       #   pass_filenames: false
       #   stages: [ pre-commit ]

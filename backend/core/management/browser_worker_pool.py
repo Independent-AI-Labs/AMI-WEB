@@ -139,24 +139,35 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         return await worker.health_check()
 
     async def _hibernate_worker(self, worker: BrowserWorker) -> None:
-        """Hibernate a browser worker to save resources."""
+        """Hibernate a browser worker to save resources.
+
+        IMPORTANT: This preserves all tabs by default to prevent user data loss.
+        Only closes tabs if explicitly configured via backend.pool.close_tabs_on_hibernation.
+        """
         try:
             # Check if driver is available
             if worker.instance.driver is None:
                 logger.warning(f"Cannot hibernate worker {worker.id}: driver is None")
                 return
 
-            # Navigate to blank page and clear state
-            worker.instance.driver.get("about:blank")
-            worker.instance.driver.delete_all_cookies()
-
-            # Close extra tabs
+            # Navigate first tab to blank page and clear cookies
             handles = worker.instance.driver.window_handles
-            if len(handles) > 1:
+            if handles:
+                worker.instance.driver.switch_to.window(handles[0])
+                worker.instance.driver.get("about:blank")
+                worker.instance.driver.delete_all_cookies()
+
+            # CRITICAL CHANGE: Only close extra tabs if explicitly configured
+            # This prevents silent tab loss that was the root cause of the bug
+            close_tabs = self._browser_config.get("backend.pool.close_tabs_on_hibernation", False)
+            if close_tabs and len(handles) > 1:
+                logger.warning(f"Closing {len(handles) - 1} tabs during hibernation for worker {worker.id}")
                 for handle in handles[1:]:
                     worker.instance.driver.switch_to.window(handle)
                     worker.instance.driver.close()
                 worker.instance.driver.switch_to.window(handles[0])
+            elif len(handles) > 1:
+                logger.info(f"Preserving {len(handles)} tabs during hibernation for worker {worker.id}")
 
             # Clean up temporary profile directory to prevent resource leaks
             worker.instance._options_builder.cleanup_temp_profile()

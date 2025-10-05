@@ -10,6 +10,7 @@ The Browser module provides a fully-featured Chrome automation platform built on
 
 - **Script Validation**: Regex-based pattern matching blocks dangerous JavaScript (e.g., `window.open('url', '_blank')`) before execution
 - **Session Persistence**: Save and restore complete browser states including multiple tabs, cookies, and active tab tracking
+- **Tab Management**: Open, close, switch, and list tabs via `browser_navigate` tool with anti-detection support
 - **Profile Management**: Isolated browser profiles with copy, create, delete, and list operations
 - **Anti-Detection**: Stealth mode with fingerprint randomization and webdriver flag removal
 - **Tab State Protection**: Improved session save logic prevents tab URL corruption during capture
@@ -18,6 +19,16 @@ The Browser module provides a fully-featured Chrome automation platform built on
 - **FastMCP Integration**: 11 tool families exposing all browser capabilities via MCP
 
 ## What's New
+
+### Tab Management via browser_navigate
+
+The `browser_navigate` tool now supports comprehensive tab management:
+- `open_tab` - Create new tabs with optional URL navigation
+- `list_tabs` - List all open tabs with current tab indicator
+- `switch_tab` - Switch to specific tab by handle ID
+- `close_tab` - Close specific or current tab
+
+All tab operations integrate with anti-detection and are fully tested via E2E integration tests.
 
 ### Script Validation System
 
@@ -119,13 +130,41 @@ await browser_session(action="save", session_name="my-work-session")
 await browser_session(action="restore", session_id="<uuid>", kill_orphaned=True)
 ```
 
-### 2. `browser_navigate` - Navigation & History
+### 2. `browser_navigate` - Navigation, History & Tab Management
 
-**Actions:** `goto`, `back`, `forward`, `refresh`, `get_url`
+**Actions:** `goto`, `back`, `forward`, `refresh`, `get_url`, `open_tab`, `close_tab`, `switch_tab`, `list_tabs`
 
-**Example:**
+**Navigation Examples:**
 ```python
+# Navigate to URL
 await browser_navigate(action="goto", url="https://example.com", wait_for="body", timeout=30)
+
+# History navigation
+await browser_navigate(action="back")
+await browser_navigate(action="forward")
+await browser_navigate(action="refresh")
+```
+
+**Tab Management Examples:**
+```python
+# Open new tab with URL
+await browser_navigate(action="open_tab", url="https://reddit.com")
+
+# Open empty tab
+await browser_navigate(action="open_tab")
+
+# List all tabs
+response = await browser_navigate(action="list_tabs")
+# Returns: {"tabs": [{"tab_id": "...", "is_current": true}, ...], "count": 2}
+
+# Switch to specific tab
+await browser_navigate(action="switch_tab", tab_id="ABC123...")
+
+# Close specific tab
+await browser_navigate(action="close_tab", tab_id="ABC123...")
+
+# Close current tab
+await browser_navigate(action="close_tab")
 ```
 
 ### 3. `browser_interact` - Element Interaction
@@ -201,12 +240,10 @@ await browser_execute(action="execute", code="window.open('url', '_blank')")
 # Error: Script validation failed: [tab_management] window.open with '_blank' corrupts tab state
 ```
 
-**Use TabController instead:**
+**Use browser_navigate for tab management:**
 ```python
-# Correct way to create tabs
-from browser.backend.facade.context.tabs import TabController
-tab_controller = TabController(instance)
-await tab_controller.create_tab(url="https://reddit.com")
+# Correct way to create tabs via MCP
+await browser_navigate(action="open_tab", url="https://reddit.com")
 ```
 
 ### 8. `web_search` - Web Search
@@ -290,6 +327,7 @@ Respects `AMI_COMPUTE_PROFILE` for driver selection (`cpu`, `nvidia`, `intel`, `
 - `tests/integration/test_window_open_tab_url_bug.py` - Tab state preservation
 - `tests/integration/test_multiple_tabs_session_persistence.py` - Multi-tab session save/restore
 - `tests/integration/test_session_persistence_e2e.py` - Full session persistence flow
+- `tests/integration/test_mcp_tab_management.py` - MCP tab management E2E tests
 
 ## Configuration
 
@@ -336,10 +374,11 @@ config:
 
 ### DO ✅
 
-1. **Use TabController for tab management:**
+1. **Use browser_navigate for tab management:**
    ```python
-   from browser.backend.facade.context.tabs import TabController
-   await TabController(instance).create_tab(url="https://example.com")
+   await browser_navigate(action="open_tab", url="https://example.com")
+   await browser_navigate(action="list_tabs")
+   await browser_navigate(action="switch_tab", tab_id=tab_id)
    ```
 
 2. **Save sessions with descriptive names:**

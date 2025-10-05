@@ -87,16 +87,21 @@ class ChromeFastMCPServer:
                 self.manager, action, instance_id, headless, profile, anti_detect, use_pool, session_id, session_name, kill_orphaned
             )
 
-        # V02 Facade Tool 2: browser_navigate - Page navigation and history
-        @self.mcp.tool(description="Navigate pages and manage browser history (goto, back, forward, refresh, get_url)")
+        # V02 Facade Tool 2: browser_navigate - Page navigation, history, and tab management
+        @self.mcp.tool(
+            description=(
+                "Navigate pages and manage browser history and tabs " "(goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
+            )
+        )
         async def browser_navigate(
-            action: Literal["goto", "back", "forward", "refresh", "get_url"],
+            action: Literal["goto", "back", "forward", "refresh", "get_url", "open_tab", "close_tab", "switch_tab", "list_tabs"],
             url: str | None = None,
             wait_for: str | None = None,
             timeout: float = 30,
+            tab_id: str | None = None,
         ) -> BrowserResponse:
-            """Navigate pages."""
-            return await browser_navigate_tool(self.manager, action, url, wait_for, timeout)
+            """Navigate pages and manage tabs."""
+            return await browser_navigate_tool(self.manager, action, url, wait_for, timeout, tab_id)
 
         # V02 Facade Tool 3: browser_interact - Element interaction and waiting
         @self.mcp.tool(description="Interact with page elements (click, type, select, hover, scroll, press, wait)")

@@ -11,7 +11,7 @@
 patterns:
   # Tab Management - window.open with target parameter
   - pattern: 'window\.open\s*\([^)]*[''"]_blank[''"]'
-    reason: "window.open with '_blank' target can corrupt original tab state. Use TabController.create_tab() instead."
+    reason: "window.open with '_blank' target can corrupt original tab state. Use browser_navigate(action='open_tab') instead."
     severity: error
     category: tab_management
 
@@ -22,7 +22,7 @@ patterns:
 
   # Direct window.open without proper tab management
   - pattern: 'window\.open\s*\('
-    reason: "Direct window.open() bypasses tab state management. Use TabController.create_tab() instead."
+    reason: "Direct window.open() bypasses tab state management. Use browser_navigate(action='open_tab') instead."
     severity: warning
     category: tab_management
 
@@ -55,7 +55,7 @@ patterns:
 
   # Window/tab closing that bypasses cleanup
   - pattern: 'window\.close\s*\('
-    reason: "Direct window.close() bypasses tab management. Use TabController.close_tab() instead."
+    reason: "Direct window.close() bypasses tab management. Use browser_navigate(action='close_tab') instead."
     severity: error
     category: tab_management
 

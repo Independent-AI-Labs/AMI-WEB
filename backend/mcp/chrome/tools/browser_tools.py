@@ -29,6 +29,9 @@ async def browser_launch_tool(
         )
         logger.debug(f"Got instance: {instance.id}")
 
+        # Set as current instance
+        manager.set_current_instance(instance.id)
+
         logger.debug("Creating response...")
         response = BrowserResponse(success=True, instance_id=instance.id, data={"status": "launched"})
         logger.debug(f"Response created: {response}")

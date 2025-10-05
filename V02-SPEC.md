@@ -24,7 +24,7 @@ The V02 facade simplifies the Browser MCP tool surface from **29 granular tools*
 | Tool | Purpose | Actions | V01 Tools Replaced |
 |------|---------|---------|-------------------|
 | `browser_session` | Instance lifecycle management | launch, terminate, list, get_active | 4 tools |
-| `browser_navigate` | Page navigation and history | goto, back, forward, refresh, get_url | 5 tools |
+| `browser_navigate` | Page navigation, history & tabs | goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs | 5 tools |
 | `browser_interact` | Element interaction and waiting | click, type, select, hover, scroll, press, wait | 7 tools |
 | `browser_inspect` | DOM structure inspection | get_html, exists, get_attribute | 3 tools |
 | `browser_extract` | Content extraction | get_text, get_cookies | 3 tools (including chunked variant) |
@@ -85,15 +85,16 @@ use_pool: bool = True
 
 ### 2. browser_navigate
 
-**Description:** Navigate pages and manage browser history.
+**Description:** Navigate pages, manage browser history, and control tabs.
 
 **Parameters:**
 
 ```python
-action: Literal["goto", "back", "forward", "refresh", "get_url"]  # Required
-url: str | None = None  # Required for "goto"
+action: Literal["goto", "back", "forward", "refresh", "get_url", "open_tab", "close_tab", "switch_tab", "list_tabs"]  # Required
+url: str | None = None  # Required for "goto", optional for "open_tab"
 wait_for: str | None = None  # CSS selector to wait for after navigation
 timeout: float = 30
+tab_id: str | None = None  # Required for "switch_tab", optional for "close_tab"
 ```
 
 **Actions:**
@@ -114,6 +115,21 @@ timeout: float = 30
 
 - **get_url:** Get current page URL
   - Returns: `url` in response
+
+- **open_tab:** Open new tab
+  - Optional: `url` (if provided, navigates to URL)
+  - Returns: `data.tab_id`, `data.url`
+
+- **close_tab:** Close tab
+  - Optional: `tab_id` (if not provided, closes current tab)
+  - Returns: `data.closed_tab`
+
+- **switch_tab:** Switch to specific tab
+  - Requires: `tab_id`
+  - Returns: `data.tab_id`
+
+- **list_tabs:** List all open tabs
+  - Returns: `data.tabs` (array of `{tab_id, is_current}`), `data.count`
 
 **Response Fields:**
 - `success`: bool

@@ -12,16 +12,13 @@ from browser.backend.facade.media.screenshot import ScreenshotController
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 
-async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = False, save_to_disk: bool = True) -> BrowserResponse:
+async def browser_screenshot_tool(
+    manager: ChromeManager, full_page: bool = False, save_to_disk: bool = True, instance_id: str | None = None
+) -> BrowserResponse:
     """Take a screenshot of the page."""
-    logger.debug(f"Taking screenshot: full_page={full_page}, save_to_disk={save_to_disk}")
+    logger.debug(f"Taking screenshot: full_page={full_page}, save_to_disk={save_to_disk}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -56,16 +53,11 @@ async def browser_screenshot_tool(manager: ChromeManager, full_page: bool = Fals
     return BrowserResponse(success=True, screenshot=screenshot_base64, data={"format": "base64"})
 
 
-async def browser_element_screenshot_tool(manager: ChromeManager, selector: str, save_to_disk: bool = True) -> BrowserResponse:
+async def browser_element_screenshot_tool(manager: ChromeManager, selector: str, save_to_disk: bool = True, instance_id: str | None = None) -> BrowserResponse:
     """Take a screenshot of an element."""
-    logger.debug(f"Taking element screenshot: {selector}, save_to_disk={save_to_disk}")
+    logger.debug(f"Taking element screenshot: {selector}, save_to_disk={save_to_disk}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 

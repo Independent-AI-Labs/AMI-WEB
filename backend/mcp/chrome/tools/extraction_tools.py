@@ -22,20 +22,17 @@ async def browser_get_text_tool(
     include_tag_names: bool = True,
     skip_hidden: bool = True,
     max_depth: int | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Get text content of an element with tags and auto-ellipsization."""
     logger.debug(
-        f"Getting text from element: {selector}, ellipsize_after={ellipsize_text_after}, " f"include_tags={include_tag_names}, skip_hidden={skip_hidden}"
+        f"Getting text from element: {selector}, ellipsize_after={ellipsize_text_after}, "
+        f"include_tags={include_tag_names}, skip_hidden={skip_hidden}, instance_id={instance_id}"
     )
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     extractor = ContentExtractor(instance)
     text = await extractor.get_text_with_tags(
@@ -67,19 +64,15 @@ async def browser_get_text_chunk_tool(
     include_tag_names: bool = True,
     skip_hidden: bool = True,
     max_depth: int | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Stream text content of an element in deterministic chunks."""
 
-    logger.debug(f"Chunking text from element: {selector} offset={offset} length={length}")
+    logger.debug(f"Chunking text from element: {selector} offset={offset} length={length}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     extractor = ContentExtractor(instance)
     text = await extractor.get_text_with_tags(
@@ -116,16 +109,11 @@ async def browser_get_text_chunk_tool(
     )
 
 
-async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attribute: str) -> BrowserResponse:
+async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attribute: str, instance_id: str | None = None) -> BrowserResponse:
     """Get attribute value of an element."""
-    logger.debug(f"Getting attribute {attribute} from element: {selector}")
+    logger.debug(f"Getting attribute {attribute} from element: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -135,16 +123,11 @@ async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attr
     return BrowserResponse(success=True, data={"value": value})
 
 
-async def browser_exists_tool(manager: ChromeManager, selector: str) -> BrowserResponse:
+async def browser_exists_tool(manager: ChromeManager, selector: str, instance_id: str | None = None) -> BrowserResponse:
     """Check if an element exists."""
-    logger.debug(f"Checking if element exists: {selector}")
+    logger.debug(f"Checking if element exists: {selector}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -157,16 +140,13 @@ async def browser_exists_tool(manager: ChromeManager, selector: str) -> BrowserR
     return BrowserResponse(success=True, data={"exists": exists})
 
 
-async def browser_wait_for_tool(manager: ChromeManager, selector: str, state: str = "visible", timeout: float = 30) -> BrowserResponse:
+async def browser_wait_for_tool(
+    manager: ChromeManager, selector: str, state: str = "visible", timeout: float = 30, instance_id: str | None = None
+) -> BrowserResponse:
     """Wait for an element to appear."""
-    logger.debug(f"Waiting for element: {selector} to be {state}")
+    logger.debug(f"Waiting for element: {selector} to be {state}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -183,16 +163,11 @@ async def browser_wait_for_tool(manager: ChromeManager, selector: str, state: st
     return BrowserResponse(success=True, data={"status": "element_found"})
 
 
-async def browser_get_cookies_tool(manager: ChromeManager) -> BrowserResponse:
+async def browser_get_cookies_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
     """Get browser cookies."""
-    logger.debug("Getting browser cookies")
+    logger.debug(f"Getting browser cookies, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -207,6 +182,7 @@ async def browser_get_html_tool(
     max_depth: int | None = None,
     collapse_depth: int | None = None,
     ellipsize_text_after: int | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Get HTML with depth limiting and text ellipsization.
 
@@ -216,20 +192,16 @@ async def browser_get_html_tool(
         max_depth: Maximum DOM depth to traverse
         collapse_depth: Depth at which to collapse elements to summaries
         ellipsize_text_after: Truncate text content after this many chars (from config if not provided)
+        instance_id: Optional instance ID to target
 
     Returns:
         BrowserResponse with HTML content
     """
-    logger.debug(f"Getting HTML: selector={selector}, max_depth={max_depth}, collapse_depth={collapse_depth}")
+    logger.debug(f"Getting HTML: selector={selector}, max_depth={max_depth}, collapse_depth={collapse_depth}, instance_id={instance_id}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="Browser instance not available")
+        return BrowserResponse(success=False, error="No browser instance available")
 
     extractor = ContentExtractor(instance)
 

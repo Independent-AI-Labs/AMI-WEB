@@ -14,9 +14,9 @@ from browser.backend.mcp.chrome.utils.limits import (
 )
 
 
-async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None) -> BrowserResponse:
+async def browser_execute_tool(manager: ChromeManager, script: str, args: list[Any | None] | None = None, instance_id: str | None = None) -> BrowserResponse:
     """Execute JavaScript code."""
-    logger.debug(f"Executing JavaScript: {script[:100]}...")
+    logger.debug(f"Executing JavaScript: {script[:100]}..., instance_id={instance_id}")
 
     # Validate script against forbidden patterns
     try:
@@ -25,12 +25,7 @@ async def browser_execute_tool(manager: ChromeManager, script: str, args: list[A
         logger.error(f"Script validation failed: {e}")
         return BrowserResponse(success=False, error=f"Script validation failed: {e}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -50,9 +45,9 @@ async def browser_execute_tool(manager: ChromeManager, script: str, args: list[A
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_evaluate_tool(manager: ChromeManager, expression: str) -> BrowserResponse:
+async def browser_evaluate_tool(manager: ChromeManager, expression: str, instance_id: str | None = None) -> BrowserResponse:
     """Evaluate JavaScript expression."""
-    logger.debug(f"Evaluating JavaScript: {expression[:100]}...")
+    logger.debug(f"Evaluating JavaScript: {expression[:100]}..., instance_id={instance_id}")
 
     # Validate expression against forbidden patterns
     try:
@@ -61,12 +56,7 @@ async def browser_evaluate_tool(manager: ChromeManager, expression: str) -> Brow
         logger.error(f"Expression validation failed: {e}")
         return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -94,10 +84,11 @@ async def browser_execute_chunk_tool(
     length: int | None = None,
     snapshot_checksum: str | None = None,
     args: list[Any | None] | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Execute JavaScript and stream the string result in deterministic chunks."""
 
-    logger.debug("Executing chunked JavaScript result")
+    logger.debug(f"Executing chunked JavaScript result, instance_id={instance_id}")
 
     # Validate script against forbidden patterns
     try:
@@ -106,12 +97,7 @@ async def browser_execute_chunk_tool(
         logger.error(f"Script validation failed: {e}")
         return BrowserResponse(success=False, error=f"Script validation failed: {e}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
@@ -152,10 +138,11 @@ async def browser_evaluate_chunk_tool(
     offset: int = 0,
     length: int | None = None,
     snapshot_checksum: str | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Evaluate JavaScript and stream the string result in deterministic chunks."""
 
-    logger.debug("Evaluating chunked JavaScript expression")
+    logger.debug(f"Evaluating chunked JavaScript expression, instance_id={instance_id}")
 
     # Validate expression against forbidden patterns
     try:
@@ -164,12 +151,7 @@ async def browser_evaluate_chunk_tool(
         logger.error(f"Expression validation failed: {e}")
         return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
-    instances = await manager.list_instances()
-    if not instances:
-        return BrowserResponse(success=False, error="No browser instance available")
-
-    instance_info = instances[0]
-    instance = await manager.get_instance(instance_info.id)
+    instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
         return BrowserResponse(success=False, error="Browser instance not available")
 
