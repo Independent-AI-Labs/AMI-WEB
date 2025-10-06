@@ -7,9 +7,11 @@ repos:
       - id: ruff
         args: [ --fix, --exit-non-zero-on-fix ]
         stages: [ pre-commit ]
+        require_serial: true
       # Formatting (replaces black)
       - id: ruff-format
         stages: [ pre-commit ]
+        require_serial: true
 
   # Type checking
   - repo: local
@@ -39,10 +41,14 @@ repos:
     hooks:
       - id: check-yaml
         stages: [ pre-commit ]
+        require_serial: true
       - id: check-added-large-files
         args: ['--maxkb=100000']  # 100MB limit
         stages: [ pre-commit ]
+        require_serial: true
       - id: check-merge-conflict
         stages: [ pre-commit ]
+        require_serial: true
       - id: debug-statements
         stages: [ pre-commit ]
+        require_serial: true
