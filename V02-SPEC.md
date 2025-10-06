@@ -50,7 +50,7 @@ action: Literal["launch", "terminate", "list", "get_active"]  # Required
 instance_id: str | None = None  # Required for "terminate"
 headless: bool = True
 profile: str | None = None
-anti_detect: bool = False
+anti_detect: bool = True  # Anti-detection enabled by default for production use
 use_pool: bool = True
 ```
 

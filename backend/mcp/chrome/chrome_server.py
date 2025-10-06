@@ -76,7 +76,7 @@ class ChromeFastMCPServer:
             instance_id: str | None = None,
             headless: bool = True,
             profile: str | None = None,
-            anti_detect: bool = False,
+            anti_detect: bool | None = None,
             use_pool: bool = True,
             session_id: str | None = None,
             session_name: str | None = None,
@@ -237,13 +237,14 @@ class ChromeFastMCPServer:
                 "clear_screenshots",
                 "set_download_behavior",
             ],
+            instance_id: str | None = None,
             filename: str | None = None,
             timeout: int = 30,
             behavior: str = "allow",
             download_path: str | None = None,
         ) -> BrowserResponse:
             """Manage storage."""
-            return await browser_storage_tool(self.manager, action, filename, timeout, behavior, download_path)
+            return await browser_storage_tool(self.manager, action, instance_id, filename, timeout, behavior, download_path)
 
         # V02 Tool 10: browser_react - React-specific interactions
         @self.mcp.tool(description="React-specific helpers for triggering handlers and inspecting components")

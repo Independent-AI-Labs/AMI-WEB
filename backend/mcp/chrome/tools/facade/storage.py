@@ -19,6 +19,8 @@ async def browser_storage_tool(  # noqa: PLR0911, PLR0912, C901
         "clear_screenshots",
         "set_download_behavior",
     ],
+    # Instance selection
+    instance_id: str | None = None,
     # Download-specific parameters
     filename: str | None = None,
     timeout: int = 30,
@@ -31,6 +33,7 @@ async def browser_storage_tool(  # noqa: PLR0911, PLR0912, C901
     Args:
         manager: Chrome manager instance
         action: Action to perform
+        instance_id: Optional browser instance ID
         filename: Filename to wait for (wait_for_download)
         timeout: Timeout in seconds (wait_for_download)
         behavior: Download behavior for CDP (set_download_behavior)
@@ -39,17 +42,12 @@ async def browser_storage_tool(  # noqa: PLR0911, PLR0912, C901
     Returns:
         BrowserResponse with action-specific data
     """
-    logger.debug(f"browser_storage: action={action}")
-
-    instances = await manager.list_instances()
-    if not instances and action not in {"list_screenshots", "clear_screenshots"}:
-        return BrowserResponse(success=False, error="No browser instance available")
+    logger.debug(f"browser_storage: action={action}, instance_id={instance_id}")
 
     # Get instance for actions that need it
     instance = None
     if action in {"list_downloads", "clear_downloads", "wait_for_download", "set_download_behavior"}:
-        instance_info = instances[0]
-        instance = await manager.get_instance(instance_info.id)
+        instance = await manager.get_instance_or_current(instance_id)
         if not instance:
             return BrowserResponse(success=False, error="Browser instance not available")
 

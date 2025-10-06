@@ -86,7 +86,7 @@ class BrowserInstance:
         profile: str | None = None,
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
-        anti_detect: bool = False,
+        anti_detect: bool | None = None,
         browser_properties: BrowserProperties | None = None,
         download_dir: str | None = None,
         security_config: SecurityConfig | None = None,
@@ -94,6 +94,10 @@ class BrowserInstance:
     ) -> WebDriver:
         """Launch the browser with specified configuration."""
         try:
+            # Use config default if anti_detect not explicitly set
+            if anti_detect is None:
+                anti_detect = self._config.get("backend.browser.default_anti_detect", True)
+
             # Store configuration
             self._profile_name = profile
             self._anti_detect = anti_detect

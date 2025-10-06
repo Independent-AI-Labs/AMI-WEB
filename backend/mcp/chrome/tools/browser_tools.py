@@ -7,9 +7,13 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_launch_tool(
-    manager: ChromeManager, headless: bool = True, profile: str | None = None, anti_detect: bool = False, use_pool: bool = True
+    manager: ChromeManager, headless: bool = True, profile: str | None = None, anti_detect: bool | None = None, use_pool: bool = True
 ) -> BrowserResponse:
     """Launch a new browser instance."""
+    # Use config default if anti_detect not explicitly set
+    if anti_detect is None:
+        anti_detect = manager.config.get("backend.browser.default_anti_detect", True)
+
     logger.debug(f"Launching browser: headless={headless}, profile={profile}, anti_detect={anti_detect}, use_pool={use_pool}")
     logger.debug("Browser launch initiated")
 
@@ -63,8 +67,8 @@ async def browser_get_active_tool(manager: ChromeManager) -> BrowserResponse:
     """Get the currently active browser instance."""
     logger.debug("Getting active browser instance")
 
-    # For now, return the first instance if available
-    instances = await manager.list_instances()
-    active_id = instances[0].id if instances else None
+    instance = await manager.get_current_instance()
+    if not instance:
+        return BrowserResponse(success=False, error="No active instance")
 
-    return BrowserResponse(success=True, instance_id=active_id)
+    return BrowserResponse(success=True, instance_id=instance.id)

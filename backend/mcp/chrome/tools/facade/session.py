@@ -91,6 +91,10 @@ async def _restore_session(
             headless=headless,
             kill_orphaned=kill_orphaned,
         )
+
+        # Set as current instance so subsequent tool calls use this instance
+        manager.set_current_instance(instance.id)
+
         return BrowserResponse(
             success=True,
             data={
@@ -173,7 +177,7 @@ async def browser_session_tool(
     instance_id: str | None = None,
     headless: bool = True,
     profile: str | None = None,
-    anti_detect: bool = False,
+    anti_detect: bool | None = None,
     use_pool: bool = True,
     session_id: str | None = None,
     session_name: str | None = None,

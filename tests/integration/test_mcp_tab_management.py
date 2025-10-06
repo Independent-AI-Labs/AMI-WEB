@@ -29,6 +29,7 @@ async def test_mcp_tab_lifecycle_full_e2e() -> None:
         # Create instance
         instance = await manager.get_or_create_instance(headless=True, use_pool=False)
         assert instance.driver is not None
+        manager.set_current_instance(instance.id)
 
         # Navigate first tab to a URL
         response = await browser_navigate_tool(manager, action="goto", url="https://example.com")
@@ -154,6 +155,7 @@ async def test_mcp_tab_switch_validation() -> None:
     try:
         instance = await manager.get_or_create_instance(headless=True, use_pool=False)
         assert instance.driver is not None
+        manager.set_current_instance(instance.id)
 
         # Attempt switch_tab without tab_id
         response = await browser_navigate_tool(manager, action="switch_tab", tab_id=None)  # noqa: FURB120
@@ -187,6 +189,7 @@ async def test_mcp_tab_antidetect_injection() -> None:
         # Create instance with anti_detect enabled
         instance = await manager.get_or_create_instance(headless=True, anti_detect=True, use_pool=False)
         assert instance.driver is not None
+        manager.set_current_instance(instance.id)
 
         # Navigate first tab
         response = await browser_navigate_tool(manager, action="goto", url="https://example.com")

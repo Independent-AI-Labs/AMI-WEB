@@ -29,6 +29,7 @@ async def test_window_open_blank_is_blocked() -> None:
         headless=True,
         use_pool=False,
     )
+    manager.set_current_instance(instance.id)
 
     # Navigate to a page first
     assert instance.driver is not None
@@ -75,6 +76,7 @@ async def test_safe_script_is_allowed() -> None:
         headless=True,
         use_pool=False,
     )
+    manager.set_current_instance(instance.id)
 
     # Navigate to a page first
     assert instance.driver is not None
@@ -116,6 +118,7 @@ async def test_window_close_is_blocked() -> None:
         headless=True,
         use_pool=False,
     )
+    manager.set_current_instance(instance.id)
 
     # Navigate to a page first
     assert instance.driver is not None

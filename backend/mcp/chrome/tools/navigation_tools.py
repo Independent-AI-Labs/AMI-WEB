@@ -7,7 +7,6 @@ from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.facade.navigation.navigator import Navigator
 from browser.backend.mcp.chrome.response import BrowserResponse
-from browser.backend.utils.exceptions import InstanceError
 
 
 def _is_fatal_error(exc: Exception) -> bool:
@@ -41,34 +40,30 @@ def _is_fatal_error(exc: Exception) -> bool:
 
 
 async def _acquire_healthy_instance(manager: ChromeManager, instance_id: str | None = None) -> tuple[bool, BrowserInstance | None]:
-    """Return a healthy browser instance, optionally provisioning a new one.
+    """Return a healthy browser instance.
 
-    Returns a tuple (from_pool, instance). When from_pool is False we created a
-    new session via get_or_create_instance.
+    Returns a tuple (from_pool, instance). Returns (False, None) if no instance available.
     """
 
     # If specific instance requested, use it
     if instance_id:
         instance = await manager.get_instance(instance_id)
-        if instance:
-            return True, instance
-        logger.warning(f"Requested instance {instance_id} not found")
-        return False, None
+        if not instance:
+            logger.error(f"Instance {instance_id} not found")
+            return False, None
+        # Determine if it's from pool
+        is_pool = instance_id in manager.pool._workers
+        return is_pool, instance
 
     # Use current instance context
     instance = await manager.get_current_instance()
-    if instance:
-        return True, instance
-
-    # Fallback: create new instance
-    default_headless = manager.config.get("backend.browser.default_headless", True)
-    try:
-        instance = await manager.get_or_create_instance(headless=default_headless, use_pool=True)
-        manager.set_current_instance(instance.id)
-        return False, instance
-    except InstanceError as exc:
-        logger.error(f"Failed to provision replacement browser instance: {exc}")
+    if not instance:
+        logger.error("No current instance - launch browser first using browser_session tool")
         return False, None
+
+    # Determine if current instance is from pool
+    is_pool = instance.id in manager.pool._workers
+    return is_pool, instance
 
 
 async def browser_navigate_tool(

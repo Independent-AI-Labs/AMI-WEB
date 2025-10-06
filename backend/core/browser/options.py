@@ -227,7 +227,7 @@ class BrowserOptionsBuilder:
         profile: str | None = None,
         extensions: list[str] | None = None,
         options: ChromeOptions | None = None,
-        anti_detect: bool = False,
+        anti_detect: bool | None = None,
         browser_properties: BrowserProperties | None = None,
         download_dir: Path | None = None,
         security_config: SecurityConfig | None = None,
@@ -235,6 +235,10 @@ class BrowserOptionsBuilder:
     ) -> Options:
         """Build Chrome options based on configuration."""
         chrome_options = Options()
+
+        # Use config default if anti_detect not explicitly set
+        if anti_detect is None:
+            anti_detect = self._config.get("backend.browser.default_anti_detect", True)
 
         # Add basic options
         self._add_basic_options(chrome_options, headless)

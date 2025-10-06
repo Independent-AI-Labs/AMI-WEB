@@ -120,19 +120,13 @@ class ChromeManager:
         logger.debug(f"Current instance set to {instance_id}")
 
     async def get_current_instance(self) -> BrowserInstance | None:
-        """Get the current instance, or fallback to first available."""
+        """Get the current instance."""
         if self._current_instance_id:
             instance = await self.get_instance(self._current_instance_id)
             if instance:
                 return instance
             # Current instance is dead, clear it
             self._current_instance_id = None
-
-        # Fallback: get first available instance
-        instances = await self.list_instances()
-        if instances:
-            return await self.get_instance(instances[0].id)
-
         return None
 
     async def get_instance_or_current(self, instance_id: str | None = None) -> BrowserInstance | None:
