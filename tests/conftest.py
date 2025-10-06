@@ -333,6 +333,22 @@ def pytest_configure(config: pytest.Config) -> None:
 # Removed cleanup_manager - no global state to clean up
 
 
+def cleanup_test_data() -> None:
+    """Clean up accumulated test data directories to prevent resource exhaustion."""
+    import shutil
+    from pathlib import Path
+
+    data_dir = Path("data")
+    if not data_dir.exists():
+        return
+
+    # Remove all test_* directories
+    with contextlib.suppress(Exception):
+        for test_dir in data_dir.glob("test_*"):
+            if test_dir.is_dir():
+                shutil.rmtree(test_dir, ignore_errors=True)
+
+
 def cleanup_processes() -> None:
     """Kill any remaining browser or server processes."""
     # No global manager to clean up - each test handles its own
@@ -345,6 +361,9 @@ def cleanup_processes() -> None:
         # Logger or stderr might be closed during cleanup
         pass
 
+    # Clean up test data directories
+    cleanup_test_data()
+
     with contextlib.suppress(Exception):
         if sys.platform == "win32":
             # Kill Chrome and ChromeDriver processes on Windows
@@ -354,6 +373,15 @@ def cleanup_processes() -> None:
             # Kill Chrome and ChromeDriver processes on Unix
             subprocess.run(["pkill", "-f", "chrome"], capture_output=True, check=False)
             subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True, check=False)
+
+
+# Pytest fixture to clean up test data after each test
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_test_data_fixture() -> Iterator[None]:
+    """Clean up test data after each test to prevent resource exhaustion."""
+    yield
+    # Run cleanup after test completes
+    cleanup_test_data()
 
 
 # Register cleanup at exit
