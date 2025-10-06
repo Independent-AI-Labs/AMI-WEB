@@ -260,15 +260,17 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
 
     # Tab 1: example.com
     assert instance1.driver is not None
+    # Set page load timeout to 30 seconds
+    instance1.driver.set_page_load_timeout(30)
     instance1.driver.get("https://example.com")
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     tab1_title = instance1.driver.title
 
-    # Tab 2: httpbin.org
+    # Tab 2: example.org (more reliable than httpbin.org)
     instance1.driver.execute_script("window.open('');")
     instance1.driver.switch_to.window(instance1.driver.window_handles[1])
-    instance1.driver.get("https://httpbin.org")
-    await asyncio.sleep(1)
+    instance1.driver.get("https://example.org")
+    await asyncio.sleep(2)
     tab2_title = instance1.driver.title
 
     # Switch back to first tab before saving
@@ -320,5 +322,5 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
     assert tab1_title == restored_tab1_title, "BUG: Tab 1 title mismatch"
 
     # Assertions for tab 2
-    assert "httpbin.org" in restored_tab2_url.lower(), f"BUG: Tab 2 URL is '{restored_tab2_url}' instead of httpbin.org"
+    assert "example.org" in restored_tab2_url.lower(), f"BUG: Tab 2 URL is '{restored_tab2_url}' instead of example.org"
     assert tab2_title == restored_tab2_title, "BUG: Tab 2 title mismatch"
