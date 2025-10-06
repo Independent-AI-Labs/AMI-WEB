@@ -5,16 +5,16 @@ repos:
     hooks:
       # Linting (includes security checks)
       - id: ruff
-        require_serial: true
         args: [ --fix, --exit-non-zero-on-fix, . ]
         pass_filenames: false
         stages: [ pre-commit ]
+        require_serial: true
       # Formatting (replaces black)
       - id: ruff-format
-        require_serial: true
         args: [ . ]
         pass_filenames: false
         stages: [ pre-commit ]
+        require_serial: true
 
   # Type checking
   - repo: local
@@ -51,15 +51,15 @@ repos:
     rev: v4.5.0
     hooks:
       - id: check-yaml
-        require_serial: true
         stages: [ pre-commit ]
-      - id: check-added-large-files
         require_serial: true
+      - id: check-added-large-files
         args: ['--maxkb=100000']  # 100MB limit
         stages: [ pre-commit ]
+        require_serial: true
       - id: check-merge-conflict
-        require_serial: true
         stages: [ pre-commit ]
+        require_serial: true
       - id: debug-statements
-        require_serial: true
         stages: [ pre-commit ]
+        require_serial: true
