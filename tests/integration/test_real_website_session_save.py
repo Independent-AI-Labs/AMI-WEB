@@ -293,6 +293,7 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
         headless=True,
         kill_orphaned=True,
     )
+    manager2.set_current_instance(instance2.id)
 
     # VERIFY: The restored session has ALL tabs with CORRECT URLs
     await asyncio.sleep(2)  # Wait for pages to load
