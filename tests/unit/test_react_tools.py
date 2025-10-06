@@ -27,6 +27,7 @@ def _create_mock_manager(execute_script_return: Any = None) -> Any:
     manager = SimpleNamespace()
     manager.list_instances = AsyncMock(return_value=[mock_instance_info])
     manager.get_instance = AsyncMock(return_value=mock_instance)
+    manager.get_instance_or_current = AsyncMock(return_value=mock_instance)
 
     return manager
 
@@ -215,28 +216,29 @@ async def test_no_browser_instance_available() -> None:
     """Test all tools when no browser instance is available."""
     manager = SimpleNamespace()
     manager.list_instances = AsyncMock(return_value=[])
+    manager.get_instance_or_current = AsyncMock(return_value=None)
 
     # Test trigger_handler
     response = await browser_react_trigger_handler_tool(manager, ".test", "onClick")  # type: ignore[arg-type]
     assert response.success is False
-    assert "No browser instance available" in (response.error or "")
+    assert "Browser instance not available" in (response.error or "")
 
     # Test get_props
     response = await browser_react_get_props_tool(manager, ".test")  # type: ignore[arg-type]
     assert response.success is False
-    assert "No browser instance available" in (response.error or "")
+    assert "Browser instance not available" in (response.error or "")
 
     # Test get_state
     response = await browser_react_get_state_tool(manager, ".test")  # type: ignore[arg-type]
     assert response.success is False
-    assert "No browser instance available" in (response.error or "")
+    assert "Browser instance not available" in (response.error or "")
 
     # Test find_component
     response = await browser_react_find_component_tool(manager, "TestComponent")  # type: ignore[arg-type]
     assert response.success is False
-    assert "No browser instance available" in (response.error or "")
+    assert "Browser instance not available" in (response.error or "")
 
     # Test get_fiber_tree
     response = await browser_react_get_fiber_tree_tool(manager, ".test")  # type: ignore[arg-type]
     assert response.success is False
-    assert "No browser instance available" in (response.error or "")
+    assert "Browser instance not available" in (response.error or "")
