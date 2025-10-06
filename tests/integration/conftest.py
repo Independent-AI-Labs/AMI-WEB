@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-from pathlib import Path
 
 from loguru import logger
 
@@ -25,15 +24,8 @@ class MCPTestServer:
         """Start the server asynchronously."""
         # Import here to avoid import issues
 
-        # Use config.yaml if it exists, otherwise config.test.yaml, otherwise defaults
-        config_file: str | None = "config.test.yaml"
-        if Path("config.yaml").exists():
-            config_file = "config.yaml"
-        elif not Path("config.test.yaml").exists():
-            # Will use defaults if neither exists
-            config_file = None
-
-        self.manager = ChromeManager(config_file=config_file)
+        # ALWAYS use config.test.yaml - verified in tests/conftest.py
+        self.manager = ChromeManager(config_file="config.test.yaml")
         await self.manager.initialize()
 
         # TODO: Update this to use ChromeFastMCPServer when websocket support is added

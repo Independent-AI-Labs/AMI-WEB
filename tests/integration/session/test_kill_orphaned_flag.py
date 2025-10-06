@@ -1,6 +1,5 @@
 """Integration tests for kill_orphaned flag when restoring sessions with profile locks."""
 
-import asyncio
 import os
 from pathlib import Path
 
@@ -11,15 +10,11 @@ from browser.backend.utils.exceptions import InstanceError
 
 
 @pytest.mark.asyncio
-async def test_restore_fails_without_kill_orphaned_flag() -> None:
+async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
     """Test that restoring a session with an orphaned process fails without kill_orphaned=True."""
-    # Get the browser module root
-    test_file = Path(__file__).resolve()
-    browser_root = test_file.parent.parent.parent
-
     # Use absolute paths for storage directories
-    session_dir = browser_root / "data" / "sessions"
-    profiles_dir = browser_root / "data" / "profiles"
+    session_dir = data_dir / "sessions"
+    profiles_dir = data_dir / "profiles"
 
     config_overrides = {
         "backend.storage.session_dir": str(session_dir),
@@ -35,8 +30,8 @@ async def test_restore_fails_without_kill_orphaned_flag() -> None:
         manager1.profile_manager.delete_profile("test-profile")
     manager1.profile_manager.create_profile("test-profile", "Test profile for kill_orphaned tests")
 
-    # Launch with test-profile
-    _ = await manager1.get_or_create_instance(
+    # Launch with test-profile and KEEP reference to prevent garbage collection
+    instance1 = await manager1.get_or_create_instance(
         headless=True,
         profile="test-profile",
         use_pool=False,
@@ -53,6 +48,9 @@ async def test_restore_fails_without_kill_orphaned_flag() -> None:
 
     # Verify lock was created (use is_symlink because exists() fails for broken symlinks)
     assert singleton_lock.is_symlink(), f"SingletonLock should be a symlink. Profile dir contents: {list(profile_dir.iterdir())}"
+
+    # Verify instance is alive (and keep reference in scope)
+    assert instance1.is_alive(), f"Instance {instance1.id} should be alive"
 
     # Get the PID from the lock
     link_target = str(singleton_lock.readlink())
@@ -113,15 +111,11 @@ async def test_restore_fails_without_kill_orphaned_flag() -> None:
 
 
 @pytest.mark.asyncio
-async def test_restore_succeeds_with_kill_orphaned_flag() -> None:
+async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
     """Test that restoring a session with kill_orphaned=True kills the orphaned process and succeeds."""
-    # Get the browser module root
-    test_file = Path(__file__).resolve()
-    browser_root = test_file.parent.parent.parent
-
     # Use absolute paths for storage directories
-    session_dir = browser_root / "data" / "sessions"
-    profiles_dir = browser_root / "data" / "profiles"
+    session_dir = data_dir / "sessions"
+    profiles_dir = data_dir / "profiles"
 
     config_overrides = {
         "backend.storage.session_dir": str(session_dir),
@@ -137,8 +131,8 @@ async def test_restore_succeeds_with_kill_orphaned_flag() -> None:
         manager1.profile_manager.delete_profile("test-profile")
     manager1.profile_manager.create_profile("test-profile", "Test profile for kill_orphaned tests")
 
-    # Launch with test-profile
-    _ = await manager1.get_or_create_instance(
+    # Launch with test-profile and KEEP reference to prevent garbage collection
+    instance1 = await manager1.get_or_create_instance(
         headless=True,
         profile="test-profile",
         use_pool=False,
@@ -155,6 +149,9 @@ async def test_restore_succeeds_with_kill_orphaned_flag() -> None:
 
     # Verify lock was created (use is_symlink because exists() fails for broken symlinks)
     assert singleton_lock.is_symlink(), f"SingletonLock should be a symlink. Profile dir contents: {list(profile_dir.iterdir())}"
+
+    # Verify instance is alive (and keep reference in scope)
+    assert instance1.is_alive(), f"Instance {instance1.id} should be alive"
 
     # Get the PID from the lock
     link_target = str(singleton_lock.readlink())
@@ -206,15 +203,11 @@ async def test_restore_succeeds_with_kill_orphaned_flag() -> None:
 
 
 @pytest.mark.asyncio
-async def test_session_restore_with_kill_orphaned() -> None:
+async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
     """Test session restore with kill_orphaned flag through the full session workflow."""
-    # Get the browser module root
-    test_file = Path(__file__).resolve()
-    browser_root = test_file.parent.parent.parent
-
     # Use absolute paths for storage directories
-    session_dir = browser_root / "data" / "sessions"
-    profiles_dir = browser_root / "data" / "profiles"
+    session_dir = data_dir / "sessions"
+    profiles_dir = data_dir / "profiles"
 
     config_overrides = {
         "backend.storage.session_dir": str(session_dir),
@@ -309,6 +302,8 @@ async def test_session_restore_with_kill_orphaned() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(test_restore_fails_without_kill_orphaned_flag())
-    asyncio.run(test_restore_succeeds_with_kill_orphaned_flag())
-    asyncio.run(test_session_restore_with_kill_orphaned())
+    # Note: These tests require data_dir fixture from pytest, cannot run standalone
+    import sys
+
+    print("These tests require pytest fixtures. Run with: pytest test_kill_orphaned_flag.py")
+    sys.exit(1)

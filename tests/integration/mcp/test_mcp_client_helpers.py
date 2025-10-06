@@ -18,9 +18,9 @@ from mcp.shared.exceptions import McpError
 
 
 @pytest.mark.asyncio
-async def test_client_error_handling() -> None:
+async def test_client_error_handling(browser_root: Path) -> None:
     """Expect MCP client to surface errors when the server exits immediately."""
-    venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__).parent.parent)
+    venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
     server_params = StdioServerParameters(command=str(venv_python), args=["-c", "import sys; sys.exit(1)"], env=None)
 
     with pytest.raises((McpError, ExceptionGroup)):
@@ -29,9 +29,9 @@ async def test_client_error_handling() -> None:
 
 
 @pytest.mark.asyncio
-async def test_client_timeout() -> None:
+async def test_client_timeout(browser_root: Path) -> None:
     """Expect a TimeoutError when the server never responds to initialize."""
-    venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__).parent.parent)
+    venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
     server_params = StdioServerParameters(command=str(venv_python), args=["-c", "import time; time.sleep(100)"], env=None)
 
     with pytest.raises(TimeoutError):

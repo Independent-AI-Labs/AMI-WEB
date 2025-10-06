@@ -120,9 +120,23 @@ class BrowserOptionsBuilder:
                 return True
 
             cmd = result.stdout.strip()
-            logger.debug(f"Process {pid} detected, checking if it uses profile {profile_dir.name}")
 
-            if "chrome" in cmd.lower() and str(profile_dir) in cmd:
+            is_chrome = "chrome" in cmd.lower()
+
+            # Resolve profile_dir to absolute path for comparison
+            abs_profile_dir = str(profile_dir.resolve())
+
+            # Check if Chrome command contains this profile path
+            uses_profile = is_chrome and abs_profile_dir in cmd
+
+            cmd_preview_len = 200
+            logger.info(
+                f"Profile lock check: pid={pid}, is_chrome={is_chrome}, "
+                f"uses_profile={uses_profile}, profile={abs_profile_dir}, "
+                f"cmd_snippet={cmd[:cmd_preview_len] if len(cmd) > cmd_preview_len else cmd}"
+            )
+
+            if uses_profile:
                 if kill_orphaned:
                     self._kill_orphaned_process(pid, profile_dir, lock_files)
                     return True
@@ -155,6 +169,7 @@ class BrowserOptionsBuilder:
         singleton_lock = profile_dir / "SingletonLock"
 
         if not singleton_lock.is_symlink():
+            logger.info(f"No SingletonLock symlink at {profile_dir}, removing stale locks")
             self._remove_lock_files(lock_files)
             return
 
@@ -175,11 +190,12 @@ class BrowserOptionsBuilder:
 
             try:
                 os.kill(pid, 0)
+                logger.info(f"Process {pid} exists, checking if it uses profile {profile_dir}")
                 if self._check_process_using_profile(pid, profile_dir, lock_files, kill_orphaned):
                     self._remove_lock_files(lock_files)
                 return
             except ProcessLookupError:
-                logger.info(f"Process {pid} from SingletonLock no longer exists, removing stale locks")
+                logger.info(f"Process {pid} from SingletonLock no longer exists (ProcessLookupError), removing stale locks")
             except PermissionError:
                 logger.debug(f"Cannot verify process {pid}, keeping locks to be safe")
                 return

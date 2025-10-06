@@ -31,9 +31,17 @@ from browser.tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E
 logger.remove()
 logger.add(sys.stderr, level="INFO")
 
-# Test configuration - can be overridden by environment variable
+# Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 logger.info(f"Test browser mode: {'headless' if HEADLESS else 'visible'}")
+
+# CRITICAL: Tests MUST use config.test.yaml - no fallbacks
+TEST_CONFIG_FILE = Path("config.test.yaml")
+if not TEST_CONFIG_FILE.exists():
+    raise RuntimeError(
+        "config.test.yaml not found. Tests require test-specific configuration.\n"
+        "Ensure chrome_binary_path and chromedriver_path are set correctly in config.test.yaml"
+    )
 
 # Detect Chrome/Chromedriver availability and auto-install if missing
 from browser.backend.utils.config import Config as _Config  # noqa: E402
@@ -140,9 +148,8 @@ from browser.backend.utils.config import Config  # noqa: E402
 @pytest_asyncio.fixture(scope="session")
 async def session_manager() -> AsyncIterator[ChromeManager]:
     """Create a Chrome manager instance for the test session."""
-    # Use test config for testing
-    test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
-    manager = ChromeManager(config_file=test_config)
+    # ALWAYS use config.test.yaml - verified above
+    manager = ChromeManager(config_file="config.test.yaml")
     # Pool is configured through the manager's constructor using config file
     # No need to modify pool settings directly - they're set via PoolConfig
     await manager.initialize()
@@ -208,9 +215,8 @@ async def browser_instance(session_manager: ChromeManager) -> AsyncIterator[Brow
 async def antidetect_browser() -> AsyncIterator[BrowserInstance]:
     """Get an anti-detect browser instance from the pool."""
     # Create a new instance with anti-detect enabled
-    # Use test config for testing
-    test_config_file = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
-    config = Config.load(test_config_file)
+    # ALWAYS use config.test.yaml
+    config = Config.load("config.test.yaml")
     instance = BrowserInstance(config=config)
     await instance.launch(headless=HEADLESS, anti_detect=True)
     logger.info(f"Created anti-detect browser instance {instance.id}")
@@ -290,9 +296,8 @@ async def browser() -> AsyncIterator[BrowserInstance]:
 async def backend() -> AsyncIterator[ChromeManager]:
     """DEPRECATED: Create a Chrome manager for testing - one per test class."""
     logger.warning("Using deprecated 'backend' fixture - use 'session_manager' instead")
-    # Use test config for all tests
-    test_config = "config.test.yaml" if Path("config.test.yaml").exists() else "config.yaml"
-    manager = ChromeManager(config_file=test_config)
+    # ALWAYS use config.test.yaml
+    manager = ChromeManager(config_file="config.test.yaml")
     await manager.initialize()
 
     yield manager
@@ -304,6 +309,31 @@ async def backend() -> AsyncIterator[ChromeManager]:
 def temp_dir(tmp_path: Path) -> Path:
     """Create a temporary directory for test files."""
     return tmp_path
+
+
+@pytest.fixture(scope="session")
+def browser_root() -> Path:
+    """Browser module root directory - single source of truth."""
+    # conftest.py is at tests/conftest.py, so parent is browser root
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture(scope="session")
+def fixtures_dir(browser_root: Path) -> Path:
+    """HTML fixtures directory."""
+    return browser_root / "tests" / "fixtures" / "html"
+
+
+@pytest.fixture(scope="session")
+def data_dir(browser_root: Path) -> Path:
+    """Data directory for profiles/sessions."""
+    return browser_root / "data"
+
+
+@pytest.fixture(scope="session")
+def scripts_dir(browser_root: Path) -> Path:
+    """Scripts directory."""
+    return browser_root / "scripts"
 
 
 # Test configuration
@@ -350,37 +380,38 @@ def cleanup_test_data() -> None:
 
 
 def cleanup_processes() -> None:
-    """Kill any remaining browser or server processes."""
-    # No global manager to clean up - each test handles its own
+    """Clean up test data directories at session end.
 
+    NOTE: Does NOT kill browser processes - manager.shutdown() handles that.
+    If tests leave orphaned processes, fix the tests, don't kill everything.
+    """
     # Try to log cleanup, but suppress any errors if logger is closed
     try:
         if sys.stderr and not sys.stderr.closed:
-            logger.info("Cleaning up browser and server processes")
+            logger.info("Cleaning up test data directories")
     except (ValueError, AttributeError, RuntimeError):
         # Logger or stderr might be closed during cleanup
         pass
 
-    # Clean up test data directories
+    # Clean up test data directories only
     cleanup_test_data()
 
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            # Kill Chrome and ChromeDriver processes on Windows
-            subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], capture_output=True, check=False)
-            subprocess.run(["taskkill", "/F", "/IM", "chromedriver.exe"], capture_output=True, check=False)
-        else:
-            # Kill Chrome and ChromeDriver processes on Unix
-            subprocess.run(["pkill", "-f", "chrome"], capture_output=True, check=False)
-            subprocess.run(["pkill", "-f", "chromedriver"], capture_output=True, check=False)
+    # DO NOT kill processes - violates project rules (CLAUDE.md):
+    # "Manage processes only through scripts/ami-run.sh nodes/scripts/setup_service.py"
+    # "NEVER touch pkill/kill*"
+    # Each test's manager.shutdown() handles process cleanup properly
 
 
-# Pytest fixture to clean up test data after each test
+# Pytest fixture to clean up test data before and after each test
 @pytest.fixture(scope="function", autouse=True)
 def cleanup_test_data_fixture() -> Iterator[None]:
-    """Clean up test data after each test to prevent resource exhaustion."""
+    """Clean up test data BEFORE and AFTER each test to prevent resource exhaustion."""
+    # Clean BEFORE test for fresh start
+    cleanup_test_data()
+
     yield
-    # Run cleanup after test completes
+
+    # Clean AFTER test to prevent accumulation
     cleanup_test_data()
 
 

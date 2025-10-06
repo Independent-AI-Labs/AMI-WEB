@@ -32,10 +32,14 @@ _server_url: str | None = None
 class HTTPHandler(SimpleHTTPRequestHandler):
     """Custom HTTP handler for test files."""
 
+    # Class variable set by set_fixtures_dir fixture
+    test_fixtures_dir: Path | None = None
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        # Set directory to test fixtures
-        test_dir = Path(__file__).parent.parent / "fixtures" / "html"
-        super().__init__(*args, directory=str(test_dir), **kwargs)
+        # Use the class variable set by the fixture
+        if self.test_fixtures_dir is None:
+            raise RuntimeError("test_fixtures_dir not set - fixture not initialized")
+        super().__init__(*args, directory=str(self.test_fixtures_dir), **kwargs)
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         """Suppress HTTP server logs."""
@@ -78,6 +82,12 @@ def _get_server_url() -> str:
     if _server_url is None:
         raise RuntimeError("Test server not initialized")
     return _server_url
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_fixtures_dir(fixtures_dir: Path) -> None:
+    """Set the fixtures directory for the HTTP handler before any tests run."""
+    HTTPHandler.test_fixtures_dir = fixtures_dir
 
 
 def setup_module() -> None:

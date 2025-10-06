@@ -17,13 +17,13 @@ from mcp.client.stdio import stdio_client
 
 
 @pytest.mark.asyncio
-async def test_run_mcp_chrome_stdio_client() -> None:
+async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
     """Launch Chrome via unified runner and validate MCP handshake/tools."""
     # Path to the unified runner script (lives in base module)
-    run_mcp_script = Path(__file__).parent.parent.parent.parent / "base" / "scripts" / "run_mcp.py"
+    run_mcp_script = browser_root.parent / "base" / "scripts" / "run_mcp.py"
 
     # Use the browser module venv's Python
-    venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__).parent.parent)
+    venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
 
     # Create stdio server parameters for `run_mcp chrome`
     server_params = StdioServerParameters(

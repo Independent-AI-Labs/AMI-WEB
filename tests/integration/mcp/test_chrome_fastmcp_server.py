@@ -2,7 +2,6 @@
 """Integration tests for Chrome FastMCP server using official MCP client."""
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -10,22 +9,18 @@ from base.backend.utils.environment_setup import EnvironmentSetup
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-# Add browser to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 
 class TestChromeFastMCPServer:
     """Test Chrome FastMCP server using official MCP client."""
 
     @pytest.mark.asyncio
-    async def test_chrome_server_with_client(self) -> None:
+    async def test_chrome_server_with_client(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test Chrome FastMCP server using official MCP client."""
         # Get the server script path
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+        server_script = scripts_dir / "run_chrome.py"
 
         # Use the module's venv python
-
-        venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
 
         # Create stdio server parameters
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
@@ -55,11 +50,11 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration  # Mark as integration test that requires Chrome
-    async def test_browser_launch_and_terminate(self) -> None:
+    async def test_browser_launch_and_terminate(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test launching and terminating a browser instance."""
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
+        server_script = scripts_dir / "run_chrome.py"
 
-        venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
@@ -95,10 +90,10 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_save_and_restore(self) -> None:
+    async def test_session_save_and_restore(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test saving and restoring a browser session."""
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
-        venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+        server_script = scripts_dir / "run_chrome.py"
+        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
@@ -185,10 +180,10 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_list_and_delete(self) -> None:
+    async def test_session_list_and_delete(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test listing and deleting sessions."""
-        server_script = Path(__file__).parent.parent.parent / "scripts" / "run_chrome.py"
-        venv_python = EnvironmentSetup.get_module_venv_python(Path(__file__))
+        server_script = scripts_dir / "run_chrome.py"
+        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
