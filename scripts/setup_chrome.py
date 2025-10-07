@@ -70,9 +70,7 @@ def _invalidate_patched_driver(driver_path: Path) -> None:
     if patched_path.exists():
         try:
             patched_path.unlink()
-            print_colored(
-                f"Removed stale patched ChromeDriver at {patched_path}", YELLOW
-            )
+            print_colored(f"Removed stale patched ChromeDriver at {patched_path}", YELLOW)
         except OSError as exc:
             print_colored(f"Warning: failed to remove {patched_path}: {exc}", YELLOW)
 
@@ -113,7 +111,7 @@ def get_latest_chromium_revision() -> str:
     print_colored(f"Fetching latest Chromium revision from {url}...", YELLOW)
 
     _validate_google_url(url)
-    with urlopen(url) as response:
+    with urlopen(url) as response:  # noqa: S310
         revision_bytes = response.read()
         revision: str = revision_bytes.decode("utf-8").strip()
 
@@ -130,23 +128,10 @@ def _ensure_chromium_permissions(chrome_dir: Path, system: str) -> None:
     try:
         if system == "Darwin":
             app_contents = chrome_dir / "Chromium.app" / "Contents"
-            helpers_dir = (
-                app_contents
-                / "Frameworks"
-                / "Chromium Framework.framework"
-                / "Versions"
-                / "Current"
-                / "Helpers"
-            )
+            helpers_dir = app_contents / "Frameworks" / "Chromium Framework.framework" / "Versions" / "Current" / "Helpers"
 
             chrome_exe = app_contents / "MacOS" / "Chromium"
-            crashpad = (
-                helpers_dir
-                / "Chrome Crashpad Handler.app"
-                / "Contents"
-                / "MacOS"
-                / "Chrome Crashpad Handler"
-            )
+            crashpad = helpers_dir / "Chrome Crashpad Handler.app" / "Contents" / "MacOS" / "Chrome Crashpad Handler"
             sandbox = helpers_dir / "chrome_crashpad_handler"
         else:  # Linux and other Unix
             chrome_exe = chrome_dir / "chrome"
@@ -163,12 +148,10 @@ def _ensure_chromium_permissions(chrome_dir: Path, system: str) -> None:
                         YELLOW,
                     )
     except OSError as e:
-        print_colored(
-            f"Warning: failed to adjust Chromium binary permissions: {e}", YELLOW
-        )
+        print_colored(f"Warning: failed to adjust Chromium binary permissions: {e}", YELLOW)
 
 
-def download_chromium(revision: str) -> Path:
+def download_chromium(revision: str) -> Path:  # noqa: C901
     """Download Chromium for the current platform."""
     plat, _ = get_platform_info()
     system = platform.system()
@@ -208,7 +191,7 @@ def download_chromium(revision: str) -> Path:
     def download_with_progress(url: str, dest: Path) -> None:
         """Download file with progress indicator."""
         _validate_google_url(url)
-        response = urlopen(url)
+        response = urlopen(url)  # noqa: S310
         total_size = int(response.headers.get("Content-Length", 0))
         downloaded = 0
         block_size = 8192
@@ -222,9 +205,7 @@ def download_chromium(revision: str) -> Path:
                 downloaded += len(block)
                 if total_size > 0:
                     percent = (downloaded / total_size) * 100
-                    logger.info(
-                        f"\rDownloading: {percent:.1f}% ({downloaded}/{total_size} bytes)"
-                    )
+                    logger.info(f"\rDownloading: {percent:.1f}% ({downloaded}/{total_size} bytes)")
         logger.info("")  # New line after download
 
     download_with_progress(url, zip_path)
@@ -251,9 +232,7 @@ def download_chromium(revision: str) -> Path:
     # Remove quarantine on macOS
     if system == "Darwin":
         with contextlib.suppress(Exception):
-            subprocess.run(
-                ["xattr", "-cr", str(chrome_dir)], capture_output=True, check=False
-            )
+            subprocess.run(["xattr", "-cr", str(chrome_dir)], capture_output=True, check=False)
 
     print_colored(f"Chromium downloaded to {chrome_dir}", GREEN)
     return chrome_dir
@@ -325,15 +304,13 @@ def get_chrome_version(chrome_dir: Path, revision: str | None = None) -> str:
 
     version = _version_from_revision(revision)
     if version:
-        print_colored(
-            f"Chrome version (from revision heuristic {revision}): {version}", GREEN
-        )
+        print_colored(f"Chrome version (from revision heuristic {revision}): {version}", GREEN)
         return version
 
     raise RuntimeError("Unable to determine Chrome version from binary or revision")
 
 
-def download_chromedriver_from_testing(major_version: str) -> Path:
+def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C901
     """Download ChromeDriver from Chrome for Testing matching the major version."""
     system = platform.system()
     _, arch = get_platform_info()
@@ -352,14 +329,12 @@ def download_chromedriver_from_testing(major_version: str) -> Path:
     driver_path = BUILD_DIR / driver_name
 
     # Get the latest version for this major version
-    print_colored(
-        f"Finding latest ChromeDriver for major version {major_version}...", YELLOW
-    )
+    print_colored(f"Finding latest ChromeDriver for major version {major_version}...", YELLOW)
 
     # Get available versions from Chrome for Testing
     url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
     _validate_google_url(url)
-    with urlopen(url) as response:
+    with urlopen(url) as response:  # noqa: S310
         data = json.loads(response.read().decode("utf-8"))
 
     # Find the latest version matching our major version
@@ -382,13 +357,11 @@ def download_chromedriver_from_testing(major_version: str) -> Path:
     download_url = f"https://storage.googleapis.com/chrome-for-testing-public/{matching_version}/{platform_str}/chromedriver-{platform_str}.zip"
     zip_path = BUILD_DIR / "chromedriver.zip"
 
-    print_colored(
-        f"Downloading ChromeDriver {matching_version} from {download_url}...", YELLOW
-    )
+    print_colored(f"Downloading ChromeDriver {matching_version} from {download_url}...", YELLOW)
 
     try:
         _validate_google_url(download_url)
-        urlretrieve(download_url, zip_path)
+        urlretrieve(download_url, zip_path)  # noqa: S310
     except (OSError, ValueError) as e:
         print_colored(f"Failed to download ChromeDriver: {e}", RED)
         raise
@@ -423,16 +396,14 @@ def download_chromedriver_from_testing(major_version: str) -> Path:
     # Remove quarantine on macOS
     if system == "Darwin":
         with contextlib.suppress(Exception):
-            subprocess.run(
-                ["xattr", "-cr", str(driver_path)], capture_output=True, check=False
-            )
+            subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
     _invalidate_patched_driver(driver_path)
     return driver_path
 
 
-def download_chromedriver(version: str) -> Path:
+def download_chromedriver(version: str) -> Path:  # noqa: C901
     """Download ChromeDriver matching the Chrome version."""
     system = platform.system()
     _, arch = get_platform_info()
@@ -452,9 +423,7 @@ def download_chromedriver(version: str) -> Path:
                 check=True,
             )
             if version in result.stdout:
-                print_colored(
-                    f"ChromeDriver {version} already exists at {driver_path}", GREEN
-                )
+                print_colored(f"ChromeDriver {version} already exists at {driver_path}", GREEN)
                 return driver_path
         except Exception:
             ...
@@ -477,14 +446,14 @@ def download_chromedriver(version: str) -> Path:
 
     try:
         _validate_google_url(url)
-        urlretrieve(url, zip_path)
+        urlretrieve(url, zip_path)  # noqa: S310
     except (OSError, ValueError) as e:
         print_colored(f"Failed to download ChromeDriver: {e}", RED)
         print_colored("Trying alternative download method...", YELLOW)
         # Try alternative URL format
         url = f"https://chromedriver.storage.googleapis.com/{version}/chromedriver_{platform_str}.zip"
         _validate_google_url(url)
-        urlretrieve(url, zip_path)
+        urlretrieve(url, zip_path)  # noqa: S310
 
     print_colored("Extracting ChromeDriver...", YELLOW)
 
@@ -514,9 +483,7 @@ def download_chromedriver(version: str) -> Path:
     # Remove quarantine on macOS
     if system == "Darwin":
         with contextlib.suppress(Exception):
-            subprocess.run(
-                ["xattr", "-cr", str(driver_path)], capture_output=True, check=False
-            )
+            subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
     _invalidate_patched_driver(driver_path)

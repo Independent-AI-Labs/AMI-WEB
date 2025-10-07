@@ -55,9 +55,7 @@ async def test_window_open_corrupts_original_tab_url() -> None:
     # Verify we're on the first URL
     current_url_after_nav = instance.driver.current_url
     print(f"✓ Navigated to: {current_url_after_nav}")
-    assert (
-        first_url in current_url_after_nav
-    ), f"Should be on {first_url}, got {current_url_after_nav}"
+    assert first_url in current_url_after_nav, f"Should be on {first_url}, got {current_url_after_nav}"
 
     # Record the handle of the first tab
     first_tab_handle = instance.driver.current_window_handle
@@ -87,9 +85,7 @@ async def test_window_open_corrupts_original_tab_url() -> None:
     print(f"DEBUG: First tab URL is now: {first_tab_url_after_open}")
 
     # Save the session
-    session_id = await manager.session_manager.save_session(
-        instance, "window-open-bug-test"
-    )
+    session_id = await manager.session_manager.save_session(instance, "window-open-bug-test")
     print(f"✓ Saved session {session_id}")
 
     # Read the saved session file to inspect what was actually saved
@@ -103,9 +99,7 @@ async def test_window_open_corrupts_original_tab_url() -> None:
     print("\n=== SAVED SESSION DATA ===")
     print(f"Number of saved tabs: {len(saved_tabs)}")
     for i, tab in enumerate(saved_tabs):
-        print(
-            f"Tab {i}: handle={tab['handle']}, url={tab['url']}, title={tab['title']}"
-        )
+        print(f"Tab {i}: handle={tab['handle']}, url={tab['url']}, title={tab['title']}")
 
     # ASSERTION: The bug is that the first tab's URL is saved as "about:blank"
     # instead of the original URL
@@ -118,16 +112,13 @@ async def test_window_open_corrupts_original_tab_url() -> None:
 
     # This assertion will FAIL if the bug exists
     assert first_url in first_saved_url, (
-        f"BUG REPRODUCED: First tab URL was saved as '{first_saved_url}' "
-        f"instead of '{first_url}' after using window.open()!"
+        f"BUG REPRODUCED: First tab URL was saved as '{first_saved_url}' " f"instead of '{first_url}' after using window.open()!"
     )
 
     # Also verify the second tab was saved correctly
     second_saved_tab = saved_tabs[1]
     second_saved_url = second_saved_tab["url"]
-    assert (
-        "reddit.com" in second_saved_url
-    ), f"Second tab should be reddit.com, got {second_saved_url}"
+    assert "reddit.com" in second_saved_url, f"Second tab should be reddit.com, got {second_saved_url}"
 
     # Clean up
     await manager.shutdown()

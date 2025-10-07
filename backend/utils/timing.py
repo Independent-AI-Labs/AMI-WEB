@@ -64,9 +64,7 @@ def wait_with_retry(
             last_exception = e
             time.sleep(poll_interval)
 
-    raise TimeoutError(
-        f"Timed out after {timeout}s waiting for {func.__name__}. Last error: {last_exception}"
-    )
+    raise TimeoutError(f"Timed out after {timeout}s waiting for {func.__name__}. Last error: {last_exception}")
 
 
 def with_timeout(timeout: float) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -90,16 +88,12 @@ def with_timeout(timeout: float) -> Callable[[Callable[..., Any]], Callable[...,
                     try:
                         return future.result(timeout=timeout)
                     except FutureTimeoutError as e:
-                        raise TimeoutError(
-                            f"Function {func.__name__} timed out after {timeout}s"
-                        ) from e
+                        raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s") from e
             else:
                 # Unix-based systems can use signal
 
                 def timeout_handler(_signum: Any, _frame: Any) -> None:
-                    raise TimeoutError(
-                        f"Function {func.__name__} timed out after {timeout}s"
-                    )
+                    raise TimeoutError(f"Function {func.__name__} timed out after {timeout}s")
 
                 # Set timeout alarm
                 old_handler = signal.signal(signal.SIGALRM, timeout_handler)

@@ -69,9 +69,7 @@ class SessionManager:
         """Check if URL is a real page (not chrome:// or about:blank)."""
         return not ("chrome://" in url or "about:blank" in url or url == "data:,")
 
-    def _collect_tab_cookies(
-        self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]
-    ) -> None:
+    def _collect_tab_cookies(self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]) -> None:
         """Collect cookies from a tab if it's a real page."""
         if not tab_url.startswith(("http://", "https://")):
             return
@@ -80,16 +78,12 @@ class SessionManager:
             tab_cookies = driver.get_cookies()
             for cookie in tab_cookies:
                 cookie_key = (cookie.get("name"), cookie.get("domain"))
-                if not any(
-                    (c.get("name"), c.get("domain")) == cookie_key for c in all_cookies
-                ):
+                if not any((c.get("name"), c.get("domain")) == cookie_key for c in all_cookies):
                     all_cookies.append(cookie)
         except Exception as e:
             logger.warning(f"Failed to get cookies from tab {tab_url}: {e}")
 
-    def _determine_active_tab(
-        self, tabs: list[dict[str, str]], current_handle: str | None
-    ) -> str | None:
+    def _determine_active_tab(self, tabs: list[dict[str, str]], current_handle: str | None) -> str | None:
         """Determine which tab is actually active - fails if state is ambiguous."""
         if not tabs:
             return None
@@ -97,27 +91,19 @@ class SessionManager:
         if not current_handle:
             from browser.backend.utils.exceptions import SessionError
 
-            raise SessionError(
-                "No current window handle available - cannot determine active tab"
-            )
+            raise SessionError("No current window handle available - cannot determine active tab")
 
-        current_tab_data = next(
-            (t for t in tabs if t["handle"] == str(current_handle)), None
-        )
+        current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None)
 
         if not current_tab_data:
             from browser.backend.utils.exceptions import SessionError
 
-            raise SessionError(
-                f"Current window handle {current_handle} not found in tab list - browser state corrupted"
-            )
+            raise SessionError(f"Current window handle {current_handle} not found in tab list - browser state corrupted")
 
         # Return the actual current handle - explicit failure on any ambiguity
         return str(current_handle)
 
-    def _get_active_tab_data(
-        self, tabs: list[dict[str, str]], actual_active_tab: str | None
-    ) -> dict[str, str] | None:
+    def _get_active_tab_data(self, tabs: list[dict[str, str]], actual_active_tab: str | None) -> dict[str, str] | None:
         """Get tab data for the active tab - fails if active tab not found."""
         if not tabs:
             return None
@@ -127,9 +113,7 @@ class SessionManager:
             if not tab_data:
                 from browser.backend.utils.exceptions import SessionError
 
-                raise SessionError(
-                    f"Active tab {actual_active_tab} not found in tab list - cannot save corrupted session state"
-                )
+                raise SessionError(f"Active tab {actual_active_tab} not found in tab list - cannot save corrupted session state")
             return tab_data
 
         # No active tab specified - fail explicitly
@@ -146,9 +130,7 @@ class SessionManager:
             or "your connection is not private" in page_source
         )
 
-    def _restore_cookies_to_tab(
-        self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]
-    ) -> int:
+    def _restore_cookies_to_tab(self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]) -> int:
         """Restore cookies to a single tab. Returns count of cookies restored."""
         # Navigate to domain root for cookie setting
         domain_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
@@ -166,25 +148,19 @@ class SessionManager:
         for cookie in cookies:
             cookie_domain = cookie.get("domain", "")
             if cookie_domain and (
-                parsed_url.netloc == cookie_domain.lstrip(".")
-                or parsed_url.netloc.endswith(cookie_domain)
-                or cookie_domain.lstrip(".") in parsed_url.netloc
+                parsed_url.netloc == cookie_domain.lstrip(".") or parsed_url.netloc.endswith(cookie_domain) or cookie_domain.lstrip(".") in parsed_url.netloc
             ):
                 try:
                     driver.add_cookie(cookie)
                     count += 1
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}"
-                    )
+                    logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
 
         # Navigate back to the actual tab URL
         driver.get(tab_url)
         return count
 
-    def _restore_all_tabs(
-        self, driver: Any, tabs: list[dict[str, str]]
-    ) -> dict[str, str]:
+    def _restore_all_tabs(self, driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
         """Restore all tabs from session data. Returns mapping of old handles to new handles."""
         handle_mapping = {}
 
@@ -254,9 +230,7 @@ class SessionManager:
         session_dir.mkdir(exist_ok=True)
 
         # Use profile_override if provided, otherwise use instance profile
-        session_profile = (
-            profile_override if profile_override is not None else instance._profile_name
-        )
+        session_profile = profile_override if profile_override is not None else instance._profile_name
 
         # Capture all tabs
         tabs = []
@@ -290,9 +264,7 @@ class SessionManager:
                     except Exception as e:
                         from browser.backend.utils.exceptions import SessionError
 
-                        raise SessionError(
-                            f"Failed to capture tab {handle}: {e} - cannot save incomplete session"
-                        ) from e
+                        raise SessionError(f"Failed to capture tab {handle}: {e} - cannot save incomplete session") from e
 
                 # Build tabs list from captured state
                 for handle in all_handles:
@@ -305,15 +277,11 @@ class SessionManager:
                 # Switch back to the original active tab
                 if original_handle and original_handle in all_handles:
                     instance.driver.switch_to.window(original_handle)
-                elif actual_active_tab and actual_active_tab in [
-                    str(h) for h in all_handles
-                ]:
+                elif actual_active_tab and actual_active_tab in [str(h) for h in all_handles]:
                     instance.driver.switch_to.window(actual_active_tab)
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to capture all tabs: {e}. Falling back to single tab capture."
-                )
+                logger.warning(f"Failed to capture all tabs: {e}. Falling back to single tab capture.")
                 # If something goes wrong, use current handle
                 actual_active_tab = str(current_handle) if current_handle else None
 
@@ -328,16 +296,10 @@ class SessionManager:
             "name": name or f"session_{session_id[:8]}",
             "created_at": datetime.now().isoformat(),
             "profile": session_profile,
-            "url": active_tab_data["url"]
-            if active_tab_data
-            else (instance.driver.current_url if instance.driver else None),
-            "title": active_tab_data["title"]
-            if active_tab_data
-            else (instance.driver.title if instance.driver else None),
+            "url": active_tab_data["url"] if active_tab_data else (instance.driver.current_url if instance.driver else None),
+            "title": active_tab_data["title"] if active_tab_data else (instance.driver.title if instance.driver else None),
             "cookies": all_cookies,  # All cookies from all tabs
-            "window_handles": len(instance.driver.window_handles)
-            if instance.driver
-            else 0,
+            "window_handles": len(instance.driver.window_handles) if instance.driver else 0,
             "tabs": tabs,
             "active_tab_handle": actual_active_tab,
         }
@@ -390,19 +352,13 @@ class SessionManager:
 
         # Restore cookies to ALL tabs that can accept them
         if session_data.get("cookies"):
-            cookies_restored = self._restore_all_cookies(
-                driver, tabs, handle_mapping, session_data["cookies"]
-            )
-            logger.info(
-                f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies"
-            )
+            cookies_restored = self._restore_all_cookies(driver, tabs, handle_mapping, session_data["cookies"])
+            logger.info(f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies")
 
         # Switch to the originally active tab
         if active_tab_handle and active_tab_handle in handle_mapping:
             driver.switch_to.window(handle_mapping[active_tab_handle])
-            logger.info(
-                f"Restored {len(tabs)} tabs and switched to original active tab"
-            )
+            logger.info(f"Restored {len(tabs)} tabs and switched to original active tab")
         else:
             logger.info(f"Restored {len(tabs)} tabs")
 
@@ -430,15 +386,9 @@ class SessionManager:
         session_data = self._load_session_data(session_id)
 
         # Determine profile to use
-        profile_name = (
-            profile_override
-            if profile_override is not None
-            else session_data.get("profile")
-        )
+        profile_name = profile_override if profile_override is not None else session_data.get("profile")
         if profile_override is not None:
-            logger.info(
-                f"Overriding saved profile with '{profile_override}' for session {session_id}"
-            )
+            logger.info(f"Overriding saved profile with '{profile_override}' for session {session_id}")
 
         # Create browser instance
         use_headless = headless if headless is not None else False

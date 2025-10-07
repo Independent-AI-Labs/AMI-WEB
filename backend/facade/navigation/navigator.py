@@ -14,9 +14,7 @@ from browser.backend.utils.exceptions import NavigationError
 class Navigator(BaseController):
     """Handles core browser navigation operations."""
 
-    async def navigate(
-        self, url: str, wait_for: WaitCondition | None = None, timeout: int = 30
-    ) -> PageResult:
+    async def navigate(self, url: str, wait_for: WaitCondition | None = None, timeout: int = 30) -> PageResult:
         """Navigate to a URL with optional wait conditions.
 
         Args:
@@ -40,9 +38,7 @@ class Navigator(BaseController):
             return self._navigate_sync(url, wait_for, timeout)
         return await self._navigate_async(url, wait_for, timeout)
 
-    def _navigate_sync(
-        self, url: str, wait_for: WaitCondition | None, timeout: int
-    ) -> PageResult:
+    def _navigate_sync(self, url: str, wait_for: WaitCondition | None, timeout: int) -> PageResult:
         """Synchronous navigation for thread context."""
         start_time = time.time()
 
@@ -64,13 +60,7 @@ class Navigator(BaseController):
 
             title = self.driver.title if self.driver else ""
             current_url = self.driver.current_url if self.driver else ""
-            content_length = (
-                self.driver.execute_script(
-                    "return document.documentElement.innerHTML.length"
-                )
-                if self.driver
-                else 0
-            )
+            content_length = self.driver.execute_script("return document.documentElement.innerHTML.length") if self.driver else 0
 
             self.instance.update_activity()
 
@@ -88,9 +78,7 @@ class Navigator(BaseController):
             logger.error(f"Navigation failed for {url}: {e}")
             raise NavigationError(f"Failed to navigate to {url}: {e}") from e
 
-    async def _navigate_async(
-        self, url: str, wait_for: WaitCondition | None, timeout: int
-    ) -> PageResult:
+    async def _navigate_async(self, url: str, wait_for: WaitCondition | None, timeout: int) -> PageResult:
         """Asynchronous navigation for normal context."""
         start_time = asyncio.get_event_loop().time()
 
@@ -197,9 +185,7 @@ class Navigator(BaseController):
             else:
                 loop = asyncio.get_event_loop()
                 if force:
-                    await loop.run_in_executor(
-                        None, self.driver.execute_script, "location.reload(true)"
-                    )
+                    await loop.run_in_executor(None, self.driver.execute_script, "location.reload(true)")
                 else:
                     await loop.run_in_executor(None, self.driver.refresh)
 

@@ -37,7 +37,5 @@ async def browser_capture_tool(
         return await browser_screenshot_tool(manager, full_page, save_to_disk)
 
     if not selector:
-        return BrowserResponse(
-            success=False, error="selector required for element_screenshot action"
-        )
+        return BrowserResponse(success=False, error="selector required for element_screenshot action")
     return await browser_element_screenshot_tool(manager, selector, save_to_disk)

@@ -98,9 +98,7 @@ class TestProfileIsolation:
         assert dir2 is not None, "Profile2 should have user-data-dir set"
 
         # Verify they are different
-        assert (
-            dir1 != dir2
-        ), f"User data directories must be different: {dir1} vs {dir2}"
+        assert dir1 != dir2, f"User data directories must be different: {dir1} vs {dir2}"
 
         # Verify they match the expected profile paths
         assert "profile1" in dir1

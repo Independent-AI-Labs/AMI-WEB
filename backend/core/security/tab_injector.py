@@ -1,6 +1,6 @@
 """Tab injector using CDP events - NO POLLING."""
 
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -52,9 +52,7 @@ class SimpleTabInjector:
 
             script_id = result.get("identifier", "unknown")
             logger.info(f"CDP injection setup complete with script ID: {script_id}")
-            logger.info(
-                "Script will be injected into ALL new tabs/documents automatically - NO POLLING"
-            )
+            logger.info("Script will be injected into ALL new tabs/documents automatically - NO POLLING")
 
         except Exception as e:
             logger.error(f"Failed to setup CDP injection: {e}")
@@ -76,19 +74,13 @@ class SimpleTabInjector:
             self.driver.execute_script(self.antidetect_script)
 
             # Verify injection worked
-            plugin_count = self.driver.execute_script(
-                "return navigator.plugins ? navigator.plugins.length : -1"
-            )
+            plugin_count = self.driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
 
             if plugin_count > 0:
                 self._injected_tabs.add(current_handle)
-                logger.info(
-                    f"Successfully injected into tab {current_handle}, plugins: {plugin_count}"
-                )
+                logger.info(f"Successfully injected into tab {current_handle}, plugins: {plugin_count}")
                 return True
-            logger.warning(
-                f"Injection may have failed for tab {current_handle}, plugins: {plugin_count}"
-            )
+            logger.warning(f"Injection may have failed for tab {current_handle}, plugins: {plugin_count}")
             return False
 
         except Exception as e:

@@ -31,9 +31,7 @@ class VideoRecorder(BaseController):
         super().__init__(instance)
         self.recording_sessions: dict[str, dict[str, Any]] = {}
 
-    async def start_recording(
-        self, output_path: str, fps: int = 30, codec: str = "h264"
-    ) -> RecordingSession:
+    async def start_recording(self, output_path: str, fps: int = 30, codec: str = "h264") -> RecordingSession:
         """Start recording browser session to video.
 
         Args:
@@ -61,9 +59,7 @@ class VideoRecorder(BaseController):
         self.recording_sessions[session_id] = {
             "session": session,
             "writer": None,
-            "task": asyncio.create_task(
-                self._record_loop(session_id, str(output_file), fps, codec)
-            ),
+            "task": asyncio.create_task(self._record_loop(session_id, str(output_file), fps, codec)),
         }
 
         logger.info(f"Started recording session {session_id} to {output_path}")
@@ -140,9 +136,7 @@ class VideoRecorder(BaseController):
         fourcc = fourcc_func(*"mp4v")
         return cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    async def _maybe_capture_frame(
-        self, recording: dict[str, Any], writer: Any, start_time: float
-    ) -> None:
+    async def _maybe_capture_frame(self, recording: dict[str, Any], writer: Any, start_time: float) -> None:
         """Capture a frame if the recording session is active."""
 
         if recording["session"].status != "recording":
@@ -160,9 +154,7 @@ class VideoRecorder(BaseController):
         recording["session"].frame_count += 1
         recording["session"].duration = time.time() - start_time
 
-    async def _record_loop(
-        self, session_id: str, output_path: str, fps: int, _codec: str
-    ) -> None:
+    async def _record_loop(self, session_id: str, output_path: str, fps: int, _codec: str) -> None:
         """Recording loop that captures frames.
 
         Args:
@@ -222,9 +214,7 @@ class VideoRecorder(BaseController):
             return session if isinstance(session, RecordingSession) else None
         return None
 
-    async def record_action(
-        self, action: str, duration: float = 5.0, output_path: str | None = None
-    ) -> str:
+    async def record_action(self, action: str, duration: float = 5.0, output_path: str | None = None) -> str:
         """Record a specific action for a duration.
 
         Args:
@@ -237,9 +227,7 @@ class VideoRecorder(BaseController):
         """
         if not output_path:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = (
-                f"recordings/action_{action.replace(' ', '_')}_{timestamp}.mp4"
-            )
+            output_path = f"recordings/action_{action.replace(' ', '_')}_{timestamp}.mp4"
 
         # Start recording
         session = await self.start_recording(output_path)
@@ -254,9 +242,7 @@ class VideoRecorder(BaseController):
         logger.info(f"Recorded action '{action}' to {output_path}")
         return output_path
 
-    async def capture_gif(
-        self, duration: float = 3.0, fps: int = 10, output_path: str | None = None
-    ) -> str:
+    async def capture_gif(self, duration: float = 3.0, fps: int = 10, output_path: str | None = None) -> str:
         """Capture a GIF animation of the browser.
 
         Args:
@@ -289,9 +275,7 @@ class VideoRecorder(BaseController):
                 loop = asyncio.get_event_loop()
                 screenshot_base64 = await loop.run_in_executor(
                     None,
-                    lambda: self.driver.get_screenshot_as_base64()
-                    if self.driver
-                    else "",
+                    lambda: self.driver.get_screenshot_as_base64() if self.driver else "",
                 )
 
             screenshot_bytes = base64.b64decode(screenshot_base64)

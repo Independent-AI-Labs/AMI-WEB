@@ -5,30 +5,25 @@ import json
 from pathlib import Path
 
 import pytest
+from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
-from base.backend.utils.environment_setup import EnvironmentSetup
 
 
 class TestChromeFastMCPServer:
     """Test Chrome FastMCP server using official MCP client."""
 
     @pytest.mark.asyncio
-    async def test_chrome_server_with_client(
-        self, browser_root: Path, scripts_dir: Path
-    ) -> None:
+    async def test_chrome_server_with_client(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test Chrome FastMCP server using official MCP client."""
         # Get the server script path
         server_script = scripts_dir / "run_chrome.py"
 
         # Use the module's venv python
-        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
+        venv_python = get_venv_python(browser_root)
 
         # Create stdio server parameters
-        server_params = StdioServerParameters(
-            command=str(venv_python), args=["-u", str(server_script)], env=None
-        )
+        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         # Use the stdio client to connect
         async with stdio_client(server_params) as (
@@ -58,16 +53,12 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration  # Mark as integration test that requires Chrome
-    async def test_browser_launch_and_terminate(
-        self, browser_root: Path, scripts_dir: Path
-    ) -> None:
+    async def test_browser_launch_and_terminate(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test launching and terminating a browser instance."""
         server_script = scripts_dir / "run_chrome.py"
 
-        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(
-            command=str(venv_python), args=["-u", str(server_script)], env=None
-        )
+        venv_python = get_venv_python(browser_root)
+        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (
             read_stream,
@@ -119,15 +110,11 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_save_and_restore(
-        self, browser_root: Path, scripts_dir: Path
-    ) -> None:
+    async def test_session_save_and_restore(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test saving and restoring a browser session."""
         server_script = scripts_dir / "run_chrome.py"
-        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(
-            command=str(venv_python), args=["-u", str(server_script)], env=None
-        )
+        venv_python = get_venv_python(browser_root)
+        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (
             read_stream,
@@ -260,15 +247,11 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_list_and_delete(
-        self, browser_root: Path, scripts_dir: Path
-    ) -> None:
+    async def test_session_list_and_delete(self, browser_root: Path, scripts_dir: Path) -> None:
         """Test listing and deleting sessions."""
         server_script = scripts_dir / "run_chrome.py"
-        venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(
-            command=str(venv_python), args=["-u", str(server_script)], env=None
-        )
+        venv_python = get_venv_python(browser_root)
+        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         async with stdio_client(server_params) as (
             read_stream,
@@ -312,9 +295,7 @@ class TestChromeFastMCPServer:
             autosaved_session_id = term_response["data"]["session_id"]
 
             # List sessions
-            list_result = await session.call_tool(
-                "browser_session", arguments={"action": "list_sessions"}
-            )
+            list_result = await session.call_tool("browser_session", arguments={"action": "list_sessions"})
             list_content = list_result.content[0]
             assert hasattr(list_content, "text")
             list_response = json.loads(list_content.text)
@@ -337,16 +318,12 @@ class TestChromeFastMCPServer:
             assert delete_response.get("success") is True
 
             # Verify it's deleted by listing again
-            list_result2 = await session.call_tool(
-                "browser_session", arguments={"action": "list_sessions"}
-            )
+            list_result2 = await session.call_tool("browser_session", arguments={"action": "list_sessions"})
             list_content2 = list_result2.content[0]
             assert hasattr(list_content2, "text")
             list_response2 = json.loads(list_content2.text)
             sessions2 = list_response2["data"]["sessions"]
-            deleted_session = next(
-                (s for s in sessions2 if s["id"] == session_id), None
-            )
+            deleted_session = next((s for s in sessions2 if s["id"] == session_id), None)
             assert deleted_session is None
 
             # Clean up the autosaved session

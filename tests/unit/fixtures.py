@@ -51,9 +51,7 @@ def mock_websocket() -> Any:
 def mock_mcp_request() -> Any:
     """Create a mock MCP request."""
 
-    def _make_request(
-        method: str, params: dict[str, Any] | None = None, request_id: int = 1
-    ) -> dict[str, Any]:
+    def _make_request(method: str, params: dict[str, Any] | None = None, request_id: int = 1) -> dict[str, Any]:
         return {
             "jsonrpc": "2.0",
             "method": method,
@@ -68,9 +66,7 @@ def mock_mcp_request() -> Any:
 def mock_mcp_response() -> Any:
     """Create a mock MCP response."""
 
-    def _make_response(
-        result: Any, response_id: int = 1, error: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    def _make_response(result: Any, response_id: int = 1, error: dict[str, Any] | None = None) -> dict[str, Any]:
         if error:
             return {"jsonrpc": "2.0", "error": error, "id": response_id}
         return {"jsonrpc": "2.0", "result": result, "id": response_id}

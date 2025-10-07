@@ -127,9 +127,7 @@ def test_compute_chunk_detects_checksum_mismatch() -> None:
     )
 
     payload = "abcdefgh"
-    first = compute_chunk(
-        config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None
-    )
+    first = compute_chunk(config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None)
 
     with pytest.raises(ChunkComputationError):
         compute_chunk(
@@ -163,9 +161,7 @@ def test_compute_chunk_handles_offset_at_end() -> None:
     )
 
     payload = "abcd"
-    first = compute_chunk(
-        config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None
-    )
+    first = compute_chunk(config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None)
 
     terminal = compute_chunk(
         config,

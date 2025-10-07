@@ -80,9 +80,7 @@ class HTMLTestServer:
                     "token": "test-token-123",
                 }
             )
-        return web.json_response(
-            {"success": False, "message": "Invalid credentials"}, status=401
-        )
+        return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
 
     async def handle_api_data(self, _request: Request) -> Response:
         """Handle API data requests."""

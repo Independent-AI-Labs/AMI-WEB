@@ -50,9 +50,7 @@ async def browser_extract_tool(  # noqa: PLR0913
 
     if action == "get_text":
         if not selector:
-            return BrowserResponse(
-                success=False, error="selector required for get_text action"
-            )
+            return BrowserResponse(success=False, error="selector required for get_text action")
 
         if use_chunking:
             return await browser_get_text_chunk_tool(

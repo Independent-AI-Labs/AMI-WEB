@@ -23,9 +23,7 @@ class TestAntiDetection:
         try:
             driver.get("https://bot.sannysoft.com")
             wait = WebDriverWait(driver, 10)
-            wait.until(
-                expected_conditions.presence_of_element_located((By.TAG_NAME, "table"))
-            )
+            wait.until(expected_conditions.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(2)
 
             # Check critical anti-detection features
@@ -45,27 +43,17 @@ class TestAntiDetection:
                         results["plugins"] = "0" not in test_result
                         results["plugin_count"] = test_result
                     elif "WebGL Vendor" in test_name:
-                        results["webgl_vendor"] = (
-                            "Google Inc." in test_result or "Intel" in test_result
-                        )
+                        results["webgl_vendor"] = "Google Inc." in test_result or "Intel" in test_result
                         results["webgl_vendor_actual"] = test_result
                     elif "WebGL Renderer" in test_name:
-                        results["webgl_renderer"] = (
-                            "ANGLE" in test_result or "Intel" in test_result
-                        )
+                        results["webgl_renderer"] = "ANGLE" in test_result or "Intel" in test_result
                         results["webgl_renderer_actual"] = test_result
 
             # Assert critical features
             assert results.get("webdriver", False), "WebDriver detection failed"
-            assert results.get(
-                "plugins", False
-            ), f"No plugins detected: {results.get('plugin_count', 'unknown')}"
-            assert results.get(
-                "webgl_vendor", False
-            ), f"WebGL vendor not properly spoofed. Actual: {results.get('webgl_vendor_actual', 'unknown')}"
-            assert results.get(
-                "webgl_renderer", False
-            ), f"WebGL renderer not properly spoofed. Actual: {results.get('webgl_renderer_actual', 'unknown')}"
+            assert results.get("plugins", False), f"No plugins detected: {results.get('plugin_count', 'unknown')}"
+            assert results.get("webgl_vendor", False), f"WebGL vendor not properly spoofed. Actual: {results.get('webgl_vendor_actual', 'unknown')}"
+            assert results.get("webgl_renderer", False), f"WebGL renderer not properly spoofed. Actual: {results.get('webgl_renderer_actual', 'unknown')}"
 
         finally:
             ...  # Cleanup handled by fixture
@@ -89,15 +77,9 @@ class TestAntiDetection:
 
     def _run_plugin_checks(self, driver: Any) -> int:
         """Run plugin detection checks."""
-        plugin_count: int = driver.execute_script(
-            "return navigator.plugins ? navigator.plugins.length : -1"
-        )
-        plugin_proto = driver.execute_script(
-            "return Object.getPrototypeOf(navigator.plugins).constructor.name"
-        )
-        plugin_0_proto = driver.execute_script(
-            "return navigator.plugins[0] ? Object.getPrototypeOf(navigator.plugins[0]).constructor.name : 'none'"
-        )
+        plugin_count: int = driver.execute_script("return navigator.plugins ? navigator.plugins.length : -1")
+        plugin_proto = driver.execute_script("return Object.getPrototypeOf(navigator.plugins).constructor.name")
+        plugin_0_proto = driver.execute_script("return navigator.plugins[0] ? Object.getPrototypeOf(navigator.plugins[0]).constructor.name : 'none'")
         logger.info(f"navigator.plugins.length: {plugin_count}")
         logger.info(f"navigator.plugins prototype: {plugin_proto}")
         logger.info(f"navigator.plugins[0] prototype: {plugin_0_proto}")
@@ -114,9 +96,7 @@ class TestAntiDetection:
         logger.info(f"Old plugin test (for loop): {old_plugin_test}")
 
         try:
-            plugin_str = driver.execute_script(
-                "return JSON.stringify(navigator.plugins)"
-            )
+            plugin_str = driver.execute_script("return JSON.stringify(navigator.plugins)")
             logger.info(f"JSON.stringify(navigator.plugins): {plugin_str}")
         except Exception as e:
             logger.error(f"JSON.stringify(navigator.plugins): {e}")
@@ -136,7 +116,7 @@ class TestAntiDetection:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_second_tab_antidetection(self, antidetect_browser: Any) -> None:
+    async def test_second_tab_antidetection(self, antidetect_browser: Any) -> None:  # noqa: C901
         """Test anti-detection on second tab opened via window.open()."""
         instance = antidetect_browser
         driver = instance.driver
@@ -145,9 +125,7 @@ class TestAntiDetection:
             # Navigate to initial page
             driver.get("https://example.com")
             wait = WebDriverWait(driver, 10)
-            wait.until(
-                expected_conditions.presence_of_element_located((By.TAG_NAME, "h1"))
-            )
+            wait.until(expected_conditions.presence_of_element_located((By.TAG_NAME, "h1")))
 
             # Store original window and open second tab
             original_window = driver.current_window_handle
@@ -162,14 +140,10 @@ class TestAntiDetection:
 
             # Navigate to bot detection site
             driver.get("https://bot.sannysoft.com")
-            wait.until(
-                expected_conditions.presence_of_element_located((By.TAG_NAME, "table"))
-            )
+            wait.until(expected_conditions.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(2)
 
-            assert (
-                "bot.sannysoft.com" in driver.current_url
-            ), f"Not on correct page: {driver.current_url}"
+            assert "bot.sannysoft.com" in driver.current_url, f"Not on correct page: {driver.current_url}"
 
             # Run detection checks
             logger.info("\n=== DIRECT JS CHECKS ===")
@@ -226,16 +200,9 @@ class TestAntiDetection:
                     # Check WebDriver (New) test specifically
                     if "WebDriver" in test_name and "New" in test_name:
                         # This test checks if navigator.webdriver exists
-                        results["webdriver_new"] = (
-                            "missing" in test_result.lower()
-                            or "passed" in test_result.lower()
-                        )
+                        results["webdriver_new"] = "missing" in test_result.lower() or "passed" in test_result.lower()
 
-                    if (
-                        "WebDriver" in test_name
-                        and "Advanced" not in test_name
-                        and "New" not in test_name
-                    ):
+                    if "WebDriver" in test_name and "Advanced" not in test_name and "New" not in test_name:
                         results["webdriver"] = "passed" in test_result
                     elif "WebDriver Advanced" in test_name:
                         results["webdriver"] = test_result == "passed"
@@ -243,43 +210,27 @@ class TestAntiDetection:
                         results["plugins"] = "0" not in test_result
                         results["plugin_count"] = test_result
                     elif "WebGL Vendor" in test_name:
-                        results["webgl_vendor"] = (
-                            "Google Inc." in test_result or "Intel" in test_result
-                        )
+                        results["webgl_vendor"] = "Google Inc." in test_result or "Intel" in test_result
                         results["webgl_vendor_actual"] = test_result
                     elif "WebGL Renderer" in test_name:
-                        results["webgl_renderer"] = (
-                            "ANGLE" in test_result or "Intel" in test_result
-                        )
+                        results["webgl_renderer"] = "ANGLE" in test_result or "Intel" in test_result
                         results["webgl_renderer_actual"] = test_result
 
             logger.info(f"Parsed results: {results}")
             logger.info("=================================\n")
 
             # The critical assertion - navigator.webdriver should not be detected
-            assert (
-                webdriver_status is None or webdriver_status is False
-            ), f"navigator.webdriver is {webdriver_status}, should be None or False"
+            assert webdriver_status is None or webdriver_status is False, f"navigator.webdriver is {webdriver_status}, should be None or False"
 
             # Assert WebDriver (New) test passes
-            assert results.get(
-                "webdriver_new", False
-            ), "WebDriver (New) test failed - navigator.webdriver was detected"
+            assert results.get("webdriver_new", False), "WebDriver (New) test failed - navigator.webdriver was detected"
 
             # Other critical features on second tab
-            assert results.get(
-                "webdriver", False
-            ), "WebDriver Advanced detection failed on second tab"
-            assert results.get(
-                "plugins", False
-            ), f"No plugins on second tab! Count: {results.get('plugin_count', 'unknown')}"
+            assert results.get("webdriver", False), "WebDriver Advanced detection failed on second tab"
+            assert results.get("plugins", False), f"No plugins on second tab! Count: {results.get('plugin_count', 'unknown')}"
             assert plugin_count > 0, f"Direct plugin check failed: {plugin_count}"
-            assert results.get(
-                "webgl_vendor", False
-            ), "WebGL vendor not properly spoofed on second tab"
-            assert results.get(
-                "webgl_renderer", False
-            ), "WebGL renderer not properly spoofed on second tab"
+            assert results.get("webgl_vendor", False), "WebGL vendor not properly spoofed on second tab"
+            assert results.get("webgl_renderer", False), "WebGL renderer not properly spoofed on second tab"
 
         finally:
             ...  # Cleanup handled by fixture
@@ -300,9 +251,7 @@ class TestAntiDetection:
 
             instance.driver.get("https://bot.sannysoft.com")
             wait = WebDriverWait(instance.driver, 10)
-            wait.until(
-                expected_conditions.presence_of_element_located((By.TAG_NAME, "table"))
-            )
+            wait.until(expected_conditions.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(2)
 
             # Check critical anti-detection features
@@ -323,12 +272,8 @@ class TestAntiDetection:
                         results["plugin_count"] = test_result
 
             # ChromeManager should have anti-detection enabled by default
-            assert results.get(
-                "webdriver", False
-            ), "ChromeManager doesn't have anti-detection enabled by default"
-            assert results.get(
-                "plugins", False
-            ), f"No plugins with ChromeManager: {results.get('plugin_count', 'unknown')}"
+            assert results.get("webdriver", False), "ChromeManager doesn't have anti-detection enabled by default"
+            assert results.get("plugins", False), f"No plugins with ChromeManager: {results.get('plugin_count', 'unknown')}"
 
         finally:
             # Ensure cleanup even if instance wasn't fully created
@@ -351,9 +296,7 @@ class TestH264Codec:
             # Test on a page that checks codec support
             driver.get("https://bot.sannysoft.com")
             wait = WebDriverWait(driver, 10)
-            wait.until(
-                expected_conditions.presence_of_element_located((By.TAG_NAME, "table"))
-            )
+            wait.until(expected_conditions.presence_of_element_located((By.TAG_NAME, "table")))
             time.sleep(1)
 
             # Direct check for H.264 support
@@ -375,9 +318,7 @@ class TestH264Codec:
                     test_name = cells[0].text.strip()
                     test_result = cells[1].text.strip()
                     if "VIDEO_CODECS" in test_name:
-                        assert (
-                            "ok" in test_result.lower()
-                        ), f"VIDEO_CODECS test failed: {test_result}"
+                        assert "ok" in test_result.lower(), f"VIDEO_CODECS test failed: {test_result}"
                         break
 
         finally:

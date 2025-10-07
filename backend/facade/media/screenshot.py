@@ -18,9 +18,7 @@ from browser.backend.utils.exceptions import MediaError
 class ScreenshotController(BaseController):
     """Controller for screenshot and image capture operations."""
 
-    async def capture_viewport(
-        self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100
-    ) -> bytes:
+    async def capture_viewport(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:
         """Capture a screenshot of the current viewport.
 
         Args:
@@ -40,17 +38,13 @@ class ScreenshotController(BaseController):
             else:
                 # Normal async operation
                 loop = asyncio.get_event_loop()
-                screenshot_base64 = await loop.run_in_executor(
-                    None, self.driver.get_screenshot_as_base64
-                )
+                screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
 
             screenshot_bytes = base64.b64decode(screenshot_base64)
 
             # Convert format if needed
             if image_format != ImageFormat.PNG:
-                screenshot_bytes = self._convert_image_format(
-                    screenshot_bytes, image_format, quality
-                )
+                screenshot_bytes = self._convert_image_format(screenshot_bytes, image_format, quality)
 
             self.instance.update_activity()
             return screenshot_bytes
@@ -90,17 +84,13 @@ class ScreenshotController(BaseController):
             else:
                 # Normal async operation
                 loop = asyncio.get_event_loop()
-                screenshot_base64 = await loop.run_in_executor(
-                    None, lambda: element.screenshot_as_base64
-                )
+                screenshot_base64 = await loop.run_in_executor(None, lambda: element.screenshot_as_base64)
 
             screenshot_bytes = base64.b64decode(screenshot_base64)
 
             # Convert format if needed
             if image_format != ImageFormat.PNG:
-                screenshot_bytes = self._convert_image_format(
-                    screenshot_bytes, image_format, quality
-                )
+                screenshot_bytes = self._convert_image_format(screenshot_bytes, image_format, quality)
 
             self.instance.update_activity()
             return screenshot_bytes
@@ -108,9 +98,7 @@ class ScreenshotController(BaseController):
         except Exception as e:
             raise MediaError(f"Failed to capture element {selector}: {e}") from e
 
-    async def capture_full_page(
-        self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100
-    ) -> bytes:
+    async def capture_full_page(self, image_format: ImageFormat = ImageFormat.PNG, quality: int = 100) -> bytes:
         """Capture a screenshot of the entire page by scrolling and stitching.
 
         Args:
@@ -136,13 +124,9 @@ class ScreenshotController(BaseController):
         if not self.driver:
             raise MediaError("Browser not initialized")
         # Get page dimensions
-        total_height = self.driver.execute_script(
-            "return document.documentElement.scrollHeight"
-        )
+        total_height = self.driver.execute_script("return document.documentElement.scrollHeight")
         viewport_height = self.driver.execute_script("return window.innerHeight")
-        total_width = self.driver.execute_script(
-            "return document.documentElement.scrollWidth"
-        )
+        total_width = self.driver.execute_script("return document.documentElement.scrollWidth")
 
         # Scroll to top
         self.driver.execute_script("window.scrollTo(0, 0)")
@@ -153,9 +137,7 @@ class ScreenshotController(BaseController):
         current_position = 0
 
         while current_position < total_height:
-            self.driver.execute_script(
-                "window.scrollTo(0, arguments[0])", current_position
-            )
+            self.driver.execute_script("window.scrollTo(0, arguments[0])", current_position)
             time.sleep(FACADE_CONFIG.screenshot_stitch_delay)
             screenshot_base64 = self.driver.get_screenshot_as_base64()
             screenshots.append(base64.b64decode(screenshot_base64))
@@ -165,9 +147,7 @@ class ScreenshotController(BaseController):
         self.driver.execute_script("window.scrollTo(0, 0)")
 
         # Stitch screenshots together
-        stitched_image = self._stitch_screenshots(
-            screenshots, total_width, total_height, viewport_height
-        )
+        stitched_image = self._stitch_screenshots(screenshots, total_width, total_height, viewport_height)
 
         # Convert to bytes
         output = io.BytesIO()
@@ -181,9 +161,7 @@ class ScreenshotController(BaseController):
         self.instance.update_activity()
         return output.getvalue()
 
-    async def _capture_full_page_async(
-        self, image_format: ImageFormat, quality: int
-    ) -> bytes:
+    async def _capture_full_page_async(self, image_format: ImageFormat, quality: int) -> bytes:
         """Asynchronous version of full page capture."""
         if not self.driver:
             raise MediaError("Browser not initialized")
@@ -195,9 +173,7 @@ class ScreenshotController(BaseController):
             self.driver.execute_script,
             "return document.documentElement.scrollHeight",
         )
-        viewport_height = await loop.run_in_executor(
-            None, self.driver.execute_script, "return window.innerHeight"
-        )
+        viewport_height = await loop.run_in_executor(None, self.driver.execute_script, "return window.innerHeight")
         total_width = await loop.run_in_executor(
             None,
             self.driver.execute_script,
@@ -205,9 +181,7 @@ class ScreenshotController(BaseController):
         )
 
         # Scroll to top
-        await loop.run_in_executor(
-            None, self.driver.execute_script, "window.scrollTo(0, 0)"
-        )
+        await loop.run_in_executor(None, self.driver.execute_script, "window.scrollTo(0, 0)")
         await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
 
         # Take screenshots while scrolling
@@ -222,21 +196,15 @@ class ScreenshotController(BaseController):
                 current_position,
             )
             await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
-            screenshot_base64 = await loop.run_in_executor(
-                None, self.driver.get_screenshot_as_base64
-            )
+            screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
             screenshots.append(base64.b64decode(screenshot_base64))
             current_position += viewport_height
 
         # Restore original position
-        await loop.run_in_executor(
-            None, self.driver.execute_script, "window.scrollTo(0, 0)"
-        )
+        await loop.run_in_executor(None, self.driver.execute_script, "window.scrollTo(0, 0)")
 
         # Stitch screenshots together
-        stitched_image = self._stitch_screenshots(
-            screenshots, total_width, total_height, viewport_height
-        )
+        stitched_image = self._stitch_screenshots(screenshots, total_width, total_height, viewport_height)
 
         # Convert to bytes
         output = io.BytesIO()
@@ -250,9 +218,7 @@ class ScreenshotController(BaseController):
         self.instance.update_activity()
         return output.getvalue()
 
-    def _stitch_screenshots(
-        self, screenshots: list[bytes], width: int, height: int, viewport_height: int
-    ) -> Image.Image:
+    def _stitch_screenshots(self, screenshots: list[bytes], width: int, height: int, viewport_height: int) -> Image.Image:
         """Stitch multiple screenshots into one image.
 
         Args:
@@ -284,9 +250,7 @@ class ScreenshotController(BaseController):
 
         return stitched
 
-    def _convert_image_format(
-        self, image_bytes: bytes, format_type: ImageFormat, quality: int
-    ) -> bytes:
+    def _convert_image_format(self, image_bytes: bytes, format_type: ImageFormat, quality: int) -> bytes:
         """Convert image to different format.
 
         Args:
@@ -314,9 +278,7 @@ class ScreenshotController(BaseController):
 
         return output.getvalue()
 
-    async def save_screenshot(
-        self, filepath: str, selector: str | None = None, full_page: bool = False
-    ) -> str:
+    async def save_screenshot(self, filepath: str, selector: str | None = None, full_page: bool = False) -> str:
         """Save a screenshot to file.
 
         Args:

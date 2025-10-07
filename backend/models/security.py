@@ -153,9 +153,7 @@ class SecurityConfig(BaseModel):
         # Safe browsing settings
         prefs["safebrowsing.enabled"] = self.safe_browsing_enabled
         prefs["safebrowsing.enhanced"] = self.safe_browsing_enhanced
-        prefs[
-            "safebrowsing.disable_download_protection"
-        ] = not self.download_protection_enabled
+        prefs["safebrowsing.disable_download_protection"] = not self.download_protection_enabled
 
         # Download settings
         prefs["download.prompt_for_download"] = False
@@ -163,22 +161,14 @@ class SecurityConfig(BaseModel):
 
         # Permission settings - Chrome expects integer values for content settings
         if not self.allow_notifications:
-            prefs.setdefault("profile.default_content_setting_values", {})[
-                "notifications"
-            ] = 2
+            prefs.setdefault("profile.default_content_setting_values", {})["notifications"] = 2
 
         if not self.allow_geolocation:
-            prefs.setdefault("profile.default_content_setting_values", {})[
-                "geolocation"
-            ] = 2
+            prefs.setdefault("profile.default_content_setting_values", {})["geolocation"] = 2
 
         if not self.allow_media_devices:
-            prefs.setdefault("profile.default_content_setting_values", {})[
-                "media_stream_camera"
-            ] = 2
-            prefs.setdefault("profile.default_content_setting_values", {})[
-                "media_stream_mic"
-            ] = 2
+            prefs.setdefault("profile.default_content_setting_values", {})["media_stream_camera"] = 2
+            prefs.setdefault("profile.default_content_setting_values", {})["media_stream_mic"] = 2
 
         return prefs
 

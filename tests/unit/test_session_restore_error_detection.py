@@ -33,9 +33,7 @@ def mock_chrome_manager() -> Mock:
     return manager
 
 
-def create_test_session(
-    session_dir: Path, session_id: str, url: str, cookies: list[Any]
-) -> None:
+def create_test_session(session_dir: Path, session_id: str, url: str, cookies: list[Any]) -> None:
     """Helper to create a test session file."""
     session_path = session_dir / session_id
     session_path.mkdir(parents=True, exist_ok=True)
@@ -45,10 +43,15 @@ def create_test_session(
         "name": "test_session",
         "created_at": "2025-01-01T00:00:00",
         "profile": None,
-        "url": url,
-        "title": "Test Page",
+        "tabs": [
+            {
+                "url": url,
+                "title": "Test Page",
+                "handle": "CDwindow-1",
+            }
+        ],
+        "active_tab_handle": "CDwindow-1",
         "cookies": cookies,
-        "window_handles": 1,
     }
 
     with (session_path / "session.json").open("w") as f:
@@ -86,9 +89,7 @@ async def test_restore_detects_certificate_error_page(
     # Mock instance with certificate error page
     mock_instance = Mock()
     mock_instance.driver = Mock()
-    mock_instance.driver.current_url = (
-        "data:text/html,chromewebdata"  # Error page indicator
-    )
+    mock_instance.driver.current_url = "data:text/html,chromewebdata"  # Error page indicator
     mock_instance.driver.page_source = "<html><body>Your connection is not private NET::ERR_CERT_AUTHORITY_INVALID</body></html>"
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
@@ -173,12 +174,8 @@ async def test_restore_succeeds_on_normal_page(
     # Mock instance on successful page load
     mock_instance = Mock()
     mock_instance.driver = Mock()
-    mock_instance.driver.current_url = (
-        "https://example.com/"  # Successfully loaded domain root
-    )
-    mock_instance.driver.page_source = (
-        "<html><body><h1>Example Domain</h1></body></html>"
-    )
+    mock_instance.driver.current_url = "https://example.com/"  # Successfully loaded domain root
+    mock_instance.driver.page_source = "<html><body><h1>Example Domain</h1></body></html>"
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
 
@@ -200,9 +197,9 @@ async def test_restore_handles_partial_cookie_failure(
 
     session_id = "test-session-partial"
     cookies = [
-        {"name": "cookie1", "value": "val1"},
-        {"name": "cookie2", "value": "val2"},
-        {"name": "cookie3", "value": "val3"},
+        {"name": "cookie1", "value": "val1", "domain": "example.com"},
+        {"name": "cookie2", "value": "val2", "domain": "example.com"},
+        {"name": "cookie3", "value": "val3", "domain": "example.com"},
     ]
     create_test_session(
         session_dir,
@@ -270,9 +267,7 @@ async def test_restore_error_detection_case_insensitive(
     mock_instance = Mock()
     mock_instance.driver = Mock()
     mock_instance.driver.current_url = "https://example.com/"
-    mock_instance.driver.page_source = (
-        "<html>YOUR CONNECTION IS NOT PRIVATE</html>"  # Uppercase
-    )
+    mock_instance.driver.page_source = "<html>YOUR CONNECTION IS NOT PRIVATE</html>"  # Uppercase
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
 

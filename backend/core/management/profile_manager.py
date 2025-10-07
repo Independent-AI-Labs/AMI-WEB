@@ -80,9 +80,7 @@ class ProfileManager:
         self._ensure_initialized()
 
         if name not in self.profiles:
-            raise ProfileError(
-                f"Profile '{name}' not found. Available profiles: {list(self.profiles.keys())}"
-            )
+            raise ProfileError(f"Profile '{name}' not found. Available profiles: {list(self.profiles.keys())}")
 
         # Update last used
         self.profiles[name]["last_used"] = datetime.now().isoformat()

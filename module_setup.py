@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-"""Browser module setup - delegates to Base and optionally provisions Chrome.
-
-Uses stdlib logging only; third-party imports are deferred until after venv exists.
-"""
+"""Base module setup - minimal wrapper around scripts/env."""
 
 from __future__ import annotations
 
+import argparse
 import logging
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -15,173 +12,100 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-# Get this module's root
-MODULE_ROOT = Path(__file__).resolve().parent
+# Import consolidated environment utilities
+sys.path.insert(0, str(Path(__file__).parent))
+from scripts.env.paths import setup_imports  # type: ignore[import-not-found]  # noqa: E402
+from scripts.env.venv import ensure_venv  # type: ignore[import-not-found]  # noqa: E402
 
 
-def copy_platform_config() -> None:
-    """Copy platform-specific config if config.yaml doesn't exist."""
-    config_path = MODULE_ROOT / "config.yaml"
-
-    if not config_path.exists():
-        # Determine platform config
-        if sys.platform == "win32":
-            platform_config = MODULE_ROOT / "configs" / "config.win.yaml"
-        elif sys.platform == "darwin":
-            platform_config = MODULE_ROOT / "configs" / "config.osx.yaml"
-        else:  # Linux
-            platform_config = MODULE_ROOT / "configs" / "config.linux.yaml"
-
-        if platform_config.exists():
-            logger.info(f"Copying platform config from {platform_config.name}")
-            shutil.copy2(platform_config, config_path)
-            logger.info(f"[OK] Created config.yaml from {platform_config.name}")
-        else:
-            logger.warning(f"[WARNING] Platform config not found: {platform_config}")
-            # Fall back to config.sample.yaml if it exists
-            sample_config = MODULE_ROOT / "config.sample.yaml"
-            if sample_config.exists():
-                shutil.copy2(sample_config, config_path)
-                logger.info("[OK] Created config.yaml from config.sample.yaml")
-    else:
-        logger.info("[OK] config.yaml already exists")
-
-
-def get_chrome_paths_from_config() -> tuple[Path | None, Path | None]:
-    """Get Chrome and ChromeDriver paths from config."""
-    # Try config.yaml first, then config.sample.yaml
-    config_path = MODULE_ROOT / "config.yaml"
-    if not config_path.exists():
-        config_path = MODULE_ROOT / "config.sample.yaml"
-
-    if not config_path.exists():
-        # Default paths if no config found
-        return None, None
-
+def check_uv() -> bool:
+    """Check if uv is installed."""
     try:
-        # Defer third-party import until needed
-        try:
-            import yaml  # noqa: PLC0415
-        except Exception:
-            logger.warning(
-                "[WARNING] PyYAML not available; cannot parse config. Skipping Chrome path detection."
-            )
-            return None, None
-
-        with config_path.open() as f:
-            config = yaml.safe_load(f)
-
-        chrome_path = (
-            config.get("backend", {}).get("browser", {}).get("chrome_binary_path")
-        )
-        chromedriver_path = (
-            config.get("backend", {}).get("browser", {}).get("chromedriver_path")
-        )
-
-        if chrome_path:
-            # Convert relative paths to absolute
-            chrome_path = (
-                MODULE_ROOT / chrome_path[2:]
-                if chrome_path.startswith("./")
-                else Path(chrome_path)
-            )
-
-        if chromedriver_path:
-            # Convert relative paths to absolute
-            chromedriver_path = (
-                MODULE_ROOT / chromedriver_path[2:]
-                if chromedriver_path.startswith("./")
-                else Path(chromedriver_path)
-            )
-
-        return chrome_path, chromedriver_path
-    except Exception as e:
-        logger.warning(f"[WARNING] Could not parse config: {e}")
-        return None, None
+        subprocess.run(["uv", "--version"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        logger.error("uv is not installed or not on PATH.")
+        logger.info("Install uv: https://docs.astral.sh/uv/")
+        return False
 
 
-def setup_chrome_if_needed() -> None:
-    """Check if Chrome is installed at configured locations, and set it up if not."""
-    # Get paths from config
-    chrome_path, chromedriver_path = get_chrome_paths_from_config()
+def ensure_uv_python(version: str = "3.12") -> None:
+    """Ensure Python version is installed via uv."""
+    find = subprocess.run(["uv", "python", "find", version], capture_output=True, text=True, check=False)
+    if find.returncode != 0 or not find.stdout.strip():
+        logger.info(f"Installing Python {version} toolchain via uv...")
+        subprocess.run(["uv", "python", "install", version], check=False)
 
-    if not chrome_path or not chromedriver_path:
-        raise RuntimeError(
-            "Chrome and ChromeDriver paths must be configured in browser/config.yaml before running module_setup. "
-            "Run browser/scripts/setup_chrome.py to install managed binaries and update the config with the absolute paths."
-        )
 
-    # Check if both executables exist
-    chrome_exists = chrome_path.exists() if chrome_path else False
-    chromedriver_exists = chromedriver_path.exists() if chromedriver_path else False
+def sync_dependencies(module_root: Path) -> bool:
+    """Sync pyproject.toml dependencies with uv."""
+    logger.info("Syncing dependencies with uv (including dev)...")
+    synced = subprocess.run(["uv", "sync", "--dev"], cwd=module_root, capture_output=True, text=True, check=False)
+    if synced.returncode != 0:
+        logger.error("uv sync failed")
+        logger.error(synced.stderr)
+        return False
+    return True
 
-    if not chrome_exists or not chromedriver_exists:
-        logger.info("\n" + "=" * 60)
-        logger.info("Chrome/ChromeDriver not found at configured locations:")
-        if not chrome_exists:
-            logger.error(f"  Chrome: {chrome_path} (NOT FOUND)")
-        if not chromedriver_exists:
-            logger.error(f"  ChromeDriver: {chromedriver_path} (NOT FOUND)")
-        logger.info("Setting up Chrome...")
-        logger.info("=" * 60)
 
-        # Run the Chrome setup script
-        setup_chrome_script = MODULE_ROOT / "scripts" / "setup_chrome.py"
-        if setup_chrome_script.exists():
-            result = subprocess.run(
-                [sys.executable, str(setup_chrome_script)], check=False
-            )
-            if result.returncode == 0:
-                logger.info("[OK] Chrome and ChromeDriver installed successfully")
-            else:
-                logger.error("[ERROR] Failed to install Chrome/ChromeDriver")
-                logger.info(
-                    "You can manually run: python browser/scripts/setup_chrome.py"
-                )
-                return
-        else:
-            logger.error(
-                f"[ERROR] setup_chrome.py script not found at {setup_chrome_script}"
-            )
-            return
+def install_precommit(module_root: Path) -> None:
+    """Install pre-commit hooks if config exists."""
+    cfg = module_root / ".pre-commit-config.yaml"
+    if not cfg.exists():
+        return
+    logger.info("Installing pre-commit hooks...")
+    subprocess.run(["uv", "run", "pre-commit", "install"], cwd=module_root, check=False)
+    subprocess.run(["uv", "run", "pre-commit", "install", "--hook-type", "pre-push"], cwd=module_root, check=False)
+
+
+def setup(module_root: Path, project_name: str | None) -> int:
+    """Main setup orchestration."""
+    name = project_name or module_root.name
+    logger.info("=" * 60)
+    logger.info(f"Setting up {name} Development Environment")
+    logger.info(f"Module root: {module_root}")
+    logger.info("=" * 60)
+
+    if not check_uv():
+        return 1
+    ensure_uv_python("3.12")
+
+    pyproject = module_root / "pyproject.toml"
+    if not pyproject.exists():
+        logger.error("pyproject.toml is required but missing at %s", pyproject)
+        logger.info("Every module must define dependencies via pyproject.toml for reproducibility.")
+        return 1
+
+    # Use consolidated env utilities for venv creation
+    setup_imports(module_root)
+    ensure_venv(module_root, python_version="3.12")
+
+    # Sync dependencies from pyproject.toml
+    if not sync_dependencies(module_root):
+        return 1
+
+    install_precommit(module_root)
+
+    logger.info("=" * 60)
+    logger.info(f"{name} Development Environment Setup Complete!")
+    logger.info("Activate the venv:")
+    if sys.platform == "win32":
+        logger.info(f"  {module_root}\\.venv\\Scripts\\activate")
     else:
-        logger.info("\n[OK] Chrome and ChromeDriver found at configured locations:")
-        logger.info(f"  Chrome: {chrome_path}")
-        logger.info(f"  ChromeDriver: {chromedriver_path}")
-
-    return
+        logger.info(f"  source {module_root}/.venv/bin/activate")
+    logger.info("Run tests:")
+    logger.info("  uv run pytest -q")
+    logger.info("=" * 60)
+    return 0
 
 
 def main() -> int:
-    """Run setup for browser module by calling base module_setup.py directly."""
-    # Find base module_setup.py
-    base_setup = MODULE_ROOT.parent / "base" / "module_setup.py"
-    if not base_setup.exists():
-        logger.error("ERROR: Cannot find base/module_setup.py")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Set up development environment for AMI base module")
+    parser.add_argument("--project-dir", type=Path, default=Path(__file__).resolve().parent, help="Project directory (default: this module)")
+    parser.add_argument("--project-name", type=str, help="Optional project name for display")
+    args = parser.parse_args()
 
-    # Call base module_setup.py with appropriate arguments
-    cmd = [
-        sys.executable,
-        str(base_setup),
-        "--project-dir",
-        str(MODULE_ROOT),
-        "--project-name",
-        "Browser Module",
-    ]
-
-    result = subprocess.run(cmd, check=False)
-
-    if result.returncode != 0:
-        return result.returncode
-
-    # Copy platform-specific config if needed
-    copy_platform_config()
-
-    # After successful base setup, set up Chrome if needed
-    setup_chrome_if_needed()
-
-    return 0
+    return setup(args.project_dir, args.project_name)
 
 
 if __name__ == "__main__":

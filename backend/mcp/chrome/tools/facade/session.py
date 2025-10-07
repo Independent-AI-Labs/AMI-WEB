@@ -14,14 +14,10 @@ from browser.backend.mcp.chrome.tools.browser_tools import (
 )
 
 
-async def _terminate_with_autosave(
-    manager: ChromeManager, instance_id: str | None, session_name: str | None
-) -> BrowserResponse:
+async def _terminate_with_autosave(manager: ChromeManager, instance_id: str | None, session_name: str | None) -> BrowserResponse:
     """Terminate instance with automatic session save."""
     if not instance_id:
-        return BrowserResponse(
-            success=False, error="instance_id required for terminate action"
-        )
+        return BrowserResponse(success=False, error="instance_id required for terminate action")
 
     instance = await manager.get_instance(instance_id)
     if not instance:
@@ -60,18 +56,14 @@ async def _save_session(
 ) -> BrowserResponse:
     """Save browser session."""
     if not instance_id:
-        return BrowserResponse(
-            success=False, error="instance_id required for save action"
-        )
+        return BrowserResponse(success=False, error="instance_id required for save action")
 
     instance = await manager.get_instance(instance_id)
     if not instance:
         return BrowserResponse(success=False, error=f"Instance {instance_id} not found")
 
     try:
-        saved_id = await manager.session_manager.save_session(
-            instance, session_name, profile_override=profile
-        )
+        saved_id = await manager.session_manager.save_session(instance, session_name, profile_override=profile)
         return BrowserResponse(
             success=True,
             data={"session_id": saved_id, "message": f"Session saved as {saved_id}"},
@@ -90,9 +82,7 @@ async def _restore_session(
 ) -> BrowserResponse:
     """Restore browser session."""
     if not session_id:
-        return BrowserResponse(
-            success=False, error="session_id required for restore action"
-        )
+        return BrowserResponse(success=False, error="session_id required for restore action")
 
     try:
         # Ensure manager is initialized so session metadata is loaded
@@ -140,14 +130,10 @@ async def _list_sessions(manager: ChromeManager) -> BrowserResponse:
         return BrowserResponse(success=False, error=f"Failed to list sessions: {e}")
 
 
-async def _delete_session(
-    manager: ChromeManager, session_id: str | None
-) -> BrowserResponse:
+async def _delete_session(manager: ChromeManager, session_id: str | None) -> BrowserResponse:
     """Delete a saved session."""
     if not session_id:
-        return BrowserResponse(
-            success=False, error="session_id required for delete_session action"
-        )
+        return BrowserResponse(success=False, error="session_id required for delete_session action")
 
     try:
         # Ensure manager is initialized so session metadata is loaded
@@ -169,18 +155,12 @@ async def _delete_session(
         return BrowserResponse(success=False, error=f"Failed to delete session: {e}")
 
 
-async def _rename_session(
-    manager: ChromeManager, session_id: str | None, session_name: str | None
-) -> BrowserResponse:
+async def _rename_session(manager: ChromeManager, session_id: str | None, session_name: str | None) -> BrowserResponse:
     """Rename a saved session."""
     if not session_id:
-        return BrowserResponse(
-            success=False, error="session_id required for rename_session action"
-        )
+        return BrowserResponse(success=False, error="session_id required for rename_session action")
     if not session_name:
-        return BrowserResponse(
-            success=False, error="session_name required for rename_session action"
-        )
+        return BrowserResponse(success=False, error="session_name required for rename_session action")
 
     try:
         # Ensure manager is initialized so session metadata is loaded
@@ -246,14 +226,8 @@ async def browser_session_tool(
     # Instance lifecycle actions (no params needed)
     if action in ("launch", "list", "get_active"):
         if action == "launch":
-            return await browser_launch_tool(
-                manager, headless, profile, anti_detect, use_pool
-            )
-        return (
-            await browser_list_tool(manager)
-            if action == "list"
-            else await browser_get_active_tool(manager)
-        )
+            return await browser_launch_tool(manager, headless, profile, anti_detect, use_pool)
+        return await browser_list_tool(manager) if action == "list" else await browser_get_active_tool(manager)
 
     # Instance-based actions (require instance_id)
     if action in ("terminate", "save"):
@@ -264,9 +238,7 @@ async def browser_session_tool(
     # Session-based actions (require session_id)
     action_handlers = {
         "list_sessions": lambda: _list_sessions(manager),
-        "restore": lambda: _restore_session(
-            manager, session_id, profile, headless, kill_orphaned
-        ),
+        "restore": lambda: _restore_session(manager, session_id, profile, headless, kill_orphaned),
         "delete_session": lambda: _delete_session(manager, session_id),
         "rename_session": lambda: _rename_session(manager, session_id, session_name),
     }

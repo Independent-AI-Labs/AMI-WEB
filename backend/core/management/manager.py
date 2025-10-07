@@ -5,14 +5,14 @@ from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
+from base.scripts.env.paths import setup_imports
 from loguru import logger
 from selenium.common.exceptions import InvalidSessionIdException, WebDriverException
-
-from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
+
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.browser_worker_pool import BrowserWorkerPool  # noqa: E402
@@ -52,11 +52,7 @@ class ChromeManager:
                     current = current[k]
                 current[keys[-1]] = value
         self.properties_manager = PropertiesManager(self.config)
-        self.profile_manager = ProfileManager(
-            base_dir=self.config.get(
-                "backend.storage.profiles_dir", "./data/browser_profiles"
-            )
-        )
+        self.profile_manager = ProfileManager(base_dir=self.config.get("backend.storage.profiles_dir", "./data/browser_profiles"))
 
         # Instance context tracking for multi-instance support
         self._current_instance_id: str | None = None
@@ -69,9 +65,7 @@ class ChromeManager:
             max_workers=self.config.get("backend.pool.max_instances", 10),
             warm_workers=self.config.get("backend.pool.warm_instances", 2),
             worker_ttl=self.config.get("backend.pool.instance_ttl", 3600),
-            health_check_interval=self.config.get(
-                "backend.pool.health_check_interval", 30
-            ),
+            health_check_interval=self.config.get("backend.pool.health_check_interval", 30),
             acquire_timeout=self.config.get("backend.pool.acquire_timeout", 30),
             enable_hibernation=self.config.get("backend.pool.enable_hibernation", True),
             # Increased from 60s to 300s (5 minutes) to prevent premature hibernation during active use
@@ -87,11 +81,7 @@ class ChromeManager:
             profile_manager=self.profile_manager,
         )
 
-        self.session_manager = SessionManager(
-            session_dir=self.config.get(
-                "backend.storage.session_dir", "./data/sessions"
-            )
-        )
+        self.session_manager = SessionManager(session_dir=self.config.get("backend.storage.session_dir", "./data/sessions"))
 
         # Track instances created outside the pool
         self._standalone_instances: dict[str, BrowserInstance] = {}
@@ -146,9 +136,7 @@ class ChromeManager:
             self._current_instance_id = None
         return None
 
-    async def get_instance_or_current(
-        self, instance_id: str | None = None
-    ) -> BrowserInstance | None:
+    async def get_instance_or_current(self, instance_id: str | None = None) -> BrowserInstance | None:
         """Get specific instance by ID, or current instance if not specified."""
         if instance_id:
             return await self.get_instance(instance_id)
@@ -158,9 +146,7 @@ class ChromeManager:
         """Check if we can reuse an existing instance with the given profile."""
         for instance_id, instance in list(self._standalone_instances.items()):
             if instance._profile_name == profile and self._is_instance_alive(instance):
-                logger.info(
-                    f"Reusing existing standalone instance {instance_id} with profile '{profile}'"
-                )
+                logger.info(f"Reusing existing standalone instance {instance_id} with profile '{profile}'")
                 return instance
             if not self._is_instance_alive(instance):
                 await self._handle_invalid_instance(instance_id, pool_managed=False)
@@ -190,9 +176,7 @@ class ChromeManager:
                 return instance
 
             await self._handle_invalid_instance(instance.id, pool_managed=True)
-            last_error = InvalidSessionIdException(
-                "Pool returned browser with invalid session"
-            )
+            last_error = InvalidSessionIdException("Pool returned browser with invalid session")
 
         message = "Unable to acquire healthy browser instance from pool"
         if last_error is None:
@@ -272,9 +256,7 @@ class ChromeManager:
             await self.initialize()
 
         if profile and use_pool:
-            logger.info(
-                f"Profile '{profile}' specified - disabling pool to use standalone instance"
-            )
+            logger.info(f"Profile '{profile}' specified - disabling pool to use standalone instance")
             use_pool = False
 
         if profile:
@@ -332,19 +314,13 @@ class ChromeManager:
         try:
             return instance.is_alive()
         except Exception as exc:  # Defensive: treat unknown errors as dead sessions
-            logger.debug(
-                f"Browser instance {instance.id} reported invalid state: {exc}"
-            )
+            logger.debug(f"Browser instance {instance.id} reported invalid state: {exc}")
             return False
 
-    async def _handle_invalid_instance(
-        self, instance_id: str, *, pool_managed: bool
-    ) -> None:
+    async def _handle_invalid_instance(self, instance_id: str, *, pool_managed: bool) -> None:
         """Retire an invalid browser session from either the pool or standalone map."""
 
-        logger.warning(
-            f"Disposing browser instance {instance_id} after invalid session detected"
-        )
+        logger.warning(f"Disposing browser instance {instance_id} after invalid session detected")
 
         if pool_managed:
             with suppress(Exception):
@@ -395,9 +371,7 @@ class ChromeManager:
         logger.warning(f"Instance {instance_id} not found")
         return False
 
-    async def terminate_instance(
-        self, instance_id: str, return_to_pool: bool = False
-    ) -> bool:
+    async def terminate_instance(self, instance_id: str, return_to_pool: bool = False) -> bool:
         """Terminate a browser instance.
 
         Args:
@@ -455,18 +429,14 @@ class ChromeManager:
                 try:
                     active_tabs = len(driver.window_handles)
                 except (InvalidSessionIdException, WebDriverException) as exc:
-                    logger.debug(
-                        f"Failed to inspect windows for instance {instance.id}: {exc}"
-                    )
+                    logger.debug(f"Failed to inspect windows for instance {instance.id}: {exc}")
                     await self._handle_invalid_instance(worker_id, pool_managed=True)
                     continue
 
             instances.append(
                 InstanceInfo(
                     id=instance.id,
-                    status=BrowserStatus.READY
-                    if worker.state.value == "idle"
-                    else BrowserStatus.BUSY,
+                    status=BrowserStatus.READY if worker.state.value == "idle" else BrowserStatus.BUSY,
                     created_at=instance.created_at,
                     last_activity=worker.last_used,
                     memory_usage=0,  # Not tracked currently
@@ -489,9 +459,7 @@ class ChromeManager:
                 try:
                     active_tabs = len(driver.window_handles)
                 except (InvalidSessionIdException, WebDriverException) as exc:
-                    logger.debug(
-                        f"Failed to inspect windows for standalone instance {instance.id}: {exc}"
-                    )
+                    logger.debug(f"Failed to inspect windows for standalone instance {instance.id}: {exc}")
                     await self._handle_invalid_instance(instance_id, pool_managed=False)
                     continue
 
@@ -555,9 +523,7 @@ class ChromeManager:
         logger.info(f"Saved session {session_id} for instance {instance_id}")
         return session_id
 
-    async def restore_session(
-        self, session_id: str, _instance_id: str | None = None
-    ) -> BrowserInstance:
+    async def restore_session(self, session_id: str, _instance_id: str | None = None) -> BrowserInstance:
         """Restore browser session.
 
         Args:
@@ -666,27 +632,21 @@ class ChromeManager:
             }}
         """
 
-    def _apply_properties_to_tab(
-        self, instance: Any, tab_id: str, browser_props: Any, properties_json: str
-    ) -> None:
+    def _apply_properties_to_tab(self, instance: Any, tab_id: str, browser_props: Any, properties_json: str) -> None:
         """Apply properties to a specific tab."""
         current_handle = instance.driver.current_window_handle
         if tab_id != current_handle:
             instance.driver.switch_to.window(tab_id)
 
         # Inject properties
-        self.properties_manager.inject_properties(
-            instance.driver, browser_props, tab_id
-        )
+        self.properties_manager.inject_properties(instance.driver, browser_props, tab_id)
         instance.driver.execute_script(self._inject_properties_script(properties_json))
 
         # Switch back if needed
         if tab_id != current_handle:
             instance.driver.switch_to.window(current_handle)
 
-    def _apply_properties_to_all_tabs(
-        self, instance: Any, browser_props: Any, properties_json: str
-    ) -> None:
+    def _apply_properties_to_all_tabs(self, instance: Any, browser_props: Any, properties_json: str) -> None:
         """Apply properties to all tabs."""
         handles = instance.driver.window_handles
         current_handle = instance.driver.current_window_handle
@@ -694,9 +654,7 @@ class ChromeManager:
         for handle in handles:
             instance.driver.switch_to.window(handle)
             self.properties_manager.inject_properties(instance.driver, browser_props)
-            instance.driver.execute_script(
-                self._inject_properties_script(properties_json)
-            )
+            instance.driver.execute_script(self._inject_properties_script(properties_json))
 
         instance.driver.switch_to.window(current_handle)
 
@@ -738,17 +696,9 @@ class ChromeManager:
                         setattr(browser_props, key, value)
             except ValueError:
                 logger.warning(f"Invalid preset '{preset}', using properties only")
-                browser_props = (
-                    BrowserProperties(**properties)
-                    if isinstance(properties, dict)
-                    else properties
-                )
+                browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
         else:
-            browser_props = (
-                BrowserProperties(**properties)
-                if isinstance(properties, dict)
-                else properties
-            )
+            browser_props = BrowserProperties(**properties) if isinstance(properties, dict) else properties
 
         # Prepare JSON for injection
 
@@ -756,9 +706,7 @@ class ChromeManager:
 
         # Apply to specific tab or all tabs
         if tab_id:
-            self.properties_manager.set_tab_properties(
-                instance_id, tab_id, browser_props
-            )
+            self.properties_manager.set_tab_properties(instance_id, tab_id, browser_props)
             self._apply_properties_to_tab(instance, tab_id, browser_props, props_json)
         else:
             self.properties_manager.set_instance_properties(instance_id, browser_props)
@@ -766,9 +714,7 @@ class ChromeManager:
 
         return True
 
-    async def get_browser_properties(
-        self, instance_id: str | None = None, tab_id: str | None = None
-    ) -> dict[str, Any]:
+    async def get_browser_properties(self, instance_id: str | None = None, tab_id: str | None = None) -> dict[str, Any]:
         """Get current browser properties.
 
         Args:

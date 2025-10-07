@@ -1,6 +1,5 @@
 """Tests for data_root enforcement in browser MCP server."""
 
-import contextlib
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -13,15 +12,15 @@ def test_run_chrome_default_data_root() -> None:
     # Mock sys.argv and server.run()
     mock_server_class = MagicMock()
     mock_server_instance = MagicMock()
+    mock_server_instance.run = MagicMock()  # Mock the run method to prevent stdio server startup
     mock_server_class.return_value = mock_server_instance
 
     with (
         patch.object(sys, "argv", ["run_chrome.py"]),
         patch(
-            "browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer",
+            "browser.scripts.run_chrome.ChromeFastMCPServer",
             mock_server_class,
         ),
-        contextlib.suppress(SystemExit),
     ):
         main()
 
@@ -40,6 +39,9 @@ def test_run_chrome_default_data_root() -> None:
     assert data_root.name == "data"
     assert data_root.parent.name == "browser"
 
+    # Verify run was called
+    assert mock_server_instance.run.called
+
 
 def test_chrome_manager_absolute_paths(tmp_path: Path) -> None:
     """Verify ChromeManager uses absolute paths from config_overrides."""
@@ -56,18 +58,10 @@ def test_chrome_manager_absolute_paths(tmp_path: Path) -> None:
     manager = ChromeManager(config_overrides=config_overrides)
 
     # Verify absolute paths are set in config (using get() method which handles nested keys)
-    assert manager.config.get("backend.storage.session_dir") == str(
-        data_root / "sessions"
-    )
-    assert manager.config.get("backend.storage.profiles_dir") == str(
-        data_root / "profiles"
-    )
-    assert manager.config.get("backend.storage.downloads_dir") == str(
-        data_root / "downloads"
-    )
-    assert manager.config.get("backend.storage.screenshots_dir") == str(
-        data_root / "screenshots"
-    )
+    assert manager.config.get("backend.storage.session_dir") == str(data_root / "sessions")
+    assert manager.config.get("backend.storage.profiles_dir") == str(data_root / "profiles")
+    assert manager.config.get("backend.storage.downloads_dir") == str(data_root / "downloads")
+    assert manager.config.get("backend.storage.screenshots_dir") == str(data_root / "screenshots")
 
     # Most importantly, verify SessionManager got the right path
     assert str(manager.session_manager.session_dir) == str(data_root / "sessions")

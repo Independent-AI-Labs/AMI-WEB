@@ -112,9 +112,7 @@ def _collect_structured_html_results(
     rank = start_rank
     for container_candidate in cast(
         Iterable[Any],
-        soup.select(
-            "article, div.result, div.result-default, li.result, div.web-result"
-        ),
+        soup.select("article, div.result, div.result-default, li.result, div.web-result"),
     ):
         if not isinstance(container_candidate, Tag):
             continue
@@ -134,9 +132,7 @@ def _collect_structured_html_results(
             continue
 
         snippet_text = _find_snippet_text(container)
-        results.append(
-            {"rank": rank, "title": title, "url": link, "snippet": snippet_text}
-        )
+        results.append({"rank": rank, "title": title, "url": link, "snippet": snippet_text})
         seen_urls.add(link)
         rank += 1
 
@@ -181,9 +177,7 @@ def _parse_html_results(payload: str, max_results: int) -> list[SearchResult]:
     soup = BeautifulSoup(payload, "html.parser")
     seen_urls: set[str] = set()
 
-    structured_results, next_rank = _collect_structured_html_results(
-        soup, max_results, 1, seen_urls
-    )
+    structured_results, next_rank = _collect_structured_html_results(soup, max_results, 1, seen_urls)
     if len(structured_results) >= max_results:
         return structured_results[:max_results]
 
@@ -193,9 +187,7 @@ def _parse_html_results(payload: str, max_results: int) -> list[SearchResult]:
     return (structured_results + anchor_results)[:max_results]
 
 
-async def _fetch_payload(
-    session: ClientSession, url: str, headers: dict[str, str]
-) -> tuple[str, Any]:
+async def _fetch_payload(session: ClientSession, url: str, headers: dict[str, str]) -> tuple[str, Any]:
     async with session.get(url, headers=headers) as response:
         if response.status != _HTTP_OK:
             raise RuntimeError(f"HTTP {response.status} for {url}")
@@ -257,25 +249,17 @@ def _resolve_template(
     config: Any,
     primary_override: str | None,
 ) -> str:
-    return (
-        primary_override
-        or (config.get("backend.tools.web_search.primary_url") if config else None)
-        or _DEFAULT_PRIMARY_URL
-    )
+    return primary_override or (config.get("backend.tools.web_search.primary_url") if config else None) or _DEFAULT_PRIMARY_URL
 
 
 def _resolve_timeout(config: Any, timeout_override: float | None) -> float:
-    configured = (
-        config.get("backend.tools.web_search.timeout_seconds", 10) if config else 10
-    )
+    configured = config.get("backend.tools.web_search.timeout_seconds", 10) if config else 10
     timeout_value = timeout_override if timeout_override is not None else configured
     return configured if timeout_value <= 0 else timeout_value
 
 
 def _resolve_max_results(config: Any, max_results_override: int | None) -> int:
-    configured = (
-        config.get("backend.tools.web_search.max_results", 10) if config else 10
-    )
+    configured = config.get("backend.tools.web_search.max_results", 10) if config else 10
     max_value = max_results_override if max_results_override is not None else configured
     return configured if max_value <= 0 else max_value
 
@@ -288,9 +272,7 @@ def _build_headers(user_agent: str | None) -> dict[str, str]:
     return {"User-Agent": user_agent} if user_agent else {}
 
 
-def _parse_payload(
-    payload_type: str, payload: Any, max_results: int
-) -> list[SearchResult]:
+def _parse_payload(payload_type: str, payload: Any, max_results: int) -> list[SearchResult]:
     parser = cast(
         Callable[[Any, int], list[SearchResult]],
         _parse_json_results if payload_type == "json" else _parse_html_results,
@@ -358,9 +340,7 @@ async def browser_web_search_tool(
 
     async with ClientSession(timeout=ClientTimeout(total=timeout_seconds)) as session:
         try:
-            return await _execute_provider(
-                session, provider, cleaned_query, effective_max, headers
-            )
+            return await _execute_provider(session, provider, cleaned_query, effective_max, headers)
         except _NoResultsError as exc:
             logger.warning(str(exc))
             error_message = str(exc)

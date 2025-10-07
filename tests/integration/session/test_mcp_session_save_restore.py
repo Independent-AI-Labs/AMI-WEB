@@ -51,9 +51,7 @@ async def test_mcp_profile_not_captured_in_session_save() -> None:
 
     # REPLICATE MCP BEHAVIOR: Save session WITHOUT profile_override
     # MCP calls: manager.session_manager.save_session(instance, session_name)
-    session_id = await manager.session_manager.save_session(
-        instance, "mcp-test-session"
-    )
+    session_id = await manager.session_manager.save_session(instance, "mcp-test-session")
 
     # Read the saved session to check profile
     import json
@@ -70,9 +68,7 @@ async def test_mcp_profile_not_captured_in_session_save() -> None:
     await manager.shutdown()
 
     # THE BUG: profile should be "default" but it's null
-    assert (
-        saved_profile == profile_name
-    ), f"BUG: Session saved with profile={saved_profile} instead of {profile_name}!"
+    assert saved_profile == profile_name, f"BUG: Session saved with profile={saved_profile} instead of {profile_name}!"
 
 
 @pytest.mark.asyncio
@@ -138,9 +134,5 @@ async def test_mcp_session_restore_with_profile_null_fails() -> None:
     await manager2.shutdown()
 
     # VERIFY: Should be on example.com, not chrome://new-tab-page/
-    assert (
-        "example.com" in restored_url
-    ), f"BUG: Restored to {restored_url} instead of {test_url}!"
-    assert (
-        "chrome://new-tab-page" not in restored_url
-    ), f"BUG: Restored to new tab page instead of {test_url}!"
+    assert "example.com" in restored_url, f"BUG: Restored to {restored_url} instead of {test_url}!"
+    assert "chrome://new-tab-page" not in restored_url, f"BUG: Restored to new tab page instead of {test_url}!"

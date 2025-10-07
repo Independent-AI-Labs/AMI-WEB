@@ -50,9 +50,7 @@ class NetworkController(BaseController):
             logger.info("Network monitoring disabled")
         except Exception as e:
             logger.error(f"Failed to disable network monitoring: {e}")
-            raise ChromeManagerError(
-                f"Failed to disable network monitoring: {e}"
-            ) from e
+            raise ChromeManagerError(f"Failed to disable network monitoring: {e}") from e
 
     async def get_network_logs(self) -> list[NetworkEntry]:
         """Get captured network activity.
@@ -122,9 +120,7 @@ class NetworkController(BaseController):
         Args:
             user_agent: User agent string
         """
-        await self._execute_cdp(
-            "Network.setUserAgentOverride", {"userAgent": user_agent}
-        )
+        await self._execute_cdp("Network.setUserAgentOverride", {"userAgent": user_agent})
         logger.info(f"Set user agent: {user_agent[:50]}...")
 
     async def set_extra_headers(self, headers: dict[str, str]) -> None:
@@ -151,9 +147,7 @@ class NetworkController(BaseController):
         await self._execute_cdp("Network.setBlockedURLs", {"urls": []})
         logger.info("Unblocked all URLs")
 
-    async def throttle_network(
-        self, download_kbps: int = 1024, upload_kbps: int = 512, latency_ms: int = 100
-    ) -> None:
+    async def throttle_network(self, download_kbps: int = 1024, upload_kbps: int = 512, latency_ms: int = 100) -> None:
         """Enable network throttling.
 
         Args:
@@ -170,9 +164,7 @@ class NetworkController(BaseController):
                 "latency": latency_ms,
             },
         )
-        logger.info(
-            f"Network throttled: {download_kbps}KB/s down, {upload_kbps}KB/s up, {latency_ms}ms latency"
-        )
+        logger.info(f"Network throttled: {download_kbps}KB/s down, {upload_kbps}KB/s up, {latency_ms}ms latency")
 
     async def go_offline(self) -> None:
         """Simulate offline mode."""
@@ -200,9 +192,7 @@ class NetworkController(BaseController):
         )
         logger.info("Network restored to online mode")
 
-    async def _execute_cdp(
-        self, command: str, params: dict[str, Any] | None = None
-    ) -> Any:
+    async def _execute_cdp(self, command: str, params: dict[str, Any] | None = None) -> Any:
         """Execute CDP command.
 
         Args:
@@ -222,12 +212,8 @@ class NetworkController(BaseController):
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
                 None,
-                lambda: cast(Any, self.driver).execute_cdp_cmd(command, params or {})
-                if self.driver
-                else None,
+                lambda: cast(Any, self.driver).execute_cdp_cmd(command, params or {}) if self.driver else None,
             )
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
-            raise ChromeManagerError(
-                f"Failed to execute CDP command {command}: {e}"
-            ) from e
+            raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e

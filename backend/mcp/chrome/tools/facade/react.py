@@ -14,11 +14,9 @@ from browser.backend.mcp.chrome.tools.react_tools import (
 )
 
 
-async def browser_react_tool(  # noqa: PLR0913
+async def browser_react_tool(  # noqa: PLR0913, PLR0911
     manager: ChromeManager,
-    action: Literal[
-        "trigger_handler", "get_props", "get_state", "find_component", "get_fiber_tree"
-    ],
+    action: Literal["trigger_handler", "get_props", "get_state", "find_component", "get_fiber_tree"],
     selector: str | None = None,
     handler_name: str | None = None,
     event_data: dict[str, Any] | None = None,
@@ -44,28 +42,20 @@ async def browser_react_tool(  # noqa: PLR0913
     match action:
         case "trigger_handler":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for trigger_handler action"
-                )
+                return BrowserResponse(success=False, error="selector required for trigger_handler action")
             if not handler_name:
                 return BrowserResponse(
                     success=False,
                     error="handler_name required for trigger_handler action",
                 )
-            return await browser_react_trigger_handler_tool(
-                manager, selector, handler_name, event_data
-            )
+            return await browser_react_trigger_handler_tool(manager, selector, handler_name, event_data)
         case "get_props":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for get_props action"
-                )
+                return BrowserResponse(success=False, error="selector required for get_props action")
             return await browser_react_get_props_tool(manager, selector, max_depth)
         case "get_state":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for get_state action"
-                )
+                return BrowserResponse(success=False, error="selector required for get_state action")
             return await browser_react_get_fiber_tree_tool(manager, selector, max_depth)
         case "find_component":
             if not component_name:
@@ -76,7 +66,5 @@ async def browser_react_tool(  # noqa: PLR0913
             return await browser_react_find_component_tool(manager, component_name)
         case "get_fiber_tree":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for get_fiber_tree action"
-                )
+                return BrowserResponse(success=False, error="selector required for get_fiber_tree action")
             return await browser_react_get_fiber_tree_tool(manager, selector, max_depth)

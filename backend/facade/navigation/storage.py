@@ -12,9 +12,7 @@ from browser.backend.utils.exceptions import NavigationError
 class StorageController(BaseController):
     """Controller for browser storage operations."""
 
-    async def get_local_storage(
-        self, key: str | None = None
-    ) -> dict[str, Any] | str | None:
+    async def get_local_storage(self, key: str | None = None) -> dict[str, Any] | str | None:
         """Get localStorage data.
 
         Args:
@@ -43,9 +41,7 @@ class StorageController(BaseController):
                 raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                raw_result = await loop.run_in_executor(
-                    None, self.driver.execute_script, script
-                )
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
             if raw_result is not None:
                 return raw_result  # type: ignore[no-any-return]
@@ -127,9 +123,7 @@ class StorageController(BaseController):
             logger.error(f"Failed to clear localStorage: {e}")
             raise NavigationError(f"Failed to clear localStorage: {e}") from e
 
-    async def get_session_storage(
-        self, key: str | None = None
-    ) -> dict[str, Any] | str | None:
+    async def get_session_storage(self, key: str | None = None) -> dict[str, Any] | str | None:
         """Get sessionStorage data.
 
         Args:
@@ -158,9 +152,7 @@ class StorageController(BaseController):
                 raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                raw_result = await loop.run_in_executor(
-                    None, self.driver.execute_script, script
-                )
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
             if raw_result is not None:
                 return raw_result  # type: ignore[no-any-return]

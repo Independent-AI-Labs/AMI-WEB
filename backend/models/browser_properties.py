@@ -4,7 +4,7 @@ import json
 from enum import Enum
 from typing import Any
 
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -29,16 +29,10 @@ class WebGLVendor(str, Enum):
 class WebGLRenderer(str, Enum):
     """Common WebGL renderers for spoofing."""
 
-    ANGLE_INTEL_UHD = (
-        "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
-    )
-    ANGLE_NVIDIA_GTX = (
-        "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
-    )
+    ANGLE_INTEL_UHD = "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    ANGLE_NVIDIA_GTX = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
     ANGLE_AMD_RADEON = "ANGLE (AMD, AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0, D3D11)"
-    ANGLE_INTEL_IRIS = (
-        "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)"
-    )
+    ANGLE_INTEL_IRIS = "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)"
     MESA_INTEL = "Mesa DRI Intel(R) HD Graphics"
     APPLE_M1 = "Apple M1"
     APPLE_M2 = "Apple M2"
@@ -246,9 +240,7 @@ class BrowserProperties(BaseModel):
         options["args"].append(f"--lang={self.language}")
 
         # Window size from screen resolution
-        options["args"].append(
-            f"--window-size={self.screen_resolution[0]},{self.screen_resolution[1]}"
-        )
+        options["args"].append(f"--window-size={self.screen_resolution[0]},{self.screen_resolution[1]}")
 
         # Automation flags based on settings
         if not self.automation_controlled:
@@ -260,9 +252,7 @@ class BrowserProperties(BaseModel):
 
         # Notifications
         notification_map = {"granted": 1, "denied": 2, "default": 0}
-        options["prefs"][
-            "profile.default_content_setting_values.notifications"
-        ] = notification_map.get(self.notification_permission, 0)
+        options["prefs"]["profile.default_content_setting_values.notifications"] = notification_map.get(self.notification_permission, 0)
 
         # Extra arguments and preferences
         options["args"].extend(self.extra_chrome_args)

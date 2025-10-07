@@ -11,10 +11,9 @@ import json
 from pathlib import Path
 
 import pytest
+from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
-from base.backend.utils.environment_setup import EnvironmentSetup
 
 
 @pytest.mark.asyncio
@@ -24,7 +23,7 @@ async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
     run_mcp_script = browser_root.parent / "base" / "scripts" / "run_mcp.py"
 
     # Use the browser module venv's Python
-    venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
+    venv_python = get_venv_python(browser_root)
 
     # Create stdio server parameters for `run_mcp chrome`
     server_params = StdioServerParameters(
@@ -55,9 +54,7 @@ async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
 
         # Optional: if navigate is available, it should respond without a running instance
         if "browser_navigate" in tool_names:
-            res = await session.call_tool(
-                "browser_navigate", arguments={"action": "get_url"}
-            )
+            res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":
                 try:

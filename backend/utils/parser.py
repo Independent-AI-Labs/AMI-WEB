@@ -37,9 +37,7 @@ class HTMLParser:
             ValueError: If HTML exceeds maximum size
         """
         if len(html) > max_size:
-            raise ValueError(
-                f"HTML size ({len(html)} bytes) exceeds maximum allowed size ({max_size} bytes)"
-            )
+            raise ValueError(f"HTML size ({len(html)} bytes) exceeds maximum allowed size ({max_size} bytes)")
 
         # Use html.parser for better security, lxml only if explicitly needed
         self.soup = BeautifulSoup(html, "html.parser")
@@ -105,25 +103,17 @@ class HTMLParser:
                 comment.extract()
 
         # Remove hidden elements using pre-compiled patterns
-        for hidden in soup.find_all(
-            attrs={"style": self._compiled_patterns["hidden_style"]}
-        ):
+        for hidden in soup.find_all(attrs={"style": self._compiled_patterns["hidden_style"]}):
             hidden.decompose()
         for hidden in soup.find_all(class_=self._compiled_patterns["hidden_class"]):
             hidden.decompose()
 
         # Extract text
-        text = (
-            self._extract_with_structure(soup)
-            if preserve_structure
-            else soup.get_text()
-        )
+        text = self._extract_with_structure(soup) if preserve_structure else soup.get_text()
 
         # Limit text length to prevent memory issues
         if len(text) > MAX_TEXT_LENGTH:
-            logger.warning(
-                f"Extracted text exceeds {MAX_TEXT_LENGTH} chars, truncating"
-            )
+            logger.warning(f"Extracted text exceeds {MAX_TEXT_LENGTH} chars, truncating")
             text = text[:MAX_TEXT_LENGTH]
 
         # Clean up whitespace
@@ -131,9 +121,7 @@ class HTMLParser:
 
         return text.strip()
 
-    def _extract_with_structure(
-        self, element: Tag | NavigableString | PageElement
-    ) -> str:
+    def _extract_with_structure(self, element: Tag | NavigableString | PageElement) -> str:
         """Extract text while preserving document structure.
 
         Args:
@@ -174,11 +162,7 @@ class HTMLParser:
             return "\n"
 
         # Extract content for all other elements
-        content = "".join(
-            self._extract_with_structure(child)
-            for child in element.children
-            if isinstance(child, Tag | NavigableString | PageElement)
-        )
+        content = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
 
         # Apply formatting based on element type
         if element.name in [
@@ -200,20 +184,11 @@ class HTMLParser:
 
     def _handle_link(self, element: Tag) -> str:
         """Handle link element text extraction."""
-        text = "".join(
-            self._extract_with_structure(child)
-            for child in element.children
-            if isinstance(child, Tag | NavigableString | PageElement)
-        )
+        text = "".join(self._extract_with_structure(child) for child in element.children if isinstance(child, Tag | NavigableString | PageElement))
         href = element.get("href", "")
         if href and isinstance(href, str) and not href.startswith("#"):
             return f"{text} ({href})"
-        if (
-            href
-            and isinstance(href, AttributeValueList)
-            and len(href) > 0
-            and not str(href[0]).startswith("#")
-        ):
+        if href and isinstance(href, AttributeValueList) and len(href) > 0 and not str(href[0]).startswith("#"):
             return f"{text} ({href[0]})"
         return text
 
@@ -254,9 +229,7 @@ class HTMLParser:
         # Clean up space around newlines using pre-compiled pattern
         return self._compiled_patterns["newline_cleanup"].sub("\n", text)
 
-    def extract_links(
-        self, absolute: bool = True, base_url: str = ""
-    ) -> list[dict[str, Any]]:
+    def extract_links(self, absolute: bool = True, base_url: str = "") -> list[dict[str, Any]]:
         """Extract all links from the page.
 
         Args:
@@ -278,9 +251,7 @@ class HTMLParser:
             if absolute and base_url and href:
                 try:
                     # Use urljoin for proper URL resolution
-                    if not href.startswith(
-                        ("http://", "https://", "//", "mailto:", "tel:", "#")
-                    ):
+                    if not href.startswith(("http://", "https://", "//", "mailto:", "tel:", "#")):
                         href = urljoin(base_url, href)
                 except Exception as e:
                     logger.debug(f"Failed to resolve URL {href}: {e}")
@@ -334,14 +305,10 @@ class HTMLParser:
             }
 
             # Extract input fields
-            field_iter = cast(
-                Iterable[Tag], form.find_all(["input", "textarea", "select"])
-            )
+            field_iter = cast(Iterable[Tag], form.find_all(["input", "textarea", "select"]))
             for input_field in field_iter:
                 field: dict[str, Any] = {
-                    "type": str(input_field.get("type", "text"))
-                    if input_field.name == "input"
-                    else input_field.name,
+                    "type": str(input_field.get("type", "text")) if input_field.name == "input" else input_field.name,
                     "name": str(input_field.get("name", "")),
                     "id": str(input_field.get("id", "")),
                     "value": str(input_field.get("value", "")),
@@ -415,9 +382,7 @@ class HTMLParser:
                 rows.append(row)
         return rows
 
-    def find_by_text(
-        self, text: str, tag: str | None = None, limit: int = 100
-    ) -> list[Any]:
+    def find_by_text(self, text: str, tag: str | None = None, limit: int = 100) -> list[Any]:
         """Find elements containing specific text.
 
         Args:
@@ -431,9 +396,7 @@ class HTMLParser:
         # Limit search text length to prevent regex DoS
         max_search_length = 1000
         if len(text) > max_search_length:
-            logger.warning(
-                f"Search text too long, truncating to {max_search_length} chars"
-            )
+            logger.warning(f"Search text too long, truncating to {max_search_length} chars")
             text = text[:max_search_length]
 
         # Cache compiled pattern for this session

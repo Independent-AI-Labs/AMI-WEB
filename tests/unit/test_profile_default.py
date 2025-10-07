@@ -20,9 +20,7 @@ def manager(profile_dir: Path) -> ProfileManager:
     return ProfileManager(base_dir=str(profile_dir))
 
 
-def test_ensure_default_profile_creates_if_not_exists(
-    manager: ProfileManager, profile_dir: Path
-) -> None:
+def test_ensure_default_profile_creates_if_not_exists(manager: ProfileManager, profile_dir: Path) -> None:
     """Test that ensure_default_profile creates default profile if it doesn't exist."""
     # Should not exist initially
     assert not (profile_dir / "default").exists()
@@ -35,15 +33,10 @@ def test_ensure_default_profile_creates_if_not_exists(
     assert result_path == profile_dir / "default"
     assert result_path.exists()
     assert "default" in manager.profiles
-    assert (
-        manager.profiles["default"]["description"]
-        == "Default profile for session persistence with HTTPS certificate exceptions"
-    )
+    assert manager.profiles["default"]["description"] == "Default profile for session persistence with HTTPS certificate exceptions"
 
 
-def test_ensure_default_profile_returns_existing(
-    manager: ProfileManager, _profile_dir: Path
-) -> None:
+def test_ensure_default_profile_returns_existing(manager: ProfileManager, _profile_dir: Path) -> None:
     """Test that ensure_default_profile returns existing profile if it exists."""
     # Create default profile first
     first_path = manager.ensure_default_profile()
@@ -84,9 +77,7 @@ def test_ensure_default_profile_loads_from_metadata(profile_dir: Path) -> None:
     assert manager.profiles["default"]["description"] == "Existing default"
 
 
-def test_ensure_default_profile_persistence(
-    manager: ProfileManager, profile_dir: Path
-) -> None:
+def test_ensure_default_profile_persistence(manager: ProfileManager, profile_dir: Path) -> None:
     """Test that default profile is persisted to metadata."""
     manager.ensure_default_profile()
 

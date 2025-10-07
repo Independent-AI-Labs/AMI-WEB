@@ -28,9 +28,7 @@ async def backend() -> AsyncIterator[ChromeManager]:
         config_file = "config.test.yaml"
 
     if not config_file:
-        pytest.skip(
-            "browser/config.yaml or config.test.yaml not found. Provision the configuration before running integration tests."
-        )
+        pytest.skip("browser/config.yaml or config.test.yaml not found. Provision the configuration before running integration tests.")
 
     # Load existing config and modify storage paths for testing
     existing_config = Config.load(config_file)
@@ -116,9 +114,7 @@ class TestProfileManagement:
         profile_manager = ProfileManager(base_dir=str(temp_profiles_dir))
 
         # Create a profile
-        profile_dir = profile_manager.create_profile(
-            "test_profile", "Test profile for unit tests"
-        )
+        profile_dir = profile_manager.create_profile("test_profile", "Test profile for unit tests")
         assert profile_dir.exists()
         assert (temp_profiles_dir / "test_profile").exists()
 
@@ -207,10 +203,7 @@ class TestProfileManagement:
             # Verify cookies are restored
             instance.driver.get("https://www.google.com/")
             current_cookies = instance.driver.get_cookies()
-            assert any(
-                c["name"] == "test_cookie" and c["value"] == "test_value"
-                for c in current_cookies
-            )
+            assert any(c["name"] == "test_cookie" and c["value"] == "test_value" for c in current_cookies)
 
         finally:
             await instance.terminate()
@@ -238,9 +231,7 @@ class TestDownloadManagement:
             instance.clear_downloads()
 
             # Download a test file
-            instance.driver.get(
-                "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-            )
+            instance.driver.get("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
 
             # Find and click download link if present
             links = instance.driver.find_elements(By.TAG_NAME, "a")
@@ -384,41 +375,25 @@ class TestSessionIsolation:
         try:
             # Set cookies and localStorage in instance1
             instance1.driver.get(f"{test_html_server}/test_page.html")
-            instance1.driver.execute_script(
-                "window.testHelpers.setCookie('profile', 'one');"
-            )
-            instance1.driver.execute_script(
-                "window.testHelpers.setLocalStorage('profile', 'one');"
-            )
+            instance1.driver.execute_script("window.testHelpers.setCookie('profile', 'one');")
+            instance1.driver.execute_script("window.testHelpers.setLocalStorage('profile', 'one');")
 
             # Set different data in instance2
             instance2.driver.get(f"{test_html_server}/test_page.html")
-            instance2.driver.execute_script(
-                "window.testHelpers.setCookie('profile', 'two');"
-            )
-            instance2.driver.execute_script(
-                "window.testHelpers.setLocalStorage('profile', 'two');"
-            )
+            instance2.driver.execute_script("window.testHelpers.setCookie('profile', 'two');")
+            instance2.driver.execute_script("window.testHelpers.setLocalStorage('profile', 'two');")
 
             # Verify isolation - instance1 should not see instance2's data
             instance1.driver.get(f"{test_html_server}/test_page.html")
-            cookie1 = instance1.driver.execute_script(
-                "return window.testHelpers.getCookie('profile')"
-            )
-            storage1 = instance1.driver.execute_script(
-                "return window.testHelpers.getLocalStorage('profile')"
-            )
+            cookie1 = instance1.driver.execute_script("return window.testHelpers.getCookie('profile')")
+            storage1 = instance1.driver.execute_script("return window.testHelpers.getLocalStorage('profile')")
             assert cookie1 == "one"
             assert storage1 == "one"
 
             # Verify instance2 has its own data
             instance2.driver.get(f"{test_html_server}/test_page.html")
-            cookie2 = instance2.driver.execute_script(
-                "return window.testHelpers.getCookie('profile')"
-            )
-            storage2 = instance2.driver.execute_script(
-                "return window.testHelpers.getLocalStorage('profile')"
-            )
+            cookie2 = instance2.driver.execute_script("return window.testHelpers.getCookie('profile')")
+            storage2 = instance2.driver.execute_script("return window.testHelpers.getLocalStorage('profile')")
             assert cookie2 == "two"
             assert storage2 == "two"
 
@@ -466,9 +441,7 @@ class TestPersistentSessions:
     """Test persistent browser sessions."""
 
     @pytest.mark.slow
-    async def test_session_persistence(
-        self, backend: Any, test_html_server: str
-    ) -> None:
+    async def test_session_persistence(self, backend: Any, test_html_server: str) -> None:
         """Test that browser sessions persist across restarts."""
         profile_name = "persistent_test"
 
@@ -483,12 +456,8 @@ class TestPersistentSessions:
         try:
             # Navigate to test page and set cookie
             instance1.driver.get(f"{test_html_server}/test_page.html")
-            instance1.driver.execute_script(
-                "window.testHelpers.setCookie('persistent', 'true');"
-            )
-            instance1.driver.execute_script(
-                "window.testHelpers.setLocalStorage('persistent', 'true');"
-            )
+            instance1.driver.execute_script("window.testHelpers.setCookie('persistent', 'true');")
+            instance1.driver.execute_script("window.testHelpers.setLocalStorage('persistent', 'true');")
 
             # Save cookies explicitly
             instance1.save_cookies()
@@ -514,13 +483,9 @@ class TestPersistentSessions:
         try:
             # Check if profile directory persists (through marker file)
             download_dir = instance2.get_download_directory()
-            assert (
-                download_dir is not None
-            ), "Download directory should exist for second instance"
+            assert download_dir is not None, "Download directory should exist for second instance"
             marker = download_dir / "test_marker.txt"
-            assert (
-                marker.exists()
-            ), "Profile persistence marker not found - profile directory was not reused"
+            assert marker.exists(), "Profile persistence marker not found - profile directory was not reused"
             assert marker.read_text() == "persistent=true", "Marker content incorrect"
 
             # Try to load cookies (may be 0 for localhost)
@@ -561,9 +526,7 @@ class TestPersistentSessions:
             saved_cookies = instance.save_cookies()
 
             # Find auth cookie
-            auth_cookie = next(
-                (c for c in saved_cookies if c["name"] == "auth_token"), None
-            )
+            auth_cookie = next((c for c in saved_cookies if c["name"] == "auth_token"), None)
             assert auth_cookie is not None
             assert auth_cookie["value"] == "test_auth_12345"
 

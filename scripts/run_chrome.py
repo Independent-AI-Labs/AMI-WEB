@@ -3,17 +3,22 @@
 
 from __future__ import annotations
 
+# Standard library imports FIRST
 import argparse
 import sys
 from pathlib import Path
 
-from base.backend.utils.standard_imports import setup_imports
+# Bootstrap sys.path - MUST come before base imports
+sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "base").exists())))
+
+# Now we can import from base
+from base.scripts.env.paths import setup_imports  # noqa: E402
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
+from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from loguru import logger  # noqa: E402
 
-from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: E402
 
 

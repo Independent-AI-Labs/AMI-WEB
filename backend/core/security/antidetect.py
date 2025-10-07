@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -87,10 +87,7 @@ def _validate_file_path(file_path: str) -> bool:
             return False
 
     # Ensure the path points to our expected file type
-    return (
-        file_path.endswith(("chromedriver", "chromedriver.exe"))
-        or "_patched" in file_path
-    )
+    return file_path.endswith(("chromedriver", "chromedriver.exe")) or "_patched" in file_path
 
 
 class ChromeDriverPatcher:
@@ -135,24 +132,18 @@ class ChromeDriverPatcher:
             codesign_path = shutil.which("codesign")
 
             if not xattr_path:
-                logger.warning(
-                    "xattr command not found - unable to remove extended attributes"
-                )
+                logger.warning("xattr command not found - unable to remove extended attributes")
             else:
                 # Remove any existing extended attributes
                 # Validate executable and file paths to avoid S603 security warning
                 driver_path_str = str(self.chromedriver_path.resolve())
 
                 if not _validate_executable_path(xattr_path):
-                    logger.error(
-                        f"Invalid or unsafe xattr executable path: {xattr_path}"
-                    )
+                    logger.error(f"Invalid or unsafe xattr executable path: {xattr_path}")
                     return
 
                 if not _validate_file_path(driver_path_str):
-                    logger.error(
-                        f"Invalid or unsafe chromedriver file path: {driver_path_str}"
-                    )
+                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
                     return
 
                 # Use validated paths in subprocess call - S603 suppressed with validation
@@ -163,24 +154,18 @@ class ChromeDriverPatcher:
                 )
 
             if not codesign_path:
-                logger.warning(
-                    "codesign command not found - unable to sign patched driver"
-                )
+                logger.warning("codesign command not found - unable to sign patched driver")
             else:
                 # Sign with ad-hoc signature
                 # Validate executable and file paths to avoid S603 security warning
                 driver_path_str = str(self.chromedriver_path.resolve())
 
                 if not _validate_executable_path(codesign_path):
-                    logger.error(
-                        f"Invalid or unsafe codesign executable path: {codesign_path}"
-                    )
+                    logger.error(f"Invalid or unsafe codesign executable path: {codesign_path}")
                     return
 
                 if not _validate_file_path(driver_path_str):
-                    logger.error(
-                        f"Invalid or unsafe chromedriver file path: {driver_path_str}"
-                    )
+                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
                     return
 
                 # Use validated paths in subprocess call - S603 suppressed with validation
@@ -262,9 +247,7 @@ class ChromeDriverPatcher:
             logger.info("ChromeDriver restored from backup")
 
 
-def get_anti_detection_arguments(
-    user_agent: str | None = None, window_size: tuple[int, int] | None = None
-) -> list[str]:
+def get_anti_detection_arguments(user_agent: str | None = None, window_size: tuple[int, int] | None = None) -> list[str]:
     """
     Get Chrome arguments for anti-detection.
 
@@ -442,9 +425,7 @@ def execute_anti_detection_scripts(driver: Any) -> None:
             driver.execute_script(script_content)
         except Exception as e:
             # This is expected for about:blank or other special pages
-            logger.debug(
-                f"Script injection failed on current page (likely about:blank): {e}"
-            )
+            logger.debug(f"Script injection failed on current page (likely about:blank): {e}")
 
         logger.debug("Complete anti-detection script injected into main target")
 

@@ -42,22 +42,14 @@ async def browser_inspect_tool(
 
     match action:
         case "get_html":
-            return await browser_get_html_tool(
-                manager, selector, max_depth, collapse_depth, ellipsize_text_after
-            )
+            return await browser_get_html_tool(manager, selector, max_depth, collapse_depth, ellipsize_text_after)
         case "exists":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for exists action"
-                )
+                return BrowserResponse(success=False, error="selector required for exists action")
             return await browser_exists_tool(manager, selector)
         case "get_attribute":
             if not selector:
-                return BrowserResponse(
-                    success=False, error="selector required for get_attribute action"
-                )
+                return BrowserResponse(success=False, error="selector required for get_attribute action")
             if not attribute:
-                return BrowserResponse(
-                    success=False, error="attribute required for get_attribute action"
-                )
+                return BrowserResponse(success=False, error="attribute required for get_attribute action")
             return await browser_get_attribute_tool(manager, selector, attribute)

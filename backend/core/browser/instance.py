@@ -55,9 +55,7 @@ class BrowserInstance:
         self._lifecycle = BrowserLifecycle(self.id, self._config)
         self._monitor = BrowserMonitor(self.id)
         self._storage = BrowserStorage(self.id, config=self._config)
-        self._options_builder = BrowserOptionsBuilder(
-            self._config, self._profile_manager
-        )
+        self._options_builder = BrowserOptionsBuilder(self._config, self._profile_manager)
 
         # State tracking
         self._profile_name: str | None = None
@@ -105,9 +103,7 @@ class BrowserInstance:
         try:
             # Use config default if anti_detect not explicitly set
             if anti_detect is None:
-                anti_detect = self._config.get(
-                    "backend.browser.default_anti_detect", True
-                )
+                anti_detect = self._config.get("backend.browser.default_anti_detect", True)
 
             # Store configuration
             self._profile_name = profile
@@ -126,9 +122,7 @@ class BrowserInstance:
                 profile_dir = self._profile_manager.get_profile_dir(profile)
                 self._storage.set_download_directory(profile_dir / "Downloads")
             else:
-                default_dir = Path(
-                    self._config.get("backend.storage.download_dir", "./data/downloads")
-                )
+                default_dir = Path(self._config.get("backend.storage.download_dir", "./data/downloads"))
                 self._storage.set_download_directory(default_dir)
 
             # Build Chrome options
@@ -152,11 +146,7 @@ class BrowserInstance:
 
             # Track process
             try:
-                if (
-                    hasattr(driver, "service")
-                    and driver.service
-                    and hasattr(driver.service, "process")
-                ):
+                if hasattr(driver, "service") and driver.service and hasattr(driver.service, "process"):
                     self.process = psutil.Process(driver.service.process.pid)
             except Exception as e:
                 logger.debug(f"Could not track process: {e}")
@@ -253,9 +243,7 @@ class BrowserInstance:
         """List all downloads."""
         return self._storage.list_downloads()
 
-    def wait_for_download(
-        self, filename: str | None = None, timeout: int = 30
-    ) -> Path | None:
+    def wait_for_download(self, filename: str | None = None, timeout: int = 30) -> Path | None:
         """Wait for a download to complete."""
         return self._storage.wait_for_download(filename, timeout)
 

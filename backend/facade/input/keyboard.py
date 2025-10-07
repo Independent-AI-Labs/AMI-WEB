@@ -20,9 +20,7 @@ MIN_KEYS_FOR_COMBINATION = 2
 class KeyboardController(BaseController):
     """Handles keyboard input and text entry operations."""
 
-    async def _type_text_sync(
-        self, element: WebElement, text: str, clear: bool, delay: int
-    ) -> None:
+    async def _type_text_sync(self, element: WebElement, text: str, clear: bool, delay: int) -> None:
         """Type text synchronously in thread context."""
         if clear:
             element.clear()
@@ -34,9 +32,7 @@ class KeyboardController(BaseController):
         else:
             element.send_keys(text)
 
-    async def _type_text_async(
-        self, element: WebElement, text: str, clear: bool, delay: int
-    ) -> None:
+    async def _type_text_async(self, element: WebElement, text: str, clear: bool, delay: int) -> None:
         """Type text asynchronously."""
         loop = asyncio.get_event_loop()
 
@@ -182,9 +178,7 @@ class KeyboardController(BaseController):
             logger.error(f"Clear input failed for {selector}: {e}")
             raise InputError(f"Failed to clear {selector}: {e}") from e
 
-    async def _apply_modifiers(
-        self, actions: ActionChains, modifiers: list[str], key_down: bool
-    ) -> None:
+    async def _apply_modifiers(self, actions: ActionChains, modifiers: list[str], key_down: bool) -> None:
         """Apply or release modifier keys.
 
         Args:
@@ -201,9 +195,7 @@ class KeyboardController(BaseController):
                 else:
                     actions.key_up(mod_key)
 
-    async def _find_element(
-        self, selector: str, wait: bool = True, timeout: int = 10
-    ) -> WebElement | None:
+    async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
         """Find an element on the page."""
         if not self.driver:
             raise InputError("Browser not initialized")
@@ -215,9 +207,7 @@ class KeyboardController(BaseController):
                 if self._is_in_thread_context():
                     return wait_obj.until(EC.presence_of_element_located((by, value)))
                 loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(
-                    None, wait_obj.until, EC.presence_of_element_located((by, value))
-                )
+                return await loop.run_in_executor(None, wait_obj.until, EC.presence_of_element_located((by, value)))
             return self.driver.find_element(by, value)
 
         except Exception as e:

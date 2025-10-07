@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -18,12 +17,12 @@ class TestAntidetectionScripts:
     @pytest.fixture
     def script_dir(self) -> Path:
         """Get the scripts directory path."""
-        return MODULE_ROOT / "web" / "scripts"
+        return Path(MODULE_ROOT / "web" / "scripts")
 
     @pytest.fixture
     def extension_dir(self) -> Path:
         """Get the extension directory path."""
-        return MODULE_ROOT / "web" / "extensions" / "antidetect"
+        return Path(MODULE_ROOT / "web" / "extensions" / "antidetect")
 
     def test_scripts_exist(self, script_dir: Path) -> None:
         """Test that all required scripts exist."""
@@ -61,10 +60,7 @@ class TestAntidetectionScripts:
 
         # Check security settings
         assert "content_security_policy" in manifest
-        assert (
-            manifest["content_security_policy"]["extension_pages"]
-            == "script-src 'self'; object-src 'none'"
-        )
+        assert manifest["content_security_policy"]["extension_pages"] == "script-src 'self'; object-src 'none'"
 
         # Check permissions are limited
         content_scripts = manifest["content_scripts"][0]
@@ -100,15 +96,9 @@ class TestAntidetectionScripts:
                 content = f.read()
 
             # Basic syntax checks
-            assert content.count("(") == content.count(
-                ")"
-            ), f"Unmatched parentheses in {script_name}"
-            assert content.count("{") == content.count(
-                "}"
-            ), f"Unmatched braces in {script_name}"
-            assert content.count("[") == content.count(
-                "]"
-            ), f"Unmatched brackets in {script_name}"
+            assert content.count("(") == content.count(")"), f"Unmatched parentheses in {script_name}"
+            assert content.count("{") == content.count("}"), f"Unmatched braces in {script_name}"
+            assert content.count("[") == content.count("]"), f"Unmatched brackets in {script_name}"
 
             # Check for try-catch blocks (error handling)
             assert "try {" in content, f"No error handling in {script_name}"
@@ -122,9 +112,7 @@ class TestAntidetectionScripts:
             content = f.read()
 
         # Check for polling patterns
-        assert (
-            "setInterval" not in content or "MutationObserver" in content
-        ), "Script uses polling instead of events"
+        assert "setInterval" not in content or "MutationObserver" in content, "Script uses polling instead of events"
         assert "while (true)" not in content, "Script contains infinite loop"
         assert "while(true)" not in content, "Script contains infinite loop"
 
@@ -137,22 +125,16 @@ class TestAntidetectionScripts:
 
         # Check that the entire script is wrapped in IIFE or try block
         assert (
-            content.strip().startswith("/*")
-            or content.strip().startswith("//")
-            or content.strip().startswith("(function")
+            content.strip().startswith("/*") or content.strip().startswith("//") or content.strip().startswith("(function")
         ), "Script should start with comment or IIFE"
 
         # Remove comments for analysis
         content_no_comments = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-        content_no_comments = re.sub(
-            r"//.*$", "", content_no_comments, flags=re.MULTILINE
-        )
+        content_no_comments = re.sub(r"//.*$", "", content_no_comments, flags=re.MULTILINE)
 
         # Check that after comments, it starts with IIFE
         content_stripped = content_no_comments.strip()
-        assert content_stripped.startswith(
-            "(function"
-        ), "Script not wrapped in IIFE after comments"
+        assert content_stripped.startswith("(function"), "Script not wrapped in IIFE after comments"
 
     def test_webdriver_removal_optimized(self, script_dir: Path) -> None:
         """Test that webdriver removal is optimized."""
@@ -172,9 +154,7 @@ class TestAntidetectionScripts:
 
         # Should use 1-2 methods max, not 4+
         max_webdriver_methods = 2
-        assert (
-            method_count <= max_webdriver_methods
-        ), f"Too many webdriver removal methods: {method_count}"
+        assert method_count <= max_webdriver_methods, f"Too many webdriver removal methods: {method_count}"
 
     def test_extension_inject_script_wrapped(self, extension_dir: Path) -> None:
         """Test that inject.js is properly wrapped."""
@@ -185,15 +165,11 @@ class TestAntidetectionScripts:
 
         # Remove comments to check structure
         content_no_comments = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
-        content_no_comments = re.sub(
-            r"//.*$", "", content_no_comments, flags=re.MULTILINE
-        )
+        content_no_comments = re.sub(r"//.*$", "", content_no_comments, flags=re.MULTILINE)
         content_stripped = content_no_comments.strip()
 
         # Check for IIFE wrapper
-        assert content_stripped.startswith(
-            "(function()"
-        ), "inject.js not wrapped in IIFE"
+        assert content_stripped.startswith("(function()"), "inject.js not wrapped in IIFE"
         assert content_stripped.endswith("})();"), "inject.js IIFE not properly closed"
 
 
@@ -229,9 +205,7 @@ class TestAntidetectionIntegration:
         )
 
         # The script should make webdriver return undefined
-        assert (
-            check_result["webdriver"] is None or check_result["isUndefined"]
-        ), f"webdriver property not properly removed: {check_result}"
+        assert check_result["webdriver"] is None or check_result["isUndefined"], f"webdriver property not properly removed: {check_result}"
 
     @pytest.mark.integration
     @pytest.mark.asyncio
@@ -249,7 +223,5 @@ class TestAntidetectionIntegration:
         driver.execute_script(script)
 
         # Check chrome object
-        has_chrome = driver.execute_script(
-            "return typeof window.chrome !== 'undefined'"
-        )
+        has_chrome = driver.execute_script("return typeof window.chrome !== 'undefined'")
         assert has_chrome, "Chrome object not defined"

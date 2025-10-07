@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -83,16 +83,12 @@ class ScriptValidator:
                             category=p["category"],
                         )
                         # Compile the regex pattern
-                        pattern.compiled = re.compile(
-                            pattern.pattern, re.IGNORECASE | re.MULTILINE
-                        )
+                        pattern.compiled = re.compile(pattern.pattern, re.IGNORECASE | re.MULTILINE)
                         self.patterns.append(pattern)
                     except (KeyError, re.error) as e:
                         logger.error(f"Failed to load pattern {p}: {e}")
 
-            logger.info(
-                f"Loaded {len(self.patterns)} forbidden script patterns from {self.config_path}"
-            )
+            logger.info(f"Loaded {len(self.patterns)} forbidden script patterns from {self.config_path}")
 
         except Exception as e:
             logger.error(f"Failed to load script validation config: {e}")
@@ -128,11 +124,7 @@ class ScriptValidator:
                 elif pattern.severity == "warning":
                     warnings.append((pattern, matched_text))
 
-                logger.warning(
-                    f"Script validation {pattern.severity}: {pattern.category} - "
-                    f"{pattern.reason}\n"
-                    f"Matched: {matched_text}"
-                )
+                logger.warning(f"Script validation {pattern.severity}: {pattern.category} - " f"{pattern.reason}\n" f"Matched: {matched_text}")
 
         # Determine if script is allowed
         allowed = True
@@ -163,20 +155,13 @@ class ScriptValidator:
         if not result.allowed:
             error_msgs = []
             for pattern, matched in result.errors:
-                error_msgs.append(
-                    f"  - [{pattern.category}] {pattern.reason}\n    Matched: {matched}"
-                )
+                error_msgs.append(f"  - [{pattern.category}] {pattern.reason}\n    Matched: {matched}")
 
             if self.warnings_are_errors:
                 for pattern, matched in result.warnings:
-                    error_msgs.append(
-                        f"  - [{pattern.category}] {pattern.reason}\n    Matched: {matched}"
-                    )
+                    error_msgs.append(f"  - [{pattern.category}] {pattern.reason}\n    Matched: {matched}")
 
-            raise ValueError(
-                f"Script validation failed with {len(result.errors)} error(s):\n"
-                + "\n".join(error_msgs)
-            )
+            raise ValueError(f"Script validation failed with {len(result.errors)} error(s):\n" + "\n".join(error_msgs))
 
 
 class _ValidatorRegistry:

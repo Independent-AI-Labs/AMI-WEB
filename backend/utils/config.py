@@ -4,7 +4,7 @@ import platform
 from pathlib import Path
 from typing import Any
 
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -107,29 +107,12 @@ class Config:
             build_dir = MODULE_ROOT / "build"
             if build_dir.exists():
                 for chrome_dir in build_dir.glob("chrome-mac-*"):
-                    chrome_paths.append(
-                        chrome_dir
-                        / "Google Chrome for Testing.app"
-                        / "Contents"
-                        / "MacOS"
-                        / "Google Chrome for Testing"
-                    )
+                    chrome_paths.append(chrome_dir / "Google Chrome for Testing.app" / "Contents" / "MacOS" / "Google Chrome for Testing")
             # Also check alternative install paths
             chrome_paths.extend(
                 [
-                    MODULE_ROOT
-                    / "chromium-mac"
-                    / "Chromium.app"
-                    / "Contents"
-                    / "MacOS"
-                    / "Chromium",
-                    MODULE_ROOT
-                    / "build"
-                    / "chromium-mac"
-                    / "Chromium.app"
-                    / "Contents"
-                    / "MacOS"
-                    / "Chromium",
+                    MODULE_ROOT / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
+                    MODULE_ROOT / "build" / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
                 ],
             )
             driver_paths = [

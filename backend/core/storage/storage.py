@@ -62,9 +62,7 @@ class BrowserStorage:
 
         return sorted(downloads, key=lambda x: x["modified"], reverse=True)
 
-    def wait_for_download(
-        self, filename: str | None = None, timeout: int = 30
-    ) -> Path | None:
+    def wait_for_download(self, filename: str | None = None, timeout: int = 30) -> Path | None:
         """Wait for a download to complete."""
         if not self._download_dir:
             logger.error("No download directory configured")
@@ -80,11 +78,7 @@ class BrowserStorage:
                     return file_path
             else:
                 # Get the most recent file
-                files = [
-                    f
-                    for f in self._download_dir.iterdir()
-                    if f.is_file() and not f.name.endswith(".crdownload")
-                ]
+                files = [f for f in self._download_dir.iterdir() if f.is_file() and not f.name.endswith(".crdownload")]
                 if files:
                     return max(files, key=lambda f: f.stat().st_mtime)
 
@@ -130,15 +124,7 @@ class BrowserStorage:
         # Save cookies to a JSON file in the profile directory
 
         # Use configured profiles directory or default
-        profiles_base = (
-            Path(
-                self._config.get(
-                    "backend.storage.profiles_dir", "./data/browser_profiles"
-                )
-            )
-            if self._config
-            else Path("./data/browser_profiles")
-        )
+        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
         profile_dir = profiles_base / self._profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
         cookies_file = profile_dir / "cookies.json"
@@ -156,15 +142,7 @@ class BrowserStorage:
         # Load cookies from JSON file in the profile directory
 
         # Use configured profiles directory or default
-        profiles_base = (
-            Path(
-                self._config.get(
-                    "backend.storage.profiles_dir", "./data/browser_profiles"
-                )
-            )
-            if self._config
-            else Path("./data/browser_profiles")
-        )
+        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
         cookies_file = profiles_base / self._profile_name / "cookies.json"
 
         if not cookies_file.exists():
@@ -174,9 +152,7 @@ class BrowserStorage:
         try:
             with cookies_file.open() as f:
                 cookies: list[dict[str, Any]] = json.load(f)
-            logger.debug(
-                f"Loaded {len(cookies)} cookies from profile {self._profile_name}"
-            )
+            logger.debug(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
             return cookies
         except Exception as e:
             logger.warning(f"Failed to load cookies from profile: {e}")
@@ -210,9 +186,7 @@ class BrowserStorage:
 
         total_added = 0
         for domain, domain_cookies in cookies_by_domain.items():
-            added = self._add_cookies_for_domain(
-                driver, domain, domain_cookies, navigate_to_domain
-            )
+            added = self._add_cookies_for_domain(driver, domain, domain_cookies, navigate_to_domain)
             total_added += added
 
         logger.info(f"Loaded {total_added} cookies into browser")
@@ -279,9 +253,7 @@ class BrowserStorage:
 
         try:
             for key, value in data.items():
-                driver.execute_script(
-                    "localStorage.setItem(arguments[0], arguments[1]);", key, value
-                )
+                driver.execute_script("localStorage.setItem(arguments[0], arguments[1]);", key, value)
         except Exception as e:
             logger.debug(f"Failed to set localStorage: {e}")
 

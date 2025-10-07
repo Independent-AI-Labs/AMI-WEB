@@ -21,9 +21,7 @@ class ContentExtractor(BaseController):
             if self._is_in_thread_context():
                 return str(self.driver.page_source)
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, lambda: str(self.driver.page_source) if self.driver else ""
-            )
+            return await loop.run_in_executor(None, lambda: str(self.driver.page_source) if self.driver else "")
         except Exception as e:
             raise NavigationError(f"Failed to get page source: {e}") from e
 
@@ -44,9 +42,7 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            script = parameterized_js_execution(
-                "return document.querySelector({selector}).innerHTML", selector=selector
-            )
+            script = parameterized_js_execution("return document.querySelector({selector}).innerHTML", selector=selector)
             result = await self.execute_script(script)
             return str(result) if result is not None else ""
         except Exception as e:
@@ -172,9 +168,7 @@ class ContentExtractor(BaseController):
         except Exception as e:
             raise NavigationError(f"Failed to get text with tags: {e}") from e
 
-    async def execute_script(
-        self, script: str, *args: Any, async_script: bool = False
-    ) -> Any:
+    async def execute_script(self, script: str, *args: Any, async_script: bool = False) -> Any:
         """Execute JavaScript in the page context.
 
         Args:
@@ -198,15 +192,11 @@ class ContentExtractor(BaseController):
             if async_script:
                 return await loop.run_in_executor(
                     None,
-                    lambda: self.driver.execute_async_script(script, *args)
-                    if self.driver
-                    else None,
+                    lambda: self.driver.execute_async_script(script, *args) if self.driver else None,
                 )
             return await loop.run_in_executor(
                 None,
-                lambda: self.driver.execute_script(script, *args)
-                if self.driver
-                else None,
+                lambda: self.driver.execute_script(script, *args) if self.driver else None,
             )
         except Exception as e:
             raise NavigationError(f"Failed to execute script: {e}") from e
@@ -279,16 +269,12 @@ class ContentExtractor(BaseController):
         """
 
         try:
-            result = await self.execute_script(
-                script, max_depth, collapse_depth, ellipsize_text_after
-            )
+            result = await self.execute_script(script, max_depth, collapse_depth, ellipsize_text_after)
             return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get HTML with depth limit: {e}") from e
 
-    async def get_parsed_html(
-        self, max_depth: int | None = None, max_tokens: int = 25000
-    ) -> str:
+    async def get_parsed_html(self, max_depth: int | None = None, max_tokens: int = 25000) -> str:
         """Get parsed and limited HTML suitable for LLM consumption.
 
         Args:

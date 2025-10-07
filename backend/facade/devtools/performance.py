@@ -73,17 +73,13 @@ class PerformanceController(BaseController):
                 first_paint=paint_timing.get("firstPaint", 0),
                 first_contentful_paint=paint_timing.get("firstContentfulPaint", 0),
                 js_heap_used=memory_info.get("usedJSHeapSize", 0) if memory_info else 0,
-                js_heap_total=memory_info.get("totalJSHeapSize", 0)
-                if memory_info
-                else 0,
+                js_heap_total=memory_info.get("totalJSHeapSize", 0) if memory_info else 0,
             )
 
         except Exception as e:
             logger.error(f"Failed to get performance metrics: {e}")
             # Return minimal valid metrics on error
-            return PerformanceMetrics(
-                timestamp=datetime.now(), dom_content_loaded=0, load_complete=0
-            )
+            return PerformanceMetrics(timestamp=datetime.now(), dom_content_loaded=0, load_complete=0)
 
     async def get_resource_timing(self) -> list[dict[str, Any]]:
         """Get resource loading timing information.
@@ -144,9 +140,7 @@ class PerformanceController(BaseController):
         await self._execute_js(f"performance.mark('{name}')")
         logger.debug(f"Created performance mark: {name}")
 
-    async def measure(
-        self, name: str, start_mark: str, end_mark: str | None = None
-    ) -> float:
+    async def measure(self, name: str, start_mark: str, end_mark: str | None = None) -> float:
         """Create a performance measure between marks.
 
         Args:
@@ -157,11 +151,7 @@ class PerformanceController(BaseController):
         Returns:
             Duration of the measure in milliseconds
         """
-        script = (
-            f"performance.measure('{name}', '{start_mark}', '{end_mark}')"
-            if end_mark
-            else f"performance.measure('{name}', '{start_mark}')"
-        )
+        script = f"performance.measure('{name}', '{start_mark}', '{end_mark}')" if end_mark else f"performance.measure('{name}', '{start_mark}')"
 
         await self._execute_js(script)
 
@@ -236,9 +226,7 @@ class PerformanceController(BaseController):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.driver.execute_script, script)
 
-    async def _execute_cdp(
-        self, command: str, params: dict[str, Any] | None = None
-    ) -> Any:
+    async def _execute_cdp(self, command: str, params: dict[str, Any] | None = None) -> Any:
         """Execute CDP command.
 
         Args:
@@ -255,11 +243,7 @@ class PerformanceController(BaseController):
             if self._is_in_thread_context():
                 return self.driver.execute_cdp_cmd(command, params or {})
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self.driver.execute_cdp_cmd, command, params or {}
-            )
+            return await loop.run_in_executor(None, self.driver.execute_cdp_cmd, command, params or {})
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
-            raise ChromeManagerError(
-                f"Failed to execute CDP command {command}: {e}"
-            ) from e
+            raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e

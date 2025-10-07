@@ -5,23 +5,23 @@ repos:
     hooks:
       # Linting (includes security checks)
       - id: ruff
-        args: [ --fix, --exit-non-zero-on-fix, . ]
+        require_serial: true
+        args: [ --config, ../base/ruff.toml, --fix, --exit-non-zero-on-fix, . ]
         pass_filenames: false
         stages: [ pre-commit ]
-        require_serial: true
       # Formatting (replaces black)
       - id: ruff-format
-        args: [ . ]
+        require_serial: true
+        args: [ --config, ../base/ruff.toml, . ]
         pass_filenames: false
         stages: [ pre-commit ]
-        require_serial: true
 
   # Type checking
   - repo: local
     hooks:
       - id: mypy
         name: mypy
-        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser --config-file=browser/mypy.ini"'
+        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser --config-file=base/mypy.ini"'
         language: system
         types: [ python ]
         require_serial: true
@@ -40,21 +40,21 @@ repos:
         require_serial: true
       - id: banned-words
         name: banned-words
-        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/check_banned_words.py browser"
+        entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/banned_words.py browser"
         language: system
         pass_filenames: false
         stages: [ pre-commit ]
         require_serial: true
       - id: no-lint-suppressions
         name: no-lint-suppressions
-        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/list_noqas.py browser"
+        entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/code_check.py browser"
         language: system
         pass_filenames: false
         stages: [ pre-commit ]
         require_serial: true
       - id: validate-serial
         name: validate-serial
-        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/validate_serial_hooks.py --module browser"
+        entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/serial_hooks.py --module browser"
         language: system
         pass_filenames: false
         stages: [ pre-push ]
@@ -77,15 +77,15 @@ repos:
     rev: v4.5.0
     hooks:
       - id: check-yaml
-        stages: [ pre-commit ]
         require_serial: true
+        stages: [ pre-commit ]
       - id: check-added-large-files
+        require_serial: true
         args: ['--maxkb=100000']  # 100MB limit
         stages: [ pre-commit ]
-        require_serial: true
       - id: check-merge-conflict
-        stages: [ pre-commit ]
         require_serial: true
+        stages: [ pre-commit ]
       - id: debug-statements
-        stages: [ pre-commit ]
         require_serial: true
+        stages: [ pre-commit ]

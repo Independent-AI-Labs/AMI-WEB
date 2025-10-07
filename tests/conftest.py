@@ -13,8 +13,7 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
-
-from base.backend.utils.standard_imports import setup_imports
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -57,9 +56,7 @@ def _has_chrome() -> bool:
         return False
 
     try:
-        result = subprocess.run(
-            [str(path_obj), "--version"], capture_output=True, text=True, check=False
-        )
+        result = subprocess.run([str(path_obj), "--version"], capture_output=True, text=True, check=False)
         return result.returncode == 0
     except Exception as exc:  # pragma: no cover - defensive
         logger.error(f"Failed to query Chrome version at {chrome_path}: {exc}")
@@ -78,9 +75,7 @@ def _has_chromedriver() -> bool:
         return False
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:  # noqa: ARG001
     # If Chrome/Driver missing, surface explicit remediation steps and skip tests
     if not (_has_chrome() and _has_chromedriver()):
         import pytest as _pytest  # local import to avoid global side effects  # noqa: PLC0415
@@ -100,23 +95,15 @@ def pytest_collection_modifyitems(
                 ChromeManager as _Mgr,
             )
 
-            mgr = _Mgr(
-                config_file="config.yaml"
-                if Path("config.yaml").exists()
-                else "config.sample.yaml"
-            )
+            mgr = _Mgr(config_file="config.yaml" if Path("config.yaml").exists() else "config.sample.yaml")
             import asyncio as _asyncio  # noqa: PLC0415
 
             async def _run() -> bool:
                 try:
                     await mgr.initialize()
-                    inst = await mgr.get_or_create_instance(
-                        headless=True, use_pool=True
-                    )
+                    inst = await mgr.get_or_create_instance(headless=True, use_pool=True)
                     # Simple health check
-                    ok = (
-                        inst.driver is not None and len(inst.driver.window_handles) >= 1
-                    )
+                    ok = inst.driver is not None and len(inst.driver.window_handles) >= 1
                     await mgr.return_to_pool(inst.id)
                     await mgr.shutdown()
                     return bool(ok)
@@ -188,9 +175,7 @@ async def browser_instance(
     """Get a browser instance from the pool - reused per module."""
     # Get instance from pool
     logger.info(f"Requesting browser instance (headless={HEADLESS})")
-    instance = await session_manager.get_or_create_instance(
-        headless=HEADLESS, use_pool=True
-    )
+    instance = await session_manager.get_or_create_instance(headless=HEADLESS, use_pool=True)
     logger.info(f"Got browser instance {instance.id} from pool (headless={HEADLESS})")
 
     # Store initial state
@@ -268,9 +253,7 @@ async def test_server() -> AsyncIterator[str]:
         base_url = await server.start()
         logger.info(f"Test server started at {base_url}")
     except OSError as e:
-        raise RuntimeError(
-            "Failed to bind test HTTP server to an ephemeral port"
-        ) from e
+        raise RuntimeError("Failed to bind test HTTP server to an ephemeral port") from e
 
     yield base_url
 
@@ -283,9 +266,7 @@ async def test_server() -> AsyncIterator[str]:
 @pytest_asyncio.fixture(scope="class")
 async def browser() -> AsyncIterator[BrowserInstance]:
     """DEPRECATED: Create a browser instance shared by all tests in a class."""
-    logger.warning(
-        "Using deprecated 'browser' fixture - use 'browser_instance' instead"
-    )
+    logger.warning("Using deprecated 'browser' fixture - use 'browser_instance' instead")
     # Load config from config.yaml if it exists, otherwise use defaults
     config = Config.load("config.yaml")
     instance = BrowserInstance(config=config)
@@ -338,7 +319,7 @@ def temp_dir(tmp_path: Path) -> Path:
 @pytest.fixture(scope="session")
 def browser_root() -> Path:
     """Browser module root directory - single source of truth."""
-    return MODULE_ROOT
+    return Path(MODULE_ROOT)
 
 
 @pytest.fixture(scope="session")
@@ -376,14 +357,10 @@ def test_config() -> dict[str, Any]:
 # Markers for test categorization
 def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-    )
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "mcp: marks tests related to MCP server")
-    config.addinivalue_line(
-        "markers", "browser: marks tests related to browser operations"
-    )
+    config.addinivalue_line("markers", "browser: marks tests related to browser operations")
     config.addinivalue_line("markers", "pool: marks tests related to browser pool")
 
 

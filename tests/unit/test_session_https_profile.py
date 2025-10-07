@@ -57,6 +57,7 @@ def mock_instance() -> Mock:
         ]
     )
     instance.driver.window_handles = ["handle1"]
+    instance.driver.current_window_handle = "handle1"
     return instance
 
 
@@ -218,6 +219,7 @@ async def test_multiple_sessions_with_default_profile(
     mock_instance2.driver.title = "Another Page"
     mock_instance2.driver.get_cookies = Mock(return_value=[])
     mock_instance2.driver.window_handles = ["handle1"]
+    mock_instance2.driver.current_window_handle = "handle1"
 
     session_id_2 = await session_manager.save_session(
         mock_instance2,

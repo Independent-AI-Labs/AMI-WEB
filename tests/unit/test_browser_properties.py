@@ -117,9 +117,7 @@ class TestPropertiesManager:
     def test_load_default_properties(self, mock_manager: Mock) -> None:
         """Test loading default properties."""
         manager = mock_manager()
-        manager.load_default_properties = Mock(
-            return_value={"userAgent": "Default", "webdriver": False}
-        )
+        manager.load_default_properties = Mock(return_value={"userAgent": "Default", "webdriver": False})
 
         props = manager.load_default_properties()
 
@@ -153,9 +151,7 @@ class TestPropertiesManager:
         base_props: dict[str, Any] = {"userAgent": "Base", "webdriver": True}
         overrides: dict[str, Any] = {"webdriver": False, "custom": "value"}
 
-        manager.apply_overrides = Mock(
-            return_value={"userAgent": "Base", "webdriver": False, "custom": "value"}
-        )
+        manager.apply_overrides = Mock(return_value={"userAgent": "Base", "webdriver": False, "custom": "value"})
 
         result = manager.apply_overrides(base_props, overrides)
 
@@ -223,9 +219,7 @@ class TestPropertyInjection:
 
         # Should escape quotes and special characters
         escaped_ua = properties["userAgent"].replace("'", "\\'").replace('"', '\\"')
-        escaped_custom = (
-            properties["customProp"].replace("<", "\\<").replace(">", "\\>")
-        )
+        escaped_custom = properties["customProp"].replace("<", "\\<").replace(">", "\\>")
 
         assert "\\'" in escaped_ua
         assert '\\"' in escaped_ua

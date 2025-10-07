@@ -8,23 +8,17 @@ from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 
-async def _create_profile(
-    manager: ChromeManager, profile_name: str | None, description: str | None
-) -> BrowserResponse:
+async def _create_profile(manager: ChromeManager, profile_name: str | None, description: str | None) -> BrowserResponse:
     """Create a new browser profile."""
     if not profile_name:
-        return BrowserResponse(
-            success=False, error="profile_name required for create action"
-        )
+        return BrowserResponse(success=False, error="profile_name required for create action")
 
     try:
         # Ensure manager is initialized
         if not manager._initialized:
             await manager.initialize()
 
-        profile_dir = manager.profile_manager.create_profile(
-            profile_name, description or ""
-        )
+        profile_dir = manager.profile_manager.create_profile(profile_name, description or "")
         return BrowserResponse(
             success=True,
             data={
@@ -39,14 +33,10 @@ async def _create_profile(
         return BrowserResponse(success=False, error=f"Failed to create profile: {e}")
 
 
-async def _delete_profile(
-    manager: ChromeManager, profile_name: str | None
-) -> BrowserResponse:
+async def _delete_profile(manager: ChromeManager, profile_name: str | None) -> BrowserResponse:
     """Delete a browser profile."""
     if not profile_name:
-        return BrowserResponse(
-            success=False, error="profile_name required for delete action"
-        )
+        return BrowserResponse(success=False, error="profile_name required for delete action")
 
     try:
         # Ensure manager is initialized
@@ -62,9 +52,7 @@ async def _delete_profile(
                     "message": f"Profile '{profile_name}' deleted successfully",
                 },
             )
-        return BrowserResponse(
-            success=False, error=f"Profile '{profile_name}' not found"
-        )
+        return BrowserResponse(success=False, error=f"Profile '{profile_name}' not found")
     except Exception as e:
         logger.error(f"Failed to delete profile: {e}")
         return BrowserResponse(success=False, error=f"Failed to delete profile: {e}")
@@ -87,18 +75,12 @@ async def _list_profiles(manager: ChromeManager) -> BrowserResponse:
         return BrowserResponse(success=False, error=f"Failed to list profiles: {e}")
 
 
-async def _copy_profile(
-    manager: ChromeManager, source_profile: str | None, dest_profile: str | None
-) -> BrowserResponse:
+async def _copy_profile(manager: ChromeManager, source_profile: str | None, dest_profile: str | None) -> BrowserResponse:
     """Copy a browser profile."""
     if not source_profile:
-        return BrowserResponse(
-            success=False, error="source_profile required for copy action"
-        )
+        return BrowserResponse(success=False, error="source_profile required for copy action")
     if not dest_profile:
-        return BrowserResponse(
-            success=False, error="dest_profile required for copy action"
-        )
+        return BrowserResponse(success=False, error="dest_profile required for copy action")
 
     try:
         # Ensure manager is initialized

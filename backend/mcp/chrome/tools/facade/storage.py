@@ -9,7 +9,7 @@ from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 
-async def browser_storage_tool(
+async def browser_storage_tool(  # noqa: C901, PLR0911, PLR0912
     manager: ChromeManager,
     action: Literal[
         "list_downloads",
@@ -54,32 +54,22 @@ async def browser_storage_tool(
     }:
         instance = await manager.get_instance_or_current(instance_id)
         if not instance:
-            return BrowserResponse(
-                success=False, error="Browser instance not available"
-            )
+            return BrowserResponse(success=False, error="Browser instance not available")
 
     match action:
         case "list_downloads":
             if not instance:
-                return BrowserResponse(
-                    success=False, error="Browser instance not available"
-                )
+                return BrowserResponse(success=False, error="Browser instance not available")
             downloads = instance.list_downloads()
-            return BrowserResponse(
-                success=True, data={"downloads": downloads, "count": len(downloads)}
-            )
+            return BrowserResponse(success=True, data={"downloads": downloads, "count": len(downloads)})
         case "clear_downloads":
             if not instance:
-                return BrowserResponse(
-                    success=False, error="Browser instance not available"
-                )
+                return BrowserResponse(success=False, error="Browser instance not available")
             count = instance.clear_downloads()
             return BrowserResponse(success=True, data={"cleared": count})
         case "wait_for_download":
             if not instance:
-                return BrowserResponse(
-                    success=False, error="Browser instance not available"
-                )
+                return BrowserResponse(success=False, error="Browser instance not available")
             file_path = instance.wait_for_download(filename, timeout)
             if file_path:
                 return BrowserResponse(
@@ -90,14 +80,10 @@ async def browser_storage_tool(
                         "found": True,
                     },
                 )
-            return BrowserResponse(
-                success=False, error=f"Download not completed within {timeout}s"
-            )
+            return BrowserResponse(success=False, error=f"Download not completed within {timeout}s")
         case "set_download_behavior":
             if not instance:
-                return BrowserResponse(
-                    success=False, error="Browser instance not available"
-                )
+                return BrowserResponse(success=False, error="Browser instance not available")
             if not instance.driver:
                 return BrowserResponse(success=False, error="Browser not initialized")
             # Use Chrome DevTools Protocol to set download behavior
@@ -106,24 +92,14 @@ async def browser_storage_tool(
                 params["downloadPath"] = download_path
             try:
                 instance.driver.execute_cdp_cmd("Browser.setDownloadBehavior", params)
-                return BrowserResponse(
-                    success=True, data={"behavior": behavior, "path": download_path}
-                )
+                return BrowserResponse(success=True, data={"behavior": behavior, "path": download_path})
             except Exception as e:
                 logger.error(f"Failed to set download behavior: {e}")
-                return BrowserResponse(
-                    success=False, error=f"Failed to set download behavior: {e}"
-                )
+                return BrowserResponse(success=False, error=f"Failed to set download behavior: {e}")
         case "list_screenshots":
-            screenshot_dir = Path(
-                manager.config.get(
-                    "backend.storage.screenshot_dir", "./data/screenshots"
-                )
-            )
+            screenshot_dir = Path(manager.config.get("backend.storage.screenshot_dir", "./data/screenshots"))
             if not screenshot_dir.exists():
-                return BrowserResponse(
-                    success=True, data={"screenshots": [], "count": 0}
-                )
+                return BrowserResponse(success=True, data={"screenshots": [], "count": 0})
             screenshots = []
             for file in screenshot_dir.iterdir():
                 if file.is_file() and file.suffix in {".png", ".jpg", ".jpeg", ".webp"}:
@@ -137,19 +113,13 @@ async def browser_storage_tool(
                         },
                     )
             # Sort by modified time, most recent first
-            screenshots = sorted(
-                screenshots, key=lambda x: cast(float, x["modified"]), reverse=True
-            )
+            screenshots = sorted(screenshots, key=lambda x: cast(float, x["modified"]), reverse=True)
             return BrowserResponse(
                 success=True,
                 data={"screenshots": screenshots, "count": len(screenshots)},
             )
         case "clear_screenshots":
-            screenshot_dir = Path(
-                manager.config.get(
-                    "backend.storage.screenshot_dir", "./data/screenshots"
-                )
-            )
+            screenshot_dir = Path(manager.config.get("backend.storage.screenshot_dir", "./data/screenshots"))
             if not screenshot_dir.exists():
                 return BrowserResponse(success=True, data={"cleared": 0})
             count = 0

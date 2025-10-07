@@ -21,7 +21,7 @@ from browser.backend.mcp.chrome.tools.navigation_tools import (
 )
 
 
-async def browser_navigate_tool(
+async def browser_navigate_tool(  # noqa: PLR0911
     manager: ChromeManager,
     action: Literal[
         "goto",
@@ -59,12 +59,8 @@ async def browser_navigate_tool(
     match action:
         case "goto":
             if not url:
-                return BrowserResponse(
-                    success=False, error="url required for goto action"
-                )
-            return await browser_navigate_impl(
-                manager, url, instance_id, wait_for, timeout
-            )
+                return BrowserResponse(success=False, error="url required for goto action")
+            return await browser_navigate_impl(manager, url, instance_id, wait_for, timeout)
         case "back":
             return await browser_back_tool(manager, instance_id)
         case "forward":
@@ -79,9 +75,7 @@ async def browser_navigate_tool(
             return await browser_close_tab_tool(manager, tab_id, instance_id)
         case "switch_tab":
             if not tab_id:
-                return BrowserResponse(
-                    success=False, error="tab_id required for switch_tab action"
-                )
+                return BrowserResponse(success=False, error="tab_id required for switch_tab action")
             return await browser_switch_tab_tool(manager, tab_id, instance_id)
         case "list_tabs":
             return await browser_list_tabs_tool(manager, instance_id)

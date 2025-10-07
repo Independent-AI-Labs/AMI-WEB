@@ -50,22 +50,16 @@ async def browser_execute_tool(
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_evaluate_tool(
-    manager: ChromeManager, expression: str, instance_id: str | None = None
-) -> BrowserResponse:
+async def browser_evaluate_tool(manager: ChromeManager, expression: str, instance_id: str | None = None) -> BrowserResponse:
     """Evaluate JavaScript expression."""
-    logger.debug(
-        f"Evaluating JavaScript: {expression[:100]}..., instance_id={instance_id}"
-    )
+    logger.debug(f"Evaluating JavaScript: {expression[:100]}..., instance_id={instance_id}")
 
     # Validate expression against forbidden patterns
     try:
         validate_script_or_raise(expression)
     except ValueError as e:
         logger.error(f"Expression validation failed: {e}")
-        return BrowserResponse(
-            success=False, error=f"Expression validation failed: {e}"
-        )
+        return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -115,9 +109,7 @@ async def browser_execute_chunk_tool(
     result = instance.driver.execute_script(script, *(args or []))
 
     if not isinstance(result, str):
-        return BrowserResponse(
-            success=False, error="Chunked execution requires a string result"
-        )
+        return BrowserResponse(success=False, error="Chunked execution requires a string result")
 
     try:
         chunk = compute_chunk(
@@ -162,9 +154,7 @@ async def browser_evaluate_chunk_tool(
         validate_script_or_raise(expression)
     except ValueError as e:
         logger.error(f"Expression validation failed: {e}")
-        return BrowserResponse(
-            success=False, error=f"Expression validation failed: {e}"
-        )
+        return BrowserResponse(success=False, error=f"Expression validation failed: {e}")
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -174,9 +164,7 @@ async def browser_evaluate_chunk_tool(
     result = instance.driver.execute_script(script)
 
     if not isinstance(result, str):
-        return BrowserResponse(
-            success=False, error="Chunked evaluation requires a string result"
-        )
+        return BrowserResponse(success=False, error="Chunked evaluation requires a string result")
 
     try:
         chunk = compute_chunk(

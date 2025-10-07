@@ -11,22 +11,19 @@ import json
 from pathlib import Path
 
 import pytest
+from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from base.backend.utils.environment_setup import EnvironmentSetup
-
 
 @pytest.mark.asyncio
-async def test_run_chrome_stdio_client_initialization(
-    browser_root: Path, scripts_dir: Path
-) -> None:
+async def test_run_chrome_stdio_client_initialization(browser_root: Path, scripts_dir: Path) -> None:
     """Launch Chrome via runner and validate MCP handshake and tools."""
     # Path to the Chrome runner script
     run_script = scripts_dir / "run_chrome.py"
 
     # Use the module venv's Python
-    venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
+    venv_python = get_venv_python(browser_root)
 
     # Create stdio server parameters for the runner
     server_params = StdioServerParameters(
@@ -65,9 +62,7 @@ async def test_run_chrome_stdio_client_initialization(
 
         # Call a representative tool twice to ensure the server keeps responding.
         for attempt in range(2):
-            res = await session.call_tool(
-                "browser_navigate", arguments={"action": "get_url"}
-            )
+            res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":
                 try:

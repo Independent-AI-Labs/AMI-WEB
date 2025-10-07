@@ -28,9 +28,7 @@ class TestRuffLinting:
             check=False,
         )
         assert result.returncode == 0, f"Ruff not found or failed: {result.stderr}"
-        assert (
-            "ruff" in result.stdout.lower()
-        ), f"Unexpected ruff version output: {result.stdout}"
+        assert "ruff" in result.stdout.lower(), f"Unexpected ruff version output: {result.stdout}"
 
     def test_ruff_check_runs_successfully(self, browser_root: Path) -> None:
         """Verify Ruff can run check on the module."""
@@ -86,9 +84,7 @@ class TestMypyTypeChecking:
             check=False,
         )
         assert result.returncode == 0, f"Mypy not found or failed: {result.stderr}"
-        assert (
-            "mypy" in result.stdout.lower()
-        ), f"Unexpected mypy version output: {result.stdout}"
+        assert "mypy" in result.stdout.lower(), f"Unexpected mypy version output: {result.stdout}"
 
     def test_mypy_config_exists(self, browser_root: Path) -> None:
         """Verify mypy.ini configuration file exists."""
@@ -112,9 +108,7 @@ class TestMypyTypeChecking:
             cwd=str(browser_root.parent),  # Run from repo root
         )
         # Mypy may find errors (non-zero) but should not crash
-        assert (
-            "error: " not in result.stderr.lower() or "found" in result.stdout.lower()
-        ), f"Mypy execution failed: {result.stderr}"
+        assert "error: " not in result.stderr.lower() or "found" in result.stdout.lower(), f"Mypy execution failed: {result.stderr}"
 
 
 class TestPreCommitHooks:
@@ -123,9 +117,7 @@ class TestPreCommitHooks:
     def test_precommit_config_exists(self, browser_root: Path) -> None:
         """Verify .pre-commit-config.yaml exists."""
         precommit_config = browser_root / ".pre-commit-config.yaml"
-        assert (
-            precommit_config.exists()
-        ), f".pre-commit-config.yaml not found at {precommit_config}"
+        assert precommit_config.exists(), f".pre-commit-config.yaml not found at {precommit_config}"
 
     def test_precommit_executable_exists(self, browser_root: Path) -> None:
         """Verify pre-commit is installed."""
@@ -146,9 +138,7 @@ class TestPreCommitHooks:
         # Find all hook definitions
         import re
 
-        hook_blocks = re.split(r"^\s*- id:", content, flags=re.MULTILINE)[
-            1:
-        ]  # Split by hook ID
+        hook_blocks = re.split(r"^\s*- id:", content, flags=re.MULTILINE)[1:]  # Split by hook ID
 
         for i, hook_block in enumerate(hook_blocks, 1):
             # Extract hook ID
@@ -158,9 +148,7 @@ class TestPreCommitHooks:
             hook_id = id_match.group(1)
 
             # Check if require_serial is present
-            has_require_serial = (
-                "require_serial:" in hook_block or "require_serial: true" in hook_block
-            )
+            has_require_serial = "require_serial:" in hook_block or "require_serial: true" in hook_block
 
             assert has_require_serial, (
                 f"Hook '{hook_id}' is missing 'require_serial: true' in .pre-commit-config.yaml. "
@@ -181,9 +169,7 @@ class TestPreCommitHooks:
             cwd=str(browser_root),
         )
         # May already be installed (exit code 0) or install fresh
-        assert (
-            result.returncode == 0
-        ), f"Failed to install pre-commit hooks: {result.stderr}"
+        assert result.returncode == 0, f"Failed to install pre-commit hooks: {result.stderr}"
 
 
 class TestPreCommitHookExecution:

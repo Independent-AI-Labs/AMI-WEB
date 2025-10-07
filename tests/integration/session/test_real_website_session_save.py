@@ -71,9 +71,7 @@ async def test_save_session_captures_actual_loaded_url() -> None:
     print(f"DEBUG: After navigation, found {len(all_handles)} tabs:")
     for i, handle in enumerate(all_handles):
         instance.driver.switch_to.window(handle)
-        print(
-            f"DEBUG: Tab {i}: {instance.driver.current_url} - '{instance.driver.title}'"
-        )
+        print(f"DEBUG: Tab {i}: {instance.driver.current_url} - '{instance.driver.title}'")
 
     # Make sure we're on the example.com tab
     instance.driver.switch_to.window(all_handles[-1])
@@ -83,9 +81,7 @@ async def test_save_session_captures_actual_loaded_url() -> None:
     print(f"DEBUG: Active tab before save: {current_url_before_save}")
     print(f"DEBUG: Active handle before save: {current_handle_before_save}")
 
-    assert (
-        test_url in current_url_before_save
-    ), f"Browser should be on {test_url} before save, got {current_url_before_save}"
+    assert test_url in current_url_before_save, f"Browser should be on {test_url} before save, got {current_url_before_save}"
 
     # Save the session
     session_id = await manager.session_manager.save_session(instance, "real-url-test")
@@ -115,34 +111,21 @@ async def test_save_session_captures_actual_loaded_url() -> None:
         f"Browser was on {current_url_before_save} but session saved {saved_url}. "
         f"Window handles: {len(all_handles)}, Active handle: {current_handle_before_save}"
     )
-    assert test_url in saved_url, (
-        f"BUG: Session did not save the actual URL! "
-        f"Browser was on {current_url_before_save} but session saved {saved_url}"
-    )
+    assert test_url in saved_url, f"BUG: Session did not save the actual URL! " f"Browser was on {current_url_before_save} but session saved {saved_url}"
 
     # Verify the active tab handle matches what we had
     assert active_tab_handle == str(current_handle_before_save), (
-        f"BUG: Active tab handle mismatch! "
-        f"Current was {current_handle_before_save} but saved {active_tab_handle}"
+        f"BUG: Active tab handle mismatch! " f"Current was {current_handle_before_save} but saved {active_tab_handle}"
     )
 
     # Also check tabs array - find the tab with our URL
     matching_tabs = [tab for tab in saved_tabs if test_url in tab["url"]]
-    assert len(matching_tabs) >= 1, (
-        f"BUG: No tab with {test_url} found in saved tabs! "
-        f"Saved tabs: {[tab['url'] for tab in saved_tabs]}"
-    )
+    assert len(matching_tabs) >= 1, f"BUG: No tab with {test_url} found in saved tabs! " f"Saved tabs: {[tab['url'] for tab in saved_tabs]}"
 
     # The saved primary URL should match the active tab
-    active_tab = next(
-        (tab for tab in saved_tabs if tab["handle"] == active_tab_handle), None
-    )
-    assert (
-        active_tab is not None
-    ), f"BUG: Active tab handle {active_tab_handle} not found in saved tabs!"
-    assert (
-        test_url in active_tab["url"]
-    ), f"BUG: Active tab has wrong URL! Expected {test_url}, got {active_tab['url']}"
+    active_tab = next((tab for tab in saved_tabs if tab["handle"] == active_tab_handle), None)
+    assert active_tab is not None, f"BUG: Active tab handle {active_tab_handle} not found in saved tabs!"
+    assert test_url in active_tab["url"], f"BUG: Active tab has wrong URL! Expected {test_url}, got {active_tab['url']}"
 
 
 @pytest.mark.asyncio
@@ -206,9 +189,7 @@ async def test_save_session_when_tab_focus_was_switched_by_browser() -> None:
     print(f"DEBUG: But current_window_handle is: {actual_focused_handle}")
 
     # NOW we save the session (like MCP browser_session save action does)
-    session_id = await manager.session_manager.save_session(
-        instance, "focus-switch-test"
-    )
+    session_id = await manager.session_manager.save_session(instance, "focus-switch-test")
 
     # Check what was saved
     session_file = test_sessions_dir / session_id / "session.json"
@@ -232,31 +213,22 @@ async def test_save_session_when_tab_focus_was_switched_by_browser() -> None:
 
     # BUG: Session saves whatever tab Chrome has focused, not what user was viewing
     assert "chrome://new-tab-page" not in saved_url, (
-        f"BUG: Session saved chrome://new-tab-page instead of user's actual tab! "
-        f"User was viewing {user_visible_url} but session saved {saved_url}"
+        f"BUG: Session saved chrome://new-tab-page instead of user's actual tab! " f"User was viewing {user_visible_url} but session saved {saved_url}"
     )
 
-    assert test_url in saved_url, (
-        f"BUG: Session should save the URL user was viewing ({user_visible_url}), "
-        f"but saved {saved_url}"
-    )
+    assert test_url in saved_url, f"BUG: Session should save the URL user was viewing ({user_visible_url}), " f"but saved {saved_url}"
 
     assert saved_active_handle == str(user_visible_handle), (
-        f"BUG: Saved wrong active tab! User was on handle {user_visible_handle}, "
-        f"but session saved handle {saved_active_handle} as active"
+        f"BUG: Saved wrong active tab! User was on handle {user_visible_handle}, " f"but session saved handle {saved_active_handle} as active"
     )
 
     # The session should capture BOTH tabs
     assert len(saved_tabs) == 2, f"Should have saved 2 tabs, got {len(saved_tabs)}"
 
     # And mark the CORRECT one (example.com) as active
-    active_tab = next(
-        (t for t in saved_tabs if t["handle"] == saved_active_handle), None
-    )
+    active_tab = next((t for t in saved_tabs if t["handle"] == saved_active_handle), None)
     assert active_tab is not None
-    assert (
-        test_url in active_tab["url"]
-    ), f"BUG: Active tab should be {test_url}, got {active_tab['url']}"
+    assert test_url in active_tab["url"], f"BUG: Active tab should be {test_url}, got {active_tab['url']}"
 
 
 @pytest.mark.asyncio
@@ -284,9 +256,7 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
     manager1.profile_manager.create_profile(profile_name)
 
     # Launch browser with profile
-    instance1 = await manager1.get_or_create_instance(
-        profile=profile_name, headless=True, use_pool=False
-    )
+    instance1 = await manager1.get_or_create_instance(profile=profile_name, headless=True, use_pool=False)
 
     # Tab 1: example.com
     assert instance1.driver is not None
@@ -307,9 +277,7 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
     instance1.driver.switch_to.window(instance1.driver.window_handles[0])
 
     # Save session
-    session_id = await manager1.session_manager.save_session(
-        instance1, "multi-real-website-session"
-    )
+    session_id = await manager1.session_manager.save_session(instance1, "multi-real-website-session")
 
     # Terminate first instance
     await manager1.terminate_instance(instance1.id)
@@ -333,9 +301,7 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
     await asyncio.sleep(2)  # Wait for pages to load
 
     assert instance2.driver is not None
-    assert (
-        len(instance2.driver.window_handles) == 2
-    ), f"BUG: Expected 2 tabs, got {len(instance2.driver.window_handles)}"
+    assert len(instance2.driver.window_handles) == 2, f"BUG: Expected 2 tabs, got {len(instance2.driver.window_handles)}"
 
     # Check first tab
     instance2.driver.switch_to.window(instance2.driver.window_handles[0])
@@ -352,13 +318,9 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
     await manager2.shutdown()
 
     # Assertions for tab 1
-    assert (
-        "example.com" in restored_tab1_url.lower()
-    ), f"BUG: Tab 1 URL is '{restored_tab1_url}' instead of example.com"
+    assert "example.com" in restored_tab1_url.lower(), f"BUG: Tab 1 URL is '{restored_tab1_url}' instead of example.com"
     assert tab1_title == restored_tab1_title, "BUG: Tab 1 title mismatch"
 
     # Assertions for tab 2
-    assert (
-        "example.org" in restored_tab2_url.lower()
-    ), f"BUG: Tab 2 URL is '{restored_tab2_url}' instead of example.org"
+    assert "example.org" in restored_tab2_url.lower(), f"BUG: Tab 2 URL is '{restored_tab2_url}' instead of example.org"
     assert tab2_title == restored_tab2_title, "BUG: Tab 2 title mismatch"
