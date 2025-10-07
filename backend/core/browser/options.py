@@ -8,9 +8,10 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from base.backend.utils.standard_imports import setup_imports
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
+
+from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 

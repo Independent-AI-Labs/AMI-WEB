@@ -11,9 +11,9 @@ from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from loguru import logger  # noqa: E402
 
+from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: E402
 
 

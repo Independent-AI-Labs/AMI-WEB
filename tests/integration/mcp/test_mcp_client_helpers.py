@@ -11,10 +11,11 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from base.backend.utils.environment_setup import EnvironmentSetup
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.exceptions import McpError
+
+from base.backend.utils.environment_setup import EnvironmentSetup
 
 
 @pytest.mark.asyncio

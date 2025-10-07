@@ -8,10 +8,10 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 from datetime import datetime  # noqa: E402
 from typing import TYPE_CHECKING, Any  # noqa: E402
 
-from base.backend.workers.base import WorkerPool  # noqa: E402
-from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState  # noqa: E402
 from loguru import logger  # noqa: E402
 
+from base.backend.workers.base import WorkerPool  # noqa: E402
+from base.backend.workers.types import PoolConfig, WorkerInfo, WorkerState  # noqa: E402
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402

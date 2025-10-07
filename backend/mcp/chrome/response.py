@@ -7,8 +7,9 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from typing import Any  # noqa: E402
 
-from base.backend.mcp.core.response import MCPResponse  # noqa: E402
 from pydantic import Field  # noqa: E402
+
+from base.backend.mcp.core.response import MCPResponse  # noqa: E402
 
 
 class BrowserResponse(MCPResponse):

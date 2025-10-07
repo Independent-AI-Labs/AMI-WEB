@@ -5,14 +5,14 @@ from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
-from base.backend.utils.standard_imports import setup_imports
 from loguru import logger
 from selenium.common.exceptions import InvalidSessionIdException, WebDriverException
+
+from base.backend.utils.standard_imports import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
-
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.browser_worker_pool import BrowserWorkerPool  # noqa: E402
