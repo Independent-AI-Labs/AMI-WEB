@@ -8,16 +8,22 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from base.backend.utils.standard_imports import setup_imports
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
 
-from browser.backend.core.management.profile_manager import ProfileManager
-from browser.backend.core.security.antidetect import get_anti_detection_arguments, get_anti_detection_prefs
-from browser.backend.models.browser import ChromeOptions
-from browser.backend.models.browser_properties import BrowserProperties
-from browser.backend.models.security import SecurityConfig
-from browser.backend.utils.compute_profile import get_compute_profile
-from browser.backend.utils.config import Config
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
+from browser.backend.core.security.antidetect import (  # noqa: E402
+    get_anti_detection_arguments,
+    get_anti_detection_prefs,
+)
+from browser.backend.models.browser import ChromeOptions  # noqa: E402
+from browser.backend.models.browser_properties import BrowserProperties  # noqa: E402
+from browser.backend.models.security import SecurityConfig  # noqa: E402
+from browser.backend.utils.compute_profile import get_compute_profile  # noqa: E402
+from browser.backend.utils.config import Config  # noqa: E402
 
 if TYPE_CHECKING:
     pass
@@ -34,11 +40,17 @@ class BrowserOptionsBuilder:
     _used_ports: set[int] = set()
     _port_lock: threading.Lock = threading.Lock()
 
-    def __init__(self, config: Config | None = None, profile_manager: "ProfileManager | None" = None):
+    def __init__(
+        self,
+        config: Config | None = None,
+        profile_manager: "ProfileManager | None" = None,
+    ):
         self._config = config or Config()
         self._profile_manager = profile_manager
         self._temp_profile_dir: Path | None = None  # Track temp dir for cleanup
-        self._original_profile_dir: Path | None = None  # Track original profile for sync
+        self._original_profile_dir: Path | None = (
+            None  # Track original profile for sync
+        )
         self._debug_port: int | None = None  # Track debug port for cleanup
 
     @classmethod
@@ -58,7 +70,8 @@ class BrowserOptionsBuilder:
                         return port
 
             raise RuntimeError(
-                "Unable to allocate a remote debugging port within the permitted range." " Configure an explicit port via browser configuration to proceed."
+                "Unable to allocate a remote debugging port within the permitted range."
+                " Configure an explicit port via browser configuration to proceed."
             )
 
     def get_temp_profile_dir(self) -> Path | None:
@@ -95,11 +108,15 @@ class BrowserOptionsBuilder:
                 except Exception as e:
                     logger.warning(f"Failed to remove lock {lock_file}: {e}")
 
-    def _kill_orphaned_process(self, pid: int, profile_dir: Path, lock_files: list[Path]) -> None:
+    def _kill_orphaned_process(
+        self, pid: int, profile_dir: Path, lock_files: list[Path]
+    ) -> None:
         """Kill an orphaned Chrome process and remove locks."""
         import os
 
-        logger.warning(f"Profile {profile_dir} is locked by orphaned Chrome process {pid}. Killing process and removing locks...")
+        logger.warning(
+            f"Profile {profile_dir} is locked by orphaned Chrome process {pid}. Killing process and removing locks..."
+        )
         try:
             os.kill(pid, 9)
             logger.info(f"Killed orphaned Chrome process {pid}")
@@ -107,14 +124,23 @@ class BrowserOptionsBuilder:
             logger.info(f"Removed locks for {profile_dir}")
         except Exception as e:
             logger.error(f"Failed to kill orphaned process {pid}: {e}")
-            raise RuntimeError(f"Profile '{profile_dir.name}' is locked by orphaned Chrome process {pid}. Failed to kill it: {e}") from e
+            raise RuntimeError(
+                f"Profile '{profile_dir.name}' is locked by orphaned Chrome process {pid}. Failed to kill it: {e}"
+            ) from e
 
-    def _check_process_using_profile(self, pid: int, profile_dir: Path, lock_files: list[Path], kill_orphaned: bool) -> bool:
+    def _check_process_using_profile(
+        self, pid: int, profile_dir: Path, lock_files: list[Path], kill_orphaned: bool
+    ) -> bool:
         """Check if process is using the profile and handle accordingly. Returns True if locks should be removed."""
         import subprocess
 
         try:
-            result = subprocess.run(["ps", "-p", str(pid), "-ww", "-o", "cmd="], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                ["ps", "-p", str(pid), "-ww", "-o", "cmd="],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
             if result.returncode != 0:
                 logger.debug(f"Process {pid} no longer exists, can remove locks")
                 return True
@@ -145,13 +171,17 @@ class BrowserOptionsBuilder:
                     f"This appears to be an orphaned/zombie process. "
                     f"Pass kill_orphaned=True when launching or restoring to automatically kill it, or manually kill process {pid}"
                 )
-            logger.debug(f"Process {pid} exists but doesn't use profile, can remove locks")
+            logger.debug(
+                f"Process {pid} exists but doesn't use profile, can remove locks"
+            )
             return True
         except subprocess.SubprocessError:
             logger.debug(f"Cannot get info for process {pid}, keeping locks to be safe")
             return False
 
-    def _cleanup_stale_locks(self, profile_dir: Path, kill_orphaned: bool = False) -> None:
+    def _cleanup_stale_locks(
+        self, profile_dir: Path, kill_orphaned: bool = False
+    ) -> None:
         """Remove stale Chrome lock files and optionally kill orphaned Chrome processes.
 
         Args:
@@ -169,14 +199,18 @@ class BrowserOptionsBuilder:
         singleton_lock = profile_dir / "SingletonLock"
 
         if not singleton_lock.is_symlink():
-            logger.info(f"No SingletonLock symlink at {profile_dir}, removing stale locks")
+            logger.info(
+                f"No SingletonLock symlink at {profile_dir}, removing stale locks"
+            )
             self._remove_lock_files(lock_files)
             return
 
         try:
             link_target = str(singleton_lock.readlink())
             if "-" not in link_target:
-                logger.warning(f"Malformed SingletonLock target: {link_target}, removing locks")
+                logger.warning(
+                    f"Malformed SingletonLock target: {link_target}, removing locks"
+                )
                 self._remove_lock_files(lock_files)
                 return
 
@@ -184,18 +218,26 @@ class BrowserOptionsBuilder:
             try:
                 pid = int(pid_str)
             except ValueError:
-                logger.warning(f"Cannot parse PID from SingletonLock target: {link_target}, removing locks")
+                logger.warning(
+                    f"Cannot parse PID from SingletonLock target: {link_target}, removing locks"
+                )
                 self._remove_lock_files(lock_files)
                 return
 
             try:
                 os.kill(pid, 0)
-                logger.info(f"Process {pid} exists, checking if it uses profile {profile_dir}")
-                if self._check_process_using_profile(pid, profile_dir, lock_files, kill_orphaned):
+                logger.info(
+                    f"Process {pid} exists, checking if it uses profile {profile_dir}"
+                )
+                if self._check_process_using_profile(
+                    pid, profile_dir, lock_files, kill_orphaned
+                ):
                     self._remove_lock_files(lock_files)
                 return
             except ProcessLookupError:
-                logger.info(f"Process {pid} from SingletonLock no longer exists (ProcessLookupError), removing stale locks")
+                logger.info(
+                    f"Process {pid} from SingletonLock no longer exists (ProcessLookupError), removing stale locks"
+                )
             except PermissionError:
                 logger.debug(f"Cannot verify process {pid}, keeping locks to be safe")
                 return
@@ -209,7 +251,9 @@ class BrowserOptionsBuilder:
 
         self._remove_lock_files(lock_files)
 
-    def _setup_profile_directory(self, chrome_options: Options, profile: str | None, kill_orphaned: bool = False) -> None:
+    def _setup_profile_directory(
+        self, chrome_options: Options, profile: str | None, kill_orphaned: bool = False
+    ) -> None:
         """Set up profile directory for Chrome instance."""
         if profile and self._profile_manager:
             # Named profiles: use actual profile directory directly for persistence
@@ -222,7 +266,9 @@ class BrowserOptionsBuilder:
                 self._cleanup_stale_locks(profile_dir, kill_orphaned=kill_orphaned)
 
                 # Use the actual profile directory - no copying
-                logger.info(f"Using profile directory: {profile_dir} with debug port: {self._debug_port}")
+                logger.info(
+                    f"Using profile directory: {profile_dir} with debug port: {self._debug_port}"
+                )
                 chrome_options.add_argument(f"--user-data-dir={profile_dir}")
 
                 # No temp directory for named profiles
@@ -230,11 +276,15 @@ class BrowserOptionsBuilder:
                 self._original_profile_dir = None
         else:
             # No profile: create a unique temp directory to avoid conflicts
-            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid.uuid4().hex[:8]}"
+            temp_dir = (
+                Path(tempfile.gettempdir()) / f"chrome_temp_{uuid.uuid4().hex[:8]}"
+            )
             temp_dir.mkdir(parents=True, exist_ok=True)
             self._temp_profile_dir = temp_dir
             self._original_profile_dir = None
-            logger.info(f"Using temporary directory: {temp_dir} with debug port: {self._debug_port}")
+            logger.info(
+                f"Using temporary directory: {temp_dir} with debug port: {self._debug_port}"
+            )
             chrome_options.add_argument(f"--user-data-dir={temp_dir}")
 
     def build(
@@ -273,7 +323,9 @@ class BrowserOptionsBuilder:
             self._configure_standard_mode(chrome_options, headless)
 
         # Exclude switches that enable verbose logging
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+        chrome_options.add_experimental_option(
+            "excludeSwitches", ["enable-logging", "enable-automation"]
+        )
 
         # Apply security configuration arguments
         if security_config:
@@ -294,12 +346,16 @@ class BrowserOptionsBuilder:
                     chrome_options.add_extension(ext_path)
 
         # Apply preferences
-        prefs = self._build_preferences(download_dir, browser_properties, security_config)
+        prefs = self._build_preferences(
+            download_dir, browser_properties, security_config
+        )
         if prefs:
             chrome_options.add_experimental_option("prefs", prefs)
 
         # Set logging preferences - keep ALL for MCP server access
-        chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"})
+        chrome_options.set_capability(
+            "goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"}
+        )
 
         return chrome_options
 
@@ -320,8 +376,12 @@ class BrowserOptionsBuilder:
                 chrome_options.add_argument("--use-angle=swiftshader")
                 chrome_options.add_argument("--use-gl=swiftshader")
             else:
-                chrome_options.add_argument("--use-gl=angle")  # Use ANGLE for hardware acceleration
-                chrome_options.add_argument("--use-angle=default")  # Let ANGLE choose best backend
+                chrome_options.add_argument(
+                    "--use-gl=angle"
+                )  # Use ANGLE for hardware acceleration
+                chrome_options.add_argument(
+                    "--use-angle=default"
+                )  # Let ANGLE choose best backend
             # Suppress GPU error logging
             chrome_options.add_argument("--log-level=3")  # Only show fatal errors
             chrome_options.add_argument("--disable-logging")  # Disable Chrome logging
@@ -345,7 +405,9 @@ class BrowserOptionsBuilder:
         if user_agent:
             chrome_options.add_argument(f"--user-agent={user_agent}")
 
-    def _configure_anti_detect_mode(self, chrome_options: Options, headless: bool) -> None:
+    def _configure_anti_detect_mode(
+        self, chrome_options: Options, headless: bool
+    ) -> None:
         """Configure options for anti-detection mode."""
 
         # Get anti-detection arguments
@@ -380,7 +442,9 @@ class BrowserOptionsBuilder:
             "--no-default-browser-check",
             "--disable-dev-shm-usage",
             "--disable-extensions-file-access-check",
-            "--disable-web-security" if self._config.get("backend.browser.disable_web_security", False) else None,
+            "--disable-web-security"
+            if self._config.get("backend.browser.disable_web_security", False)
+            else None,
             "--disable-features=VizDisplayCompositor",
             "--disable-breakpad",
             "--disable-features=TranslateUI",
@@ -424,12 +488,14 @@ class BrowserOptionsBuilder:
 
     def _add_antidetect_extension(self, chrome_options: Options) -> None:
         """Add the anti-detection extension."""
-        ext_path = Path(__file__).parent.parent / "extensions" / "antidetect"
+        ext_path = MODULE_ROOT / "extensions" / "antidetect"
         if ext_path.exists():
             chrome_options.add_argument(f"--load-extension={ext_path}")
             logger.debug(f"Added anti-detect extension from {ext_path}")
 
-    def _apply_custom_options(self, chrome_options: Options, custom: ChromeOptions, extensions: list[str]) -> None:
+    def _apply_custom_options(
+        self, chrome_options: Options, custom: ChromeOptions, extensions: list[str]
+    ) -> None:
         """Apply custom Chrome options."""
         # Apply arguments
         if hasattr(custom, "arguments"):

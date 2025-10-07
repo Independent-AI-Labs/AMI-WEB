@@ -51,8 +51,15 @@ def mock_websocket() -> Any:
 def mock_mcp_request() -> Any:
     """Create a mock MCP request."""
 
-    def _make_request(method: str, params: dict[str, Any] | None = None, request_id: int = 1) -> dict[str, Any]:
-        return {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": request_id}
+    def _make_request(
+        method: str, params: dict[str, Any] | None = None, request_id: int = 1
+    ) -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or {},
+            "id": request_id,
+        }
 
     return _make_request
 
@@ -61,7 +68,9 @@ def mock_mcp_request() -> Any:
 def mock_mcp_response() -> Any:
     """Create a mock MCP response."""
 
-    def _make_response(result: Any, response_id: int = 1, error: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _make_response(
+        result: Any, response_id: int = 1, error: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         if error:
             return {"jsonrpc": "2.0", "error": error, "id": response_id}
         return {"jsonrpc": "2.0", "result": result, "id": response_id}
@@ -116,8 +125,22 @@ def sample_html_content() -> str:
 def sample_cookies() -> list[dict[str, Any]]:
     """Sample cookies for testing."""
     return [
-        {"name": "session_id", "value": "abc123", "domain": ".example.com", "path": "/", "secure": True, "httpOnly": True},
-        {"name": "user_pref", "value": "dark_mode", "domain": ".example.com", "path": "/", "secure": False, "httpOnly": False},
+        {
+            "name": "session_id",
+            "value": "abc123",
+            "domain": ".example.com",
+            "path": "/",
+            "secure": True,
+            "httpOnly": True,
+        },
+        {
+            "name": "user_pref",
+            "value": "dark_mode",
+            "domain": ".example.com",
+            "path": "/",
+            "secure": False,
+            "httpOnly": False,
+        },
     ]
 
 
@@ -125,8 +148,20 @@ def sample_cookies() -> list[dict[str, Any]]:
 def sample_network_logs() -> list[dict[str, Any]]:
     """Sample network logs for testing."""
     return [
-        {"url": "https://example.com/api/data", "method": "GET", "status_code": 200, "response_time": 150, "size": 2048},
-        {"url": "https://example.com/api/user", "method": "POST", "status_code": 201, "response_time": 200, "size": 512},
+        {
+            "url": "https://example.com/api/data",
+            "method": "GET",
+            "status_code": 200,
+            "response_time": 150,
+            "size": 2048,
+        },
+        {
+            "url": "https://example.com/api/user",
+            "method": "POST",
+            "status_code": 201,
+            "response_time": 200,
+            "size": 512,
+        },
     ]
 
 

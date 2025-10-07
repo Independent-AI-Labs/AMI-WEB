@@ -9,7 +9,11 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_react_trigger_handler_tool(
-    manager: ChromeManager, selector: str, handler_name: str, event_data: dict[str, Any] | None = None, instance_id: str | None = None
+    manager: ChromeManager,
+    selector: str,
+    handler_name: str,
+    event_data: dict[str, Any] | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Trigger React event handler on an element.
 
@@ -23,7 +27,9 @@ async def browser_react_trigger_handler_tool(
     Returns:
         BrowserResponse with execution result
     """
-    logger.debug(f"Triggering React handler: {handler_name} on {selector}, instance_id={instance_id}")
+    logger.debug(
+        f"Triggering React handler: {handler_name} on {selector}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -74,13 +80,22 @@ async def browser_react_trigger_handler_tool(
 
     if isinstance(result, dict):
         if result.get("success"):
-            return BrowserResponse(success=True, result=result.get("message", "Handler triggered"))
-        return BrowserResponse(success=False, error=result.get("error", "Unknown error"))
+            return BrowserResponse(
+                success=True, result=result.get("message", "Handler triggered")
+            )
+        return BrowserResponse(
+            success=False, error=result.get("error", "Unknown error")
+        )
 
     return BrowserResponse(success=True, result="Handler triggered")
 
 
-async def browser_react_get_props_tool(manager: ChromeManager, selector: str, max_depth: int = 10, instance_id: str | None = None) -> BrowserResponse:
+async def browser_react_get_props_tool(
+    manager: ChromeManager,
+    selector: str,
+    max_depth: int = 10,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Get React component props.
 
     Args:
@@ -139,12 +154,19 @@ async def browser_react_get_props_tool(manager: ChromeManager, selector: str, ma
     if isinstance(result, dict):
         if result.get("success"):
             return BrowserResponse(success=True, result=result.get("props", {}))
-        return BrowserResponse(success=False, error=result.get("error", "Unknown error"))
+        return BrowserResponse(
+            success=False, error=result.get("error", "Unknown error")
+        )
 
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_get_state_tool(manager: ChromeManager, selector: str, max_depth: int = 10, instance_id: str | None = None) -> BrowserResponse:
+async def browser_react_get_state_tool(
+    manager: ChromeManager,
+    selector: str,
+    max_depth: int = 10,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Get React component state.
 
     Args:
@@ -194,12 +216,16 @@ async def browser_react_get_state_tool(manager: ChromeManager, selector: str, ma
     if isinstance(result, dict):
         if result.get("success"):
             return BrowserResponse(success=True, result=result.get("state"))
-        return BrowserResponse(success=False, error=result.get("error", "Unknown error"))
+        return BrowserResponse(
+            success=False, error=result.get("error", "Unknown error")
+        )
 
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_find_component_tool(manager: ChromeManager, component_name: str, instance_id: str | None = None) -> BrowserResponse:
+async def browser_react_find_component_tool(
+    manager: ChromeManager, component_name: str, instance_id: str | None = None
+) -> BrowserResponse:
     """Find React component by type or displayName.
 
     Args:
@@ -210,7 +236,9 @@ async def browser_react_find_component_tool(manager: ChromeManager, component_na
     Returns:
         BrowserResponse with component information
     """
-    logger.debug(f"Finding React component: {component_name}, instance_id={instance_id}")
+    logger.debug(
+        f"Finding React component: {component_name}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -265,12 +293,19 @@ async def browser_react_find_component_tool(manager: ChromeManager, component_na
     if isinstance(result, dict):
         if result.get("success"):
             return BrowserResponse(success=True, result=result.get("components", []))
-        return BrowserResponse(success=False, error=result.get("error", "Unknown error"))
+        return BrowserResponse(
+            success=False, error=result.get("error", "Unknown error")
+        )
 
     return BrowserResponse(success=True, result=result)
 
 
-async def browser_react_get_fiber_tree_tool(manager: ChromeManager, selector: str, max_depth: int = 5, instance_id: str | None = None) -> BrowserResponse:
+async def browser_react_get_fiber_tree_tool(
+    manager: ChromeManager,
+    selector: str,
+    max_depth: int = 5,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Get React fiber tree structure.
 
     Args:
@@ -324,6 +359,8 @@ async def browser_react_get_fiber_tree_tool(manager: ChromeManager, selector: st
     if isinstance(result, dict):
         if result.get("success"):
             return BrowserResponse(success=True, result=result.get("tree"))
-        return BrowserResponse(success=False, error=result.get("error", "Unknown error"))
+        return BrowserResponse(
+            success=False, error=result.get("error", "Unknown error")
+        )
 
     return BrowserResponse(success=True, result=result)

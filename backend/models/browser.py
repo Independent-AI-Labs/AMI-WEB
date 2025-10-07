@@ -73,7 +73,9 @@ class ChromeOptions(BaseModel):
     disable_gpu: bool = True
     no_sandbox: bool = True
     disable_dev_shm_usage: bool = True
-    disable_blink_features: list[str] = Field(default_factory=default_disable_blink_features)
+    disable_blink_features: list[str] = Field(
+        default_factory=default_disable_blink_features
+    )
     arguments: list[str] = Field(default_factory=list)
     experimental_options: dict[str, Any] = Field(default_factory=dict)
     extensions: list[str] = Field(default_factory=list)

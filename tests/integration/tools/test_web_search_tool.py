@@ -30,11 +30,15 @@ async def _start_test_server(
 
 @pytest.mark.asyncio
 async def test_web_search_tool_via_fastmcp() -> None:
-    async def searx_handler(request: web.Request) -> web.Response:
+    async def searx_handler(_request: web.Request) -> web.Response:
         return web.json_response(
             {
                 "results": [
-                    {"title": "Integration Result", "url": "https://integration.example", "content": "Integration snippet"},
+                    {
+                        "title": "Integration Result",
+                        "url": "https://integration.example",
+                        "content": "Integration snippet",
+                    },
                 ],
             },
         )

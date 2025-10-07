@@ -21,9 +21,19 @@ from browser.backend.mcp.chrome.tools.navigation_tools import (
 )
 
 
-async def browser_navigate_tool(  # noqa: PLR0911, C901
+async def browser_navigate_tool(
     manager: ChromeManager,
-    action: Literal["goto", "back", "forward", "refresh", "get_url", "open_tab", "close_tab", "switch_tab", "list_tabs"],
+    action: Literal[
+        "goto",
+        "back",
+        "forward",
+        "refresh",
+        "get_url",
+        "open_tab",
+        "close_tab",
+        "switch_tab",
+        "list_tabs",
+    ],
     url: str | None = None,
     wait_for: str | None = None,
     timeout: float = 30,
@@ -46,35 +56,32 @@ async def browser_navigate_tool(  # noqa: PLR0911, C901
     """
     logger.debug(f"browser_navigate: action={action}, instance_id={instance_id}")
 
-    if action == "goto":
-        if not url:
-            return BrowserResponse(success=False, error="url required for goto action")
-        return await browser_navigate_impl(manager, url, instance_id, wait_for, timeout)
-
-    if action == "back":
-        return await browser_back_tool(manager, instance_id)
-
-    if action == "forward":
-        return await browser_forward_tool(manager, instance_id)
-
-    if action == "refresh":
-        return await browser_refresh_tool(manager, instance_id)
-
-    if action == "get_url":
-        return await browser_get_url_tool(manager, instance_id)
-
-    if action == "open_tab":
-        return await browser_open_tab_tool(manager, url, instance_id)
-
-    if action == "close_tab":
-        return await browser_close_tab_tool(manager, tab_id, instance_id)
-
-    if action == "switch_tab":
-        if not tab_id:
-            return BrowserResponse(success=False, error="tab_id required for switch_tab action")
-        return await browser_switch_tab_tool(manager, tab_id, instance_id)
-
-    if action == "list_tabs":
-        return await browser_list_tabs_tool(manager, instance_id)
-
-    return BrowserResponse(success=False, error=f"Unknown action: {action}")  # type: ignore[unreachable]
+    match action:
+        case "goto":
+            if not url:
+                return BrowserResponse(
+                    success=False, error="url required for goto action"
+                )
+            return await browser_navigate_impl(
+                manager, url, instance_id, wait_for, timeout
+            )
+        case "back":
+            return await browser_back_tool(manager, instance_id)
+        case "forward":
+            return await browser_forward_tool(manager, instance_id)
+        case "refresh":
+            return await browser_refresh_tool(manager, instance_id)
+        case "get_url":
+            return await browser_get_url_tool(manager, instance_id)
+        case "open_tab":
+            return await browser_open_tab_tool(manager, url, instance_id)
+        case "close_tab":
+            return await browser_close_tab_tool(manager, tab_id, instance_id)
+        case "switch_tab":
+            if not tab_id:
+                return BrowserResponse(
+                    success=False, error="tab_id required for switch_tab action"
+                )
+            return await browser_switch_tab_tool(manager, tab_id, instance_id)
+        case "list_tabs":
+            return await browser_list_tabs_tool(manager, instance_id)

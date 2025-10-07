@@ -38,11 +38,15 @@ async def _start_test_server(
 
 @pytest.mark.asyncio
 async def test_browser_web_search_tool_primary_success() -> None:
-    async def searx_handler(request: web.Request) -> web.Response:
+    async def searx_handler(_request: web.Request) -> web.Response:
         return web.json_response(
             {
                 "results": [
-                    {"title": "<b>Example Result</b>", "url": "https://example.com", "content": "Snippet <i>content</i>"},
+                    {
+                        "title": "<b>Example Result</b>",
+                        "url": "https://example.com",
+                        "content": "Snippet <i>content</i>",
+                    },
                     {"title": "Ignore Without URL"},
                 ],
             },
@@ -70,7 +74,11 @@ async def test_browser_web_search_tool_primary_success() -> None:
         await runner.cleanup()
 
     assert response.success is True
-    assert response.data == {"provider": "primary", "query": "test query", "request_url": f"http://127.0.0.1:{port}/search?q=test+query&format=json"}
+    assert response.data == {
+        "provider": "primary",
+        "query": "test query",
+        "request_url": f"http://127.0.0.1:{port}/search?q=test+query&format=json",
+    }
     assert isinstance(response.result, dict)
     results = response.result.get("results")
     assert isinstance(results, list)
@@ -80,7 +88,7 @@ async def test_browser_web_search_tool_primary_success() -> None:
 
 @pytest.mark.asyncio
 async def test_browser_web_search_tool_primary_html_success() -> None:
-    async def html_handler(request: web.Request) -> web.Response:
+    async def html_handler(_request: web.Request) -> web.Response:
         html_body = """
         <html>
             <body>

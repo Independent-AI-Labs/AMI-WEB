@@ -8,7 +8,10 @@ from loguru import logger
 
 from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.facade.base import BaseController
-from browser.backend.facade.devtools.config import get_device_config, list_available_devices
+from browser.backend.facade.devtools.config import (
+    get_device_config,
+    list_available_devices,
+)
 from browser.backend.models.browser import ConsoleEntry, NetworkEntry
 from browser.backend.utils.exceptions import ChromeManagerError
 
@@ -21,7 +24,9 @@ class DevToolsController(BaseController):
         self.instance = instance
         self.driver = instance.driver
 
-    async def execute_cdp_command(self, command: str, params: dict[str, Any] | None = None) -> Any:
+    async def execute_cdp_command(
+        self, command: str, params: dict[str, Any] | None = None
+    ) -> Any:
         """Execute a Chrome DevTools Protocol command.
 
         Args:
@@ -39,10 +44,17 @@ class DevToolsController(BaseController):
             if self._is_in_thread_context():
                 return driver_obj.execute_cdp_cmd(command, params or {})
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: driver_obj.execute_cdp_cmd(command, params or {}) if self.driver else None)
+            return await loop.run_in_executor(
+                None,
+                lambda: driver_obj.execute_cdp_cmd(command, params or {})
+                if self.driver
+                else None,
+            )
         except Exception as e:
             logger.error(f"CDP command failed: {command}: {e}")
-            raise ChromeManagerError(f"Failed to execute CDP command {command}: {e}") from e
+            raise ChromeManagerError(
+                f"Failed to execute CDP command {command}: {e}"
+            ) from e
 
     async def get_performance_metrics(self) -> Any:
         """Get browser performance metrics.
@@ -68,7 +80,10 @@ class DevToolsController(BaseController):
             for log in logs:
                 try:
                     message = json.loads(log["message"])
-                    if message.get("message", {}).get("method") == "Network.responseReceived":
+                    if (
+                        message.get("message", {}).get("method")
+                        == "Network.responseReceived"
+                    ):
                         response = message["message"]["params"]["response"]
                         entries.append(
                             NetworkEntry(  # type: ignore[call-arg]
@@ -104,7 +119,12 @@ class DevToolsController(BaseController):
         """
         return await self.instance.get_console_logs()
 
-    async def enable_network_throttling(self, download_throughput: int = 1024 * 1024, upload_throughput: int = 1024 * 512, latency: int = 100) -> None:
+    async def enable_network_throttling(
+        self,
+        download_throughput: int = 1024 * 1024,
+        upload_throughput: int = 1024 * 512,
+        latency: int = 100,
+    ) -> None:
         """Enable network throttling.
 
         Args:
@@ -114,13 +134,28 @@ class DevToolsController(BaseController):
         """
         await self.execute_cdp_command(
             "Network.emulateNetworkConditions",
-            {"offline": False, "downloadThroughput": download_throughput, "uploadThroughput": upload_throughput, "latency": latency},
+            {
+                "offline": False,
+                "downloadThroughput": download_throughput,
+                "uploadThroughput": upload_throughput,
+                "latency": latency,
+            },
         )
-        logger.info(f"Enabled network throttling: {download_throughput / 1024}KB/s down, {upload_throughput / 1024}KB/s up, {latency}ms latency")
+        logger.info(
+            f"Enabled network throttling: {download_throughput / 1024}KB/s down, {upload_throughput / 1024}KB/s up, {latency}ms latency"
+        )
 
     async def disable_network_throttling(self) -> None:
         """Disable network throttling."""
-        await self.execute_cdp_command("Network.emulateNetworkConditions", {"offline": False, "downloadThroughput": -1, "uploadThroughput": -1, "latency": 0})
+        await self.execute_cdp_command(
+            "Network.emulateNetworkConditions",
+            {
+                "offline": False,
+                "downloadThroughput": -1,
+                "uploadThroughput": -1,
+                "latency": 0,
+            },
+        )
         logger.info("Disabled network throttling")
 
     async def emulate_device(self, device_name: str) -> None:
@@ -135,7 +170,9 @@ class DevToolsController(BaseController):
         device_config = get_device_config(device_name)
         if not device_config:
             available = list_available_devices()
-            raise ChromeManagerError(f"Unknown device: {device_name}. Available devices: {', '.join(available)}")
+            raise ChromeManagerError(
+                f"Unknown device: {device_name}. Available devices: {', '.join(available)}"
+            )
 
         # Convert dataclass to dict for CDP
         device_params = {
@@ -145,8 +182,12 @@ class DevToolsController(BaseController):
             "mobile": device_config.mobile,
         }
 
-        await self.execute_cdp_command("Emulation.setDeviceMetricsOverride", device_params)
-        await self.execute_cdp_command("Emulation.setUserAgentOverride", {"userAgent": device_config.userAgent})
+        await self.execute_cdp_command(
+            "Emulation.setDeviceMetricsOverride", device_params
+        )
+        await self.execute_cdp_command(
+            "Emulation.setUserAgentOverride", {"userAgent": device_config.userAgent}
+        )
 
         logger.info(f"Emulating device: {device_name}")
 
@@ -171,7 +212,9 @@ class DevToolsController(BaseController):
         await self.execute_cdp_command("Network.setBlockedURLs", {"urls": []})
         logger.info("Unblocked all URLs")
 
-    async def set_geolocation(self, latitude: float, longitude: float, accuracy: int = 100) -> None:
+    async def set_geolocation(
+        self, latitude: float, longitude: float, accuracy: int = 100
+    ) -> None:
         """Set browser geolocation.
 
         Args:
@@ -179,8 +222,13 @@ class DevToolsController(BaseController):
             longitude: Longitude coordinate
             accuracy: Location accuracy in meters
         """
-        await self.execute_cdp_command("Emulation.setGeolocationOverride", {"latitude": latitude, "longitude": longitude, "accuracy": accuracy})
-        logger.info(f"Set geolocation to ({latitude}, {longitude}) with {accuracy}m accuracy")
+        await self.execute_cdp_command(
+            "Emulation.setGeolocationOverride",
+            {"latitude": latitude, "longitude": longitude, "accuracy": accuracy},
+        )
+        logger.info(
+            f"Set geolocation to ({latitude}, {longitude}) with {accuracy}m accuracy"
+        )
 
     async def clear_geolocation(self) -> None:
         """Clear geolocation override."""
@@ -193,7 +241,9 @@ class DevToolsController(BaseController):
         Args:
             timezone_id: Timezone identifier (e.g., 'America/New_York')
         """
-        await self.execute_cdp_command("Emulation.setTimezoneOverride", {"timezoneId": timezone_id})
+        await self.execute_cdp_command(
+            "Emulation.setTimezoneOverride", {"timezoneId": timezone_id}
+        )
         logger.info(f"Set timezone to {timezone_id}")
 
     async def set_locale(self, locale: str) -> None:
@@ -202,7 +252,9 @@ class DevToolsController(BaseController):
         Args:
             locale: Locale identifier (e.g., 'en-US')
         """
-        await self.execute_cdp_command("Emulation.setLocaleOverride", {"locale": locale})
+        await self.execute_cdp_command(
+            "Emulation.setLocaleOverride", {"locale": locale}
+        )
         logger.info(f"Set locale to {locale}")
 
     async def enable_request_interception(self) -> None:
@@ -215,7 +267,9 @@ class DevToolsController(BaseController):
         await self.execute_cdp_command("Fetch.disable")
         logger.info("Disabled request interception")
 
-    def evaluate_performance_tree(self, metrics: dict[str, Any], max_depth: int = 3) -> dict[str, Any]:
+    def evaluate_performance_tree(
+        self, metrics: dict[str, Any], max_depth: int = 3
+    ) -> dict[str, Any]:
         """Recursively evaluate performance metrics tree.
 
         Args:
@@ -228,7 +282,9 @@ class DevToolsController(BaseController):
         result = self._evaluate_tree_recursive(metrics, 0, max_depth)
         return result if isinstance(result, dict) else {}
 
-    def _evaluate_tree_recursive(self, obj: Any, current_depth: int, max_depth: int) -> Any:
+    def _evaluate_tree_recursive(
+        self, obj: Any, current_depth: int, max_depth: int
+    ) -> Any:
         """Recursive helper for tree evaluation.
 
         Args:
@@ -240,10 +296,20 @@ class DevToolsController(BaseController):
             Evaluated object
         """
         if current_depth >= max_depth:
-            return str(obj) if not isinstance(obj, str | int | float | bool | type(None)) else obj
+            return (
+                str(obj)
+                if not isinstance(obj, str | int | float | bool | type(None))
+                else obj
+            )
 
         if isinstance(obj, dict):
-            return {k: self._evaluate_tree_recursive(v, current_depth + 1, max_depth) for k, v in obj.items()}
+            return {
+                k: self._evaluate_tree_recursive(v, current_depth + 1, max_depth)
+                for k, v in obj.items()
+            }
         if isinstance(obj, list):
-            return [self._evaluate_tree_recursive(item, current_depth + 1, max_depth) for item in obj]
+            return [
+                self._evaluate_tree_recursive(item, current_depth + 1, max_depth)
+                for item in obj
+            ]
         return obj

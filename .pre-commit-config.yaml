@@ -27,12 +27,38 @@ repos:
         require_serial: true
         stages: [ pre-commit ]
         pass_filenames: false
-      # - id: no-lint-suppressions
-      #   name: no-lint-suppressions
-      #   entry: bash -c "cd .. && .venv/bin/python scripts/list_noqas.py {{MODULE}}"
-      #   language: system
-      #   pass_filenames: false
-      #   stages: [ pre-commit ]
+
+  # Quality checks (ALL reference /base/scripts/)
+  - repo: local
+    hooks:
+      - id: no-unstaged-changes
+        name: no-unstaged-changes
+        entry: 'bash -c "git diff --exit-code || { echo \"BLOCKED: Unstaged changes detected. Run git add -A before commit.\"; exit 1; }"'
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]
+        require_serial: true
+      - id: banned-words
+        name: banned-words
+        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/check_banned_words.py browser"
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]
+        require_serial: true
+      - id: no-lint-suppressions
+        name: no-lint-suppressions
+        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/list_noqas.py browser"
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]
+        require_serial: true
+      - id: validate-serial
+        name: validate-serial
+        entry: bash -c "cd .. && base/.venv/bin/python base/scripts/validate_serial_hooks.py --module browser"
+        language: system
+        pass_filenames: false
+        stages: [ pre-push ]
+        require_serial: true
 
   # Run tests on pre-push
   - repo: local

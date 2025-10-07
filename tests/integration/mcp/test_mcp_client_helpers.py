@@ -21,10 +21,15 @@ from mcp.shared.exceptions import McpError
 async def test_client_error_handling(browser_root: Path) -> None:
     """Expect MCP client to surface errors when the server exits immediately."""
     venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-    server_params = StdioServerParameters(command=str(venv_python), args=["-c", "import sys; sys.exit(1)"], env=None)
+    server_params = StdioServerParameters(
+        command=str(venv_python), args=["-c", "import sys; sys.exit(1)"], env=None
+    )
 
     with pytest.raises((McpError, ExceptionGroup)):
-        async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+        async with stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ), ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
 
@@ -32,9 +37,14 @@ async def test_client_error_handling(browser_root: Path) -> None:
 async def test_client_timeout(browser_root: Path) -> None:
     """Expect a TimeoutError when the server never responds to initialize."""
     venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-    server_params = StdioServerParameters(command=str(venv_python), args=["-c", "import time; time.sleep(100)"], env=None)
+    server_params = StdioServerParameters(
+        command=str(venv_python), args=["-c", "import time; time.sleep(100)"], env=None
+    )
 
     with pytest.raises(TimeoutError):
         async with asyncio.timeout(2.0):
-            async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+            async with stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ), ClientSession(read_stream, write_stream) as session:
                 await session.initialize()

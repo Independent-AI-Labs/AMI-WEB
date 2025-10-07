@@ -51,7 +51,7 @@ class HTMLTestServer:
                 self.port = int(actual_port)
         except Exception:
             # Best-effort; keep configured port if we cannot resolve
-            pass
+            ...
 
         logger.info(f"Test server started on http://127.0.0.1:{self.port}")
         return f"http://127.0.0.1:{self.port}"
@@ -73,17 +73,29 @@ class HTMLTestServer:
         # Simulate authentication
         test_password = "password123"  # noqa: S105
         if username == "testuser" and password == test_password:
-            return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
-        return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
+            return web.json_response(
+                {
+                    "success": True,
+                    "message": "Login successful",
+                    "token": "test-token-123",
+                }
+            )
+        return web.json_response(
+            {"success": False, "message": "Invalid credentials"}, status=401
+        )
 
-    async def handle_api_data(self, request: Request) -> Response:  # noqa: ARG002
+    async def handle_api_data(self, _request: Request) -> Response:
         """Handle API data requests."""
         # Simulate delayed response
         await asyncio.sleep(0.5)
 
         return web.json_response(
             {
-                "data": [{"id": 1, "name": "Item 1", "value": 100}, {"id": 2, "name": "Item 2", "value": 200}, {"id": 3, "name": "Item 3", "value": 300}],
+                "data": [
+                    {"id": 1, "name": "Item 1", "value": 100},
+                    {"id": 2, "name": "Item 2", "value": 200},
+                    {"id": 3, "name": "Item 3", "value": 300},
+                ],
                 "timestamp": asyncio.get_event_loop().time(),
             },
         )
@@ -92,7 +104,13 @@ class HTMLTestServer:
         """Handle form submissions."""
         data = await request.json()
 
-        return web.json_response({"success": True, "received": data, "processed_at": asyncio.get_event_loop().time()})
+        return web.json_response(
+            {
+                "success": True,
+                "received": data,
+                "processed_at": asyncio.get_event_loop().time(),
+            }
+        )
 
 
 async def run_server() -> None:

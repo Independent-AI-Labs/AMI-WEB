@@ -2,8 +2,11 @@
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
+
+from base.backend.utils.standard_imports import setup_imports
+
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 
 @dataclass
@@ -19,7 +22,7 @@ class DeviceEmulation:
 
 def _load_user_agents_config() -> dict[str, Any]:
     """Load user agents configuration from JSON file."""
-    config_path = Path(__file__).parent.parent.parent / "config" / "user_agents.json"
+    config_path = MODULE_ROOT / "config" / "user_agents.json"
     if config_path.exists():
         with config_path.open() as f:
             data: dict[str, Any] = json.load(f)

@@ -14,7 +14,9 @@ class TestChromeFastMCPServer:
     """Test Chrome FastMCP server using official MCP client."""
 
     @pytest.mark.asyncio
-    async def test_chrome_server_with_client(self, browser_root: Path, scripts_dir: Path) -> None:
+    async def test_chrome_server_with_client(
+        self, browser_root: Path, scripts_dir: Path
+    ) -> None:
         """Test Chrome FastMCP server using official MCP client."""
         # Get the server script path
         server_script = scripts_dir / "run_chrome.py"
@@ -23,10 +25,15 @@ class TestChromeFastMCPServer:
         venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
 
         # Create stdio server parameters
-        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
+        server_params = StdioServerParameters(
+            command=str(venv_python), args=["-u", str(server_script)], env=None
+        )
 
         # Use the stdio client to connect
-        async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+        async with stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ), ClientSession(read_stream, write_stream) as session:
             # Initialize the connection
             result = await session.initialize()
 
@@ -50,19 +57,34 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration  # Mark as integration test that requires Chrome
-    async def test_browser_launch_and_terminate(self, browser_root: Path, scripts_dir: Path) -> None:
+    async def test_browser_launch_and_terminate(
+        self, browser_root: Path, scripts_dir: Path
+    ) -> None:
         """Test launching and terminating a browser instance."""
         server_script = scripts_dir / "run_chrome.py"
 
         venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
+        server_params = StdioServerParameters(
+            command=str(venv_python), args=["-u", str(server_script)], env=None
+        )
 
-        async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+        async with stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ), ClientSession(read_stream, write_stream) as session:
             # Initialize
             await session.initialize()
 
             # Launch a browser using V02 API
-            launch_result = await session.call_tool("browser_session", arguments={"action": "launch", "headless": True, "anti_detect": True, "use_pool": False})
+            launch_result = await session.call_tool(
+                "browser_session",
+                arguments={
+                    "action": "launch",
+                    "headless": True,
+                    "anti_detect": True,
+                    "use_pool": False,
+                },
+            )
 
             assert launch_result is not None
             assert len(launch_result.content) > 0
@@ -76,7 +98,13 @@ class TestChromeFastMCPServer:
                 assert "instance_id" in response
 
                 # Terminate the browser using V02 API
-                terminate_result = await session.call_tool("browser_session", arguments={"action": "terminate", "instance_id": response["instance_id"]})
+                terminate_result = await session.call_tool(
+                    "browser_session",
+                    arguments={
+                        "action": "terminate",
+                        "instance_id": response["instance_id"],
+                    },
+                )
 
                 assert terminate_result is not None
                 term_content = terminate_result.content[0]
@@ -90,19 +118,32 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_save_and_restore(self, browser_root: Path, scripts_dir: Path) -> None:
+    async def test_session_save_and_restore(
+        self, browser_root: Path, scripts_dir: Path
+    ) -> None:
         """Test saving and restoring a browser session."""
         server_script = scripts_dir / "run_chrome.py"
         venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
+        server_params = StdioServerParameters(
+            command=str(venv_python), args=["-u", str(server_script)], env=None
+        )
 
-        async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+        async with stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ), ClientSession(read_stream, write_stream) as session:
             # Initialize
             await session.initialize()
 
             # Launch a browser
             launch_result = await session.call_tool(
-                "browser_session", arguments={"action": "launch", "headless": True, "anti_detect": False, "use_pool": False}
+                "browser_session",
+                arguments={
+                    "action": "launch",
+                    "headless": True,
+                    "anti_detect": False,
+                    "use_pool": False,
+                },
             )
 
             assert launch_result is not None
@@ -117,7 +158,10 @@ class TestChromeFastMCPServer:
                 instance_id = launch_response["instance_id"]
 
                 # Navigate to a test URL
-                nav_result = await session.call_tool("browser_navigate", arguments={"action": "goto", "url": "https://example.com"})
+                nav_result = await session.call_tool(
+                    "browser_navigate",
+                    arguments={"action": "goto", "url": "https://example.com"},
+                )
                 assert nav_result is not None
                 nav_content = nav_result.content[0]
                 assert hasattr(nav_content, "text")
@@ -126,7 +170,12 @@ class TestChromeFastMCPServer:
 
                 # Save the session
                 save_result = await session.call_tool(
-                    "browser_session", arguments={"action": "save", "instance_id": instance_id, "session_name": "test_session"}
+                    "browser_session",
+                    arguments={
+                        "action": "save",
+                        "instance_id": instance_id,
+                        "session_name": "test_session",
+                    },
                 )
                 assert save_result is not None
 
@@ -140,7 +189,10 @@ class TestChromeFastMCPServer:
                     assert session_id is not None
 
                     # Terminate the browser (this will auto-save another session)
-                    term_result = await session.call_tool("browser_session", arguments={"action": "terminate", "instance_id": instance_id})
+                    term_result = await session.call_tool(
+                        "browser_session",
+                        arguments={"action": "terminate", "instance_id": instance_id},
+                    )
                     term_content = term_result.content[0]
                     assert hasattr(term_content, "text")
                     term_response = json.loads(term_content.text)
@@ -150,7 +202,10 @@ class TestChromeFastMCPServer:
                     assert autosaved_session_id != session_id
 
                     # Restore the session
-                    restore_result = await session.call_tool("browser_session", arguments={"action": "restore", "session_id": session_id})
+                    restore_result = await session.call_tool(
+                        "browser_session",
+                        arguments={"action": "restore", "session_id": session_id},
+                    )
                     assert restore_result is not None
 
                     restore_content = restore_result.content[0]
@@ -162,7 +217,13 @@ class TestChromeFastMCPServer:
                         assert restored_instance_id is not None
 
                         # Clean up: terminate restored instance and delete both sessions
-                        term_restore_result = await session.call_tool("browser_session", arguments={"action": "terminate", "instance_id": restored_instance_id})
+                        term_restore_result = await session.call_tool(
+                            "browser_session",
+                            arguments={
+                                "action": "terminate",
+                                "instance_id": restored_instance_id,
+                            },
+                        )
                         # This creates yet another auto-saved session
                         term_restore_content = term_restore_result.content[0]
                         assert hasattr(term_restore_content, "text")
@@ -170,9 +231,27 @@ class TestChromeFastMCPServer:
                         third_session_id = term_restore_response["data"]["session_id"]
 
                         # Delete all three sessions
-                        await session.call_tool("browser_session", arguments={"action": "delete_session", "session_id": session_id})
-                        await session.call_tool("browser_session", arguments={"action": "delete_session", "session_id": autosaved_session_id})
-                        delete_result = await session.call_tool("browser_session", arguments={"action": "delete_session", "session_id": third_session_id})
+                        await session.call_tool(
+                            "browser_session",
+                            arguments={
+                                "action": "delete_session",
+                                "session_id": session_id,
+                            },
+                        )
+                        await session.call_tool(
+                            "browser_session",
+                            arguments={
+                                "action": "delete_session",
+                                "session_id": autosaved_session_id,
+                            },
+                        )
+                        delete_result = await session.call_tool(
+                            "browser_session",
+                            arguments={
+                                "action": "delete_session",
+                                "session_id": third_session_id,
+                            },
+                        )
                         delete_content = delete_result.content[0]
                         assert hasattr(delete_content, "text")
                         delete_response = json.loads(delete_content.text)
@@ -180,18 +259,28 @@ class TestChromeFastMCPServer:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_session_list_and_delete(self, browser_root: Path, scripts_dir: Path) -> None:
+    async def test_session_list_and_delete(
+        self, browser_root: Path, scripts_dir: Path
+    ) -> None:
         """Test listing and deleting sessions."""
         server_script = scripts_dir / "run_chrome.py"
         venv_python = EnvironmentSetup.get_module_venv_python(browser_root)
-        server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
+        server_params = StdioServerParameters(
+            command=str(venv_python), args=["-u", str(server_script)], env=None
+        )
 
-        async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+        async with stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ), ClientSession(read_stream, write_stream) as session:
             # Initialize
             await session.initialize()
 
             # Launch a browser
-            launch_result = await session.call_tool("browser_session", arguments={"action": "launch", "headless": True, "use_pool": False})
+            launch_result = await session.call_tool(
+                "browser_session",
+                arguments={"action": "launch", "headless": True, "use_pool": False},
+            )
             launch_content = launch_result.content[0]
             assert hasattr(launch_content, "text")
             launch_response = json.loads(launch_content.text)
@@ -199,7 +288,12 @@ class TestChromeFastMCPServer:
 
             # Save a session
             save_result = await session.call_tool(
-                "browser_session", arguments={"action": "save", "instance_id": instance_id, "session_name": "test_list_session"}
+                "browser_session",
+                arguments={
+                    "action": "save",
+                    "instance_id": instance_id,
+                    "session_name": "test_list_session",
+                },
             )
             save_content = save_result.content[0]
             assert hasattr(save_content, "text")
@@ -207,14 +301,19 @@ class TestChromeFastMCPServer:
             session_id = save_response["data"]["session_id"]
 
             # Terminate instance (creates an auto-saved session too)
-            term_result = await session.call_tool("browser_session", arguments={"action": "terminate", "instance_id": instance_id})
+            term_result = await session.call_tool(
+                "browser_session",
+                arguments={"action": "terminate", "instance_id": instance_id},
+            )
             term_content = term_result.content[0]
             assert hasattr(term_content, "text")
             term_response = json.loads(term_content.text)
             autosaved_session_id = term_response["data"]["session_id"]
 
             # List sessions
-            list_result = await session.call_tool("browser_session", arguments={"action": "list_sessions"})
+            list_result = await session.call_tool(
+                "browser_session", arguments={"action": "list_sessions"}
+            )
             list_content = list_result.content[0]
             assert hasattr(list_content, "text")
             list_response = json.loads(list_content.text)
@@ -227,20 +326,33 @@ class TestChromeFastMCPServer:
             assert our_session is not None
 
             # Delete the session
-            delete_result = await session.call_tool("browser_session", arguments={"action": "delete_session", "session_id": session_id})
+            delete_result = await session.call_tool(
+                "browser_session",
+                arguments={"action": "delete_session", "session_id": session_id},
+            )
             delete_content = delete_result.content[0]
             assert hasattr(delete_content, "text")
             delete_response = json.loads(delete_content.text)
             assert delete_response.get("success") is True
 
             # Verify it's deleted by listing again
-            list_result2 = await session.call_tool("browser_session", arguments={"action": "list_sessions"})
+            list_result2 = await session.call_tool(
+                "browser_session", arguments={"action": "list_sessions"}
+            )
             list_content2 = list_result2.content[0]
             assert hasattr(list_content2, "text")
             list_response2 = json.loads(list_content2.text)
             sessions2 = list_response2["data"]["sessions"]
-            deleted_session = next((s for s in sessions2 if s["id"] == session_id), None)
+            deleted_session = next(
+                (s for s in sessions2 if s["id"] == session_id), None
+            )
             assert deleted_session is None
 
             # Clean up the autosaved session
-            await session.call_tool("browser_session", arguments={"action": "delete_session", "session_id": autosaved_session_id})
+            await session.call_tool(
+                "browser_session",
+                arguments={
+                    "action": "delete_session",
+                    "session_id": autosaved_session_id,
+                },
+            )

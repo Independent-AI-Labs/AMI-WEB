@@ -17,7 +17,13 @@ from browser.backend.utils.exceptions import InputError
 class FormsController(BaseController):
     """Handles form interactions and input controls."""
 
-    async def select_option(self, selector: str, value: str | None = None, text: str | None = None, index: int | None = None) -> None:
+    async def select_option(
+        self,
+        selector: str,
+        value: str | None = None,
+        text: str | None = None,
+        index: int | None = None,
+    ) -> None:
         """Select an option from a dropdown.
 
         Args:
@@ -214,7 +220,10 @@ class FormsController(BaseController):
                 result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, lambda: self.driver.execute_script(script) if self.driver else None)
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: self.driver.execute_script(script) if self.driver else None,
+                )
 
             return result if isinstance(result, dict) else {}
 
@@ -275,7 +284,9 @@ class FormsController(BaseController):
         keyboard = KeyboardController(self.instance)
         await keyboard.type_text(selector, str(value), clear=True)
 
-    async def _fill_single_field(self, selector: str, value: str | bool, element: WebElement) -> None:
+    async def _fill_single_field(
+        self, selector: str, value: str | bool, element: WebElement
+    ) -> None:
         """Fill a single form field based on its type."""
         tag_name = element.tag_name.lower()
         input_type = element.get_attribute("type")
@@ -294,12 +305,16 @@ class FormsController(BaseController):
 
     async def _submit_form(self) -> None:
         """Submit the form."""
-        submit_button = await self._find_element("button[type='submit'], input[type='submit']")
+        submit_button = await self._find_element(
+            "button[type='submit'], input[type='submit']"
+        )
         if submit_button:
             mouse = MouseController(self.instance)
             await mouse.click("button[type='submit'], input[type='submit']")
 
-    async def fill_form(self, form_data: dict[str, str | bool], submit: bool = False) -> None:
+    async def fill_form(
+        self, form_data: dict[str, str | bool], submit: bool = False
+    ) -> None:
         """Fill a form with provided data.
 
         Args:
@@ -328,7 +343,9 @@ class FormsController(BaseController):
             logger.error(f"Fill form failed: {e}")
             raise InputError(f"Failed to fill form: {e}") from e
 
-    async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
+    async def _find_element(
+        self, selector: str, wait: bool = True, timeout: int = 10
+    ) -> WebElement | None:
         """Find an element on the page."""
         try:
             if not self.driver:
@@ -340,7 +357,12 @@ class FormsController(BaseController):
                 if self._is_in_thread_context():
                     return wait_obj.until(EC.presence_of_element_located((by, value)))
                 loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(None, lambda: wait_obj.until(EC.presence_of_element_located((by, value))) if self.driver else None)
+                return await loop.run_in_executor(
+                    None,
+                    lambda: wait_obj.until(EC.presence_of_element_located((by, value)))
+                    if self.driver
+                    else None,
+                )
             return self.driver.find_element(by, value)
 
         except Exception as e:

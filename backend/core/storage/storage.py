@@ -16,7 +16,13 @@ DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
 class BrowserStorage:
     """Manages browser storage - cookies, downloads, localStorage."""
 
-    def __init__(self, instance_id: str, config: Any = None, download_dir: Path | None = None, profile_name: str | None = None):
+    def __init__(
+        self,
+        instance_id: str,
+        config: Any = None,
+        download_dir: Path | None = None,
+        profile_name: str | None = None,
+    ):
         self.instance_id = instance_id
         self._config = config
         self._download_dir = download_dir
@@ -44,11 +50,21 @@ class BrowserStorage:
         for file in self._download_dir.iterdir():
             if file.is_file() and not file.name.endswith(".crdownload"):
                 stat = file.stat()
-                downloads.append({"name": file.name, "path": str(file), "size": stat.st_size, "modified": stat.st_mtime, "created": stat.st_ctime})
+                downloads.append(
+                    {
+                        "name": file.name,
+                        "path": str(file),
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime,
+                        "created": stat.st_ctime,
+                    }
+                )
 
         return sorted(downloads, key=lambda x: x["modified"], reverse=True)
 
-    def wait_for_download(self, filename: str | None = None, timeout: int = 30) -> Path | None:
+    def wait_for_download(
+        self, filename: str | None = None, timeout: int = 30
+    ) -> Path | None:
         """Wait for a download to complete."""
         if not self._download_dir:
             logger.error("No download directory configured")
@@ -64,7 +80,11 @@ class BrowserStorage:
                     return file_path
             else:
                 # Get the most recent file
-                files = [f for f in self._download_dir.iterdir() if f.is_file() and not f.name.endswith(".crdownload")]
+                files = [
+                    f
+                    for f in self._download_dir.iterdir()
+                    if f.is_file() and not f.name.endswith(".crdownload")
+                ]
                 if files:
                     return max(files, key=lambda f: f.stat().st_mtime)
 
@@ -110,7 +130,15 @@ class BrowserStorage:
         # Save cookies to a JSON file in the profile directory
 
         # Use configured profiles directory or default
-        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
+        profiles_base = (
+            Path(
+                self._config.get(
+                    "backend.storage.profiles_dir", "./data/browser_profiles"
+                )
+            )
+            if self._config
+            else Path("./data/browser_profiles")
+        )
         profile_dir = profiles_base / self._profile_name
         profile_dir.mkdir(parents=True, exist_ok=True)
         cookies_file = profile_dir / "cookies.json"
@@ -128,7 +156,15 @@ class BrowserStorage:
         # Load cookies from JSON file in the profile directory
 
         # Use configured profiles directory or default
-        profiles_base = Path(self._config.get("backend.storage.profiles_dir", "./data/browser_profiles")) if self._config else Path("./data/browser_profiles")
+        profiles_base = (
+            Path(
+                self._config.get(
+                    "backend.storage.profiles_dir", "./data/browser_profiles"
+                )
+            )
+            if self._config
+            else Path("./data/browser_profiles")
+        )
         cookies_file = profiles_base / self._profile_name / "cookies.json"
 
         if not cookies_file.exists():
@@ -138,13 +174,20 @@ class BrowserStorage:
         try:
             with cookies_file.open() as f:
                 cookies: list[dict[str, Any]] = json.load(f)
-            logger.debug(f"Loaded {len(cookies)} cookies from profile {self._profile_name}")
+            logger.debug(
+                f"Loaded {len(cookies)} cookies from profile {self._profile_name}"
+            )
             return cookies
         except Exception as e:
             logger.warning(f"Failed to load cookies from profile: {e}")
             return None
 
-    def load_cookies(self, driver: WebDriver, cookies: list[dict[str, Any]] | None = None, navigate_to_domain: bool = True) -> int:
+    def load_cookies(
+        self,
+        driver: WebDriver,
+        cookies: list[dict[str, Any]] | None = None,
+        navigate_to_domain: bool = True,
+    ) -> int:
         """Load cookies into the browser."""
         if not driver:
             raise InstanceError("Browser not initialized")
@@ -167,13 +210,21 @@ class BrowserStorage:
 
         total_added = 0
         for domain, domain_cookies in cookies_by_domain.items():
-            added = self._add_cookies_for_domain(driver, domain, domain_cookies, navigate_to_domain)
+            added = self._add_cookies_for_domain(
+                driver, domain, domain_cookies, navigate_to_domain
+            )
             total_added += added
 
         logger.info(f"Loaded {total_added} cookies into browser")
         return total_added
 
-    def _add_cookies_for_domain(self, driver: WebDriver, domain: str, cookies: list[dict[str, Any]], navigate: bool) -> int:
+    def _add_cookies_for_domain(
+        self,
+        driver: WebDriver,
+        domain: str,
+        cookies: list[dict[str, Any]],
+        navigate: bool,
+    ) -> int:
         """Add cookies for a specific domain."""
         if navigate:
             # Navigate to domain to set cookies
@@ -228,7 +279,9 @@ class BrowserStorage:
 
         try:
             for key, value in data.items():
-                driver.execute_script("localStorage.setItem(arguments[0], arguments[1]);", key, value)
+                driver.execute_script(
+                    "localStorage.setItem(arguments[0], arguments[1]);", key, value
+                )
         except Exception as e:
             logger.debug(f"Failed to set localStorage: {e}")
 

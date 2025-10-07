@@ -64,7 +64,14 @@ def test_compute_chunk_produces_offsets_and_checksum() -> None:
     )
 
     payload = "abcdefghij"  # 10 bytes
-    first = compute_chunk(config, "browser_get_text", payload, offset=0, length=None, snapshot_checksum=None)
+    first = compute_chunk(
+        config,
+        "browser_get_text",
+        payload,
+        offset=0,
+        length=None,
+        snapshot_checksum=None,
+    )
 
     assert first.text == payload[:6]
     assert first.chunk_start == 0
@@ -100,7 +107,14 @@ def test_compute_chunk_rejects_invalid_offset() -> None:
     )
 
     with pytest.raises(ChunkComputationError):
-        compute_chunk(config, "browser_get_text", "abc", offset=5, length=None, snapshot_checksum=None)
+        compute_chunk(
+            config,
+            "browser_get_text",
+            "abc",
+            offset=5,
+            length=None,
+            snapshot_checksum=None,
+        )
 
 
 def test_compute_chunk_detects_checksum_mismatch() -> None:
@@ -113,14 +127,30 @@ def test_compute_chunk_detects_checksum_mismatch() -> None:
     )
 
     payload = "abcdefgh"
-    first = compute_chunk(config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None)
+    first = compute_chunk(
+        config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None
+    )
 
     with pytest.raises(ChunkComputationError):
-        compute_chunk(config, "browser_get_text", payload, offset=4, length=4, snapshot_checksum="deadbeef")
+        compute_chunk(
+            config,
+            "browser_get_text",
+            payload,
+            offset=4,
+            length=4,
+            snapshot_checksum="deadbeef",
+        )
 
     # offset beyond total but checksum correct should still fail with offset error
     with pytest.raises(ChunkComputationError):
-        compute_chunk(config, "browser_get_text", payload, offset=20, length=4, snapshot_checksum=first.snapshot_checksum)
+        compute_chunk(
+            config,
+            "browser_get_text",
+            payload,
+            offset=20,
+            length=4,
+            snapshot_checksum=first.snapshot_checksum,
+        )
 
 
 def test_compute_chunk_handles_offset_at_end() -> None:
@@ -133,7 +163,9 @@ def test_compute_chunk_handles_offset_at_end() -> None:
     )
 
     payload = "abcd"
-    first = compute_chunk(config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None)
+    first = compute_chunk(
+        config, "browser_get_text", payload, offset=0, length=4, snapshot_checksum=None
+    )
 
     terminal = compute_chunk(
         config,

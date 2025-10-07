@@ -68,7 +68,9 @@ async def browser_get_text_chunk_tool(
 ) -> BrowserResponse:
     """Stream text content of an element in deterministic chunks."""
 
-    logger.debug(f"Chunking text from element: {selector} offset={offset} length={length}, instance_id={instance_id}")
+    logger.debug(
+        f"Chunking text from element: {selector} offset={offset} length={length}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance:
@@ -109,9 +111,16 @@ async def browser_get_text_chunk_tool(
     )
 
 
-async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attribute: str, instance_id: str | None = None) -> BrowserResponse:
+async def browser_get_attribute_tool(
+    manager: ChromeManager,
+    selector: str,
+    attribute: str,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Get attribute value of an element."""
-    logger.debug(f"Getting attribute {attribute} from element: {selector}, instance_id={instance_id}")
+    logger.debug(
+        f"Getting attribute {attribute} from element: {selector}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -123,7 +132,9 @@ async def browser_get_attribute_tool(manager: ChromeManager, selector: str, attr
     return BrowserResponse(success=True, data={"value": value})
 
 
-async def browser_exists_tool(manager: ChromeManager, selector: str, instance_id: str | None = None) -> BrowserResponse:
+async def browser_exists_tool(
+    manager: ChromeManager, selector: str, instance_id: str | None = None
+) -> BrowserResponse:
     """Check if an element exists."""
     logger.debug(f"Checking if element exists: {selector}, instance_id={instance_id}")
 
@@ -141,10 +152,16 @@ async def browser_exists_tool(manager: ChromeManager, selector: str, instance_id
 
 
 async def browser_wait_for_tool(
-    manager: ChromeManager, selector: str, state: str = "visible", timeout: float = 30, instance_id: str | None = None
+    manager: ChromeManager,
+    selector: str,
+    state: str = "visible",
+    timeout: float = 30,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Wait for an element to appear."""
-    logger.debug(f"Waiting for element: {selector} to be {state}, instance_id={instance_id}")
+    logger.debug(
+        f"Waiting for element: {selector} to be {state}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -163,7 +180,9 @@ async def browser_wait_for_tool(
     return BrowserResponse(success=True, data={"status": "element_found"})
 
 
-async def browser_get_cookies_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_get_cookies_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """Get browser cookies."""
     logger.debug(f"Getting browser cookies, instance_id={instance_id}")
 
@@ -197,7 +216,9 @@ async def browser_get_html_tool(
     Returns:
         BrowserResponse with HTML content
     """
-    logger.debug(f"Getting HTML: selector={selector}, max_depth={max_depth}, collapse_depth={collapse_depth}, instance_id={instance_id}")
+    logger.debug(
+        f"Getting HTML: selector={selector}, max_depth={max_depth}, collapse_depth={collapse_depth}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance:
@@ -207,7 +228,9 @@ async def browser_get_html_tool(
 
     # Get ellipsize_text_after from config if not provided
     if ellipsize_text_after is None:
-        ellipsize_text_after = manager.config.get("mcp.tool_limits.browser_get_html.ellipsize_text_after", 128)
+        ellipsize_text_after = manager.config.get(
+            "mcp.tool_limits.browser_get_html.ellipsize_text_after", 128
+        )
 
     # Get HTML based on selector or full page
     if selector:
@@ -215,10 +238,18 @@ async def browser_get_html_tool(
         html = await extractor.get_element_html(selector)
         # Apply ellipsization to element HTML
         if ellipsize_text_after:
-            html = await extractor.get_html_with_depth_limit(max_depth=max_depth, collapse_depth=collapse_depth, ellipsize_text_after=ellipsize_text_after)
+            html = await extractor.get_html_with_depth_limit(
+                max_depth=max_depth,
+                collapse_depth=collapse_depth,
+                ellipsize_text_after=ellipsize_text_after,
+            )
     else:
         # Full page with depth/collapse/ellipsize options
-        html = await extractor.get_html_with_depth_limit(max_depth=max_depth, collapse_depth=collapse_depth, ellipsize_text_after=ellipsize_text_after)
+        html = await extractor.get_html_with_depth_limit(
+            max_depth=max_depth,
+            collapse_depth=collapse_depth,
+            ellipsize_text_after=ellipsize_text_after,
+        )
 
     # Enforce response limits
     limited = enforce_text_limit(manager.config, "browser_get_html", html)

@@ -13,10 +13,15 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_screenshot_tool(
-    manager: ChromeManager, full_page: bool = False, save_to_disk: bool = True, instance_id: str | None = None
+    manager: ChromeManager,
+    full_page: bool = False,
+    save_to_disk: bool = True,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Take a screenshot of the page."""
-    logger.debug(f"Taking screenshot: full_page={full_page}, save_to_disk={save_to_disk}, instance_id={instance_id}")
+    logger.debug(
+        f"Taking screenshot: full_page={full_page}, save_to_disk={save_to_disk}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -26,7 +31,9 @@ async def browser_screenshot_tool(
 
     if save_to_disk:
         # Save to configured screenshot directory
-        screenshot_dir = Path(manager.config.get("backend.storage.screenshot_dir", "./data/screenshots"))
+        screenshot_dir = Path(
+            manager.config.get("backend.storage.screenshot_dir", "./data/screenshots")
+        )
         screenshot_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate filename with timestamp
@@ -35,11 +42,18 @@ async def browser_screenshot_tool(
         filepath = screenshot_dir / filename
 
         # Save screenshot
-        saved_path = await screenshot_controller.save_screenshot(str(filepath), full_page=full_page)
+        saved_path = await screenshot_controller.save_screenshot(
+            str(filepath), full_page=full_page
+        )
 
         return BrowserResponse(
             success=True,
-            data={"filepath": saved_path, "filename": filename, "format": "png", "saved": True},
+            data={
+                "filepath": saved_path,
+                "filename": filename,
+                "format": "png",
+                "saved": True,
+            },
         )
 
     # Return base64 encoded
@@ -50,12 +64,21 @@ async def browser_screenshot_tool(
 
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    return BrowserResponse(success=True, screenshot=screenshot_base64, data={"format": "base64"})
+    return BrowserResponse(
+        success=True, screenshot=screenshot_base64, data={"format": "base64"}
+    )
 
 
-async def browser_element_screenshot_tool(manager: ChromeManager, selector: str, save_to_disk: bool = True, instance_id: str | None = None) -> BrowserResponse:
+async def browser_element_screenshot_tool(
+    manager: ChromeManager,
+    selector: str,
+    save_to_disk: bool = True,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Take a screenshot of an element."""
-    logger.debug(f"Taking element screenshot: {selector}, save_to_disk={save_to_disk}, instance_id={instance_id}")
+    logger.debug(
+        f"Taking element screenshot: {selector}, save_to_disk={save_to_disk}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance or not instance.driver:
@@ -65,22 +88,36 @@ async def browser_element_screenshot_tool(manager: ChromeManager, selector: str,
 
     if save_to_disk:
         # Save to configured screenshot directory
-        screenshot_dir = Path(manager.config.get("backend.storage.screenshot_dir", "./data/screenshots"))
+        screenshot_dir = Path(
+            manager.config.get("backend.storage.screenshot_dir", "./data/screenshots")
+        )
         screenshot_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         # Sanitize selector for filename
-        safe_selector = selector.replace(" ", "_").replace(".", "").replace("#", "").replace(">", "")[:50]
+        safe_selector = (
+            selector.replace(" ", "_")
+            .replace(".", "")
+            .replace("#", "")
+            .replace(">", "")[:50]
+        )
         filename = f"element_{safe_selector}_{timestamp}.png"
         filepath = screenshot_dir / filename
 
         # Save screenshot
-        saved_path = await screenshot_controller.save_screenshot(str(filepath), selector=selector)
+        saved_path = await screenshot_controller.save_screenshot(
+            str(filepath), selector=selector
+        )
 
         return BrowserResponse(
             success=True,
-            data={"filepath": saved_path, "filename": filename, "format": "png", "saved": True},
+            data={
+                "filepath": saved_path,
+                "filename": filename,
+                "format": "png",
+                "saved": True,
+            },
         )
 
     # Return base64 encoded
@@ -88,4 +125,6 @@ async def browser_element_screenshot_tool(manager: ChromeManager, selector: str,
     screenshot_bytes = element.screenshot_as_png
     screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
 
-    return BrowserResponse(success=True, screenshot=screenshot_base64, data={"format": "base64"})
+    return BrowserResponse(
+        success=True, screenshot=screenshot_base64, data={"format": "base64"}
+    )

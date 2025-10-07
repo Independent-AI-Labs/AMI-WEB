@@ -35,10 +35,19 @@ class TestBrowserProperties:
         """Test stealth preset removes detection vectors."""
         stealth_properties: dict[str, Any] = {
             "webdriver": False,
-            "plugins": {"length": 3, "0": {"name": "Chrome PDF Plugin"}, "1": {"name": "Chrome PDF Viewer"}, "2": {"name": "Native Client"}},
+            "plugins": {
+                "length": 3,
+                "0": {"name": "Chrome PDF Plugin"},
+                "1": {"name": "Chrome PDF Viewer"},
+                "2": {"name": "Native Client"},
+            },
             "chrome": {"runtime": {}},
             "permissions": {"query": "function"},
-            "navigator": {"webdriver": False, "plugins": "PluginArray", "languages": ["en-US", "en"]},
+            "navigator": {
+                "webdriver": False,
+                "plugins": "PluginArray",
+                "languages": ["en-US", "en"],
+            },
         }
 
         assert stealth_properties["webdriver"] is False
@@ -78,9 +87,18 @@ class TestBrowserProperties:
 
     def test_property_merging(self) -> None:
         """Test merging custom properties with defaults."""
-        defaults: dict[str, Any] = {"userAgent": "Default UA", "platform": "Win32", "webdriver": True, "languages": ["en"]}
+        defaults: dict[str, Any] = {
+            "userAgent": "Default UA",
+            "platform": "Win32",
+            "webdriver": True,
+            "languages": ["en"],
+        }
 
-        custom: dict[str, Any] = {"userAgent": "Custom UA", "webdriver": False, "customProp": "value"}
+        custom: dict[str, Any] = {
+            "userAgent": "Custom UA",
+            "webdriver": False,
+            "customProp": "value",
+        }
 
         # Merge custom into defaults
         merged = {**defaults, **custom}
@@ -99,7 +117,9 @@ class TestPropertiesManager:
     def test_load_default_properties(self, mock_manager: Mock) -> None:
         """Test loading default properties."""
         manager = mock_manager()
-        manager.load_default_properties = Mock(return_value={"userAgent": "Default", "webdriver": False})
+        manager.load_default_properties = Mock(
+            return_value={"userAgent": "Default", "webdriver": False}
+        )
 
         props = manager.load_default_properties()
 
@@ -111,7 +131,13 @@ class TestPropertiesManager:
     def test_load_preset(self, mock_manager: Mock) -> None:
         """Test loading property presets."""
         manager = mock_manager()
-        manager.load_preset = Mock(return_value={"preset": "stealth", "webdriver": False, "plugins": {"length": 3}})
+        manager.load_preset = Mock(
+            return_value={
+                "preset": "stealth",
+                "webdriver": False,
+                "plugins": {"length": 3},
+            }
+        )
 
         props = manager.load_preset("stealth")
 
@@ -127,7 +153,9 @@ class TestPropertiesManager:
         base_props: dict[str, Any] = {"userAgent": "Base", "webdriver": True}
         overrides: dict[str, Any] = {"webdriver": False, "custom": "value"}
 
-        manager.apply_overrides = Mock(return_value={"userAgent": "Base", "webdriver": False, "custom": "value"})
+        manager.apply_overrides = Mock(
+            return_value={"userAgent": "Base", "webdriver": False, "custom": "value"}
+        )
 
         result = manager.apply_overrides(base_props, overrides)
 
@@ -140,7 +168,11 @@ class TestPropertiesManager:
         """Test property validation."""
         manager = mock_manager()
 
-        valid_props: dict[str, Any] = {"userAgent": "Mozilla/5.0", "webdriver": False, "languages": ["en-US"]}
+        valid_props: dict[str, Any] = {
+            "userAgent": "Mozilla/5.0",
+            "webdriver": False,
+            "languages": ["en-US"],
+        }
 
         invalid_props: dict[str, Any] = {
             "userAgent": 123,  # Should be string
@@ -159,7 +191,11 @@ class TestPropertyInjection:
 
     def test_generate_injection_script(self) -> None:
         """Test generating property injection JavaScript."""
-        properties: dict[str, Any] = {"userAgent": "Custom UA", "webdriver": False, "platform": "Win32"}
+        properties: dict[str, Any] = {
+            "userAgent": "Custom UA",
+            "webdriver": False,
+            "platform": "Win32",
+        }
 
         # Generate injection script
         script = f"""
@@ -180,11 +216,16 @@ class TestPropertyInjection:
 
     def test_injection_script_escaping(self) -> None:
         """Test proper escaping in injection scripts."""
-        properties: dict[str, str] = {"userAgent": "Mozilla/5.0 'test' \"quotes\"", "customProp": "<script>alert('xss')</script>"}
+        properties: dict[str, str] = {
+            "userAgent": "Mozilla/5.0 'test' \"quotes\"",
+            "customProp": "<script>alert('xss')</script>",
+        }
 
         # Should escape quotes and special characters
         escaped_ua = properties["userAgent"].replace("'", "\\'").replace('"', '\\"')
-        escaped_custom = properties["customProp"].replace("<", "\\<").replace(">", "\\>")
+        escaped_custom = (
+            properties["customProp"].replace("<", "\\<").replace(">", "\\>")
+        )
 
         assert "\\'" in escaped_ua
         assert '\\"' in escaped_ua
@@ -230,7 +271,11 @@ class TestPropertyPersistence:
 
     def test_save_properties_to_profile(self) -> None:
         """Test saving properties to profile."""
-        properties: dict[str, Any] = {"userAgent": "Custom UA", "webdriver": False, "profile_id": "test-profile-123"}
+        properties: dict[str, Any] = {
+            "userAgent": "Custom UA",
+            "webdriver": False,
+            "profile_id": "test-profile-123",
+        }
 
         # Simulate saving to JSON
         json_data = json.dumps(properties, indent=2)
@@ -253,7 +298,10 @@ class TestPropertyPersistence:
         old_format: dict[str, Any] = {"ua": "Old UA", "no_webdriver": True}
 
         # Migration logic
-        new_format: dict[str, Any] = {"userAgent": old_format.get("ua", ""), "webdriver": not old_format.get("no_webdriver", False)}
+        new_format: dict[str, Any] = {
+            "userAgent": old_format.get("ua", ""),
+            "webdriver": not old_format.get("no_webdriver", False),
+        }
 
         assert new_format["userAgent"] == "Old UA"
         assert new_format["webdriver"] is False

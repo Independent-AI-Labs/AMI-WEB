@@ -28,7 +28,9 @@ class TabController(BaseController):
             loop = asyncio.get_event_loop()
 
             # Open new tab
-            await loop.run_in_executor(None, self.driver.execute_script, "window.open('', '_blank');")
+            await loop.run_in_executor(
+                None, self.driver.execute_script, "window.open('', '_blank');"
+            )
 
             handles = self.driver.window_handles
             if not handles:
@@ -79,7 +81,9 @@ class TabController(BaseController):
             # Validate tab exists
             handles = self.driver.window_handles
             if tab_id not in handles:
-                raise NavigationError(f"Tab {tab_id} not found. Available tabs: {handles}")
+                raise NavigationError(
+                    f"Tab {tab_id} not found. Available tabs: {handles}"
+                )
 
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self.driver.switch_to.window, tab_id)
@@ -117,7 +121,9 @@ class TabController(BaseController):
 
                 # Switch to target tab if not current
                 if tab_id != current_handle:
-                    await loop.run_in_executor(None, self.driver.switch_to.window, tab_id)
+                    await loop.run_in_executor(
+                        None, self.driver.switch_to.window, tab_id
+                    )
 
                 # Close the tab
                 await loop.run_in_executor(None, self.driver.close)
@@ -127,9 +133,13 @@ class TabController(BaseController):
                 if remaining_handles:
                     # Prefer switching back to original tab if it still exists
                     if current_handle != tab_id and current_handle in remaining_handles:
-                        await loop.run_in_executor(None, self.driver.switch_to.window, current_handle)
+                        await loop.run_in_executor(
+                            None, self.driver.switch_to.window, current_handle
+                        )
                     else:
-                        await loop.run_in_executor(None, self.driver.switch_to.window, remaining_handles[0])
+                        await loop.run_in_executor(
+                            None, self.driver.switch_to.window, remaining_handles[0]
+                        )
             else:
                 # Close current tab
                 await loop.run_in_executor(None, self.driver.close)
@@ -137,7 +147,9 @@ class TabController(BaseController):
                 # Switch to first remaining tab
                 remaining_handles = self.driver.window_handles
                 if remaining_handles:
-                    await loop.run_in_executor(None, self.driver.switch_to.window, remaining_handles[0])
+                    await loop.run_in_executor(
+                        None, self.driver.switch_to.window, remaining_handles[0]
+                    )
 
             self.instance.update_activity()
             logger.debug(f"Closed tab: {tab_id or 'current'}")
@@ -195,7 +207,9 @@ class TabController(BaseController):
             handles = self.driver.window_handles
 
             if index >= len(handles):
-                raise NavigationError(f"Tab index {index} out of range (0-{len(handles) - 1})")
+                raise NavigationError(
+                    f"Tab index {index} out of range (0-{len(handles) - 1})"
+                )
 
             await self.switch_tab(handles[index])
 
@@ -220,12 +234,18 @@ class TabController(BaseController):
             tabs = await self.list_tabs()
 
             for tab in tabs:
-                if (partial and title.lower() in tab.title.lower()) or (not partial and tab.title.lower() == title.lower()):
+                if (partial and title.lower() in tab.title.lower()) or (
+                    not partial and tab.title.lower() == title.lower()
+                ):
                     await self.switch_tab(tab.id)
                     return
 
-            raise NavigationError(f"No tab found with title {'containing' if partial else 'matching'} '{title}'")
+            raise NavigationError(
+                f"No tab found with title {'containing' if partial else 'matching'} '{title}'"
+            )
 
         except Exception as e:
             logger.error(f"Failed to switch to tab by title: {e}")
-            raise NavigationError(f"Failed to switch to tab by title '{title}': {e}") from e
+            raise NavigationError(
+                f"Failed to switch to tab by title '{title}': {e}"
+            ) from e

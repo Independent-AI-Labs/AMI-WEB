@@ -9,7 +9,9 @@ from browser.backend.core.management.session_manager import SessionManager
 
 
 @pytest.fixture
-async def session_manager_with_session(tmp_path: Path) -> tuple[SessionManager, str, str]:
+async def session_manager_with_session(
+    tmp_path: Path,
+) -> tuple[SessionManager, str, str]:
     """Create a session manager with a test session."""
     session_dir = tmp_path / "sessions"
     manager = SessionManager(session_dir=str(session_dir))
@@ -51,7 +53,9 @@ async def session_manager_with_session(tmp_path: Path) -> tuple[SessionManager, 
 
 
 @pytest.mark.asyncio
-async def test_rename_session_success(session_manager_with_session: tuple[SessionManager, str, str]) -> None:
+async def test_rename_session_success(
+    session_manager_with_session: tuple[SessionManager, str, str],
+) -> None:
     """Test successful session rename."""
     manager, session_id, original_name = session_manager_with_session
 
@@ -74,7 +78,9 @@ async def test_rename_session_success(session_manager_with_session: tuple[Sessio
 
 
 @pytest.mark.asyncio
-async def test_rename_session_not_found(session_manager_with_session: tuple[SessionManager, str, str]) -> None:
+async def test_rename_session_not_found(
+    session_manager_with_session: tuple[SessionManager, str, str],
+) -> None:
     """Test renaming non-existent session."""
     manager, _, _ = session_manager_with_session
 
@@ -84,7 +90,9 @@ async def test_rename_session_not_found(session_manager_with_session: tuple[Sess
 
 
 @pytest.mark.asyncio
-async def test_rename_session_persists(session_manager_with_session: tuple[SessionManager, str, str]) -> None:
+async def test_rename_session_persists(
+    session_manager_with_session: tuple[SessionManager, str, str],
+) -> None:
     """Test renamed session persists across manager restarts."""
     manager, session_id, _ = session_manager_with_session
 
@@ -99,7 +107,9 @@ async def test_rename_session_persists(session_manager_with_session: tuple[Sessi
 
 
 @pytest.mark.asyncio
-async def test_list_sessions_shows_renamed(session_manager_with_session: tuple[SessionManager, str, str]) -> None:
+async def test_list_sessions_shows_renamed(
+    session_manager_with_session: tuple[SessionManager, str, str],
+) -> None:
     """Test list_sessions reflects renamed session."""
     manager, session_id, _ = session_manager_with_session
 

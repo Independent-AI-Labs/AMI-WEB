@@ -12,7 +12,13 @@ from browser.backend.utils.exceptions import NavigationError
 class Scroller(BaseController):
     """Handles scrolling and viewport operations."""
 
-    async def scroll_to(self, x: int | None = None, y: int | None = None, element: str | None = None, smooth: bool = True) -> None:
+    async def scroll_to(
+        self,
+        x: int | None = None,
+        y: int | None = None,
+        element: str | None = None,
+        smooth: bool = True,
+    ) -> None:
         """Scroll to a position or element.
 
         Args:
@@ -45,11 +51,19 @@ class Scroller(BaseController):
 
             if self._is_in_thread_context():
                 self.driver.execute_script(script)
-                time.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+                time.sleep(
+                    FACADE_CONFIG.scroll_wait_smooth
+                    if smooth
+                    else FACADE_CONFIG.scroll_wait_instant
+                )
             else:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self.driver.execute_script, script)
-                await asyncio.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+                await asyncio.sleep(
+                    FACADE_CONFIG.scroll_wait_smooth
+                    if smooth
+                    else FACADE_CONFIG.scroll_wait_instant
+                )
 
         except Exception as e:
             raise NavigationError(f"Failed to scroll: {e}") from e
@@ -70,7 +84,9 @@ class Scroller(BaseController):
             await self.scroll_to(0, height, smooth=smooth)
         else:
             loop = asyncio.get_event_loop()
-            height = await loop.run_in_executor(None, self.driver.execute_script, script)
+            height = await loop.run_in_executor(
+                None, self.driver.execute_script, script
+            )
             await self.scroll_to(0, height, smooth=smooth)
 
     async def scroll_by(self, x: int = 0, y: int = 0, smooth: bool = True) -> None:
@@ -90,11 +106,19 @@ class Scroller(BaseController):
         try:
             if self._is_in_thread_context():
                 self.driver.execute_script(script)
-                time.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+                time.sleep(
+                    FACADE_CONFIG.scroll_wait_smooth
+                    if smooth
+                    else FACADE_CONFIG.scroll_wait_instant
+                )
             else:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(None, self.driver.execute_script, script)
-                await asyncio.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+                await asyncio.sleep(
+                    FACADE_CONFIG.scroll_wait_smooth
+                    if smooth
+                    else FACADE_CONFIG.scroll_wait_instant
+                )
         except Exception as e:
             raise NavigationError(f"Failed to scroll by offset: {e}") from e
 
@@ -114,7 +138,9 @@ class Scroller(BaseController):
                 result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                result = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
             return result  # type: ignore[no-any-return]
         except Exception as e:
             raise NavigationError(f"Failed to get scroll position: {e}") from e
@@ -135,7 +161,9 @@ class Scroller(BaseController):
                 result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                result = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
             return result  # type: ignore[no-any-return]
         except Exception as e:
             raise NavigationError(f"Failed to get viewport size: {e}") from e
@@ -161,7 +189,9 @@ class Scroller(BaseController):
                 result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                result = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
             return result  # type: ignore[no-any-return]
         except Exception as e:
             raise NavigationError(f"Failed to get page dimensions: {e}") from e

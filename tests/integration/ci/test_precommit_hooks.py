@@ -28,31 +28,50 @@ class TestRuffLinting:
             check=False,
         )
         assert result.returncode == 0, f"Ruff not found or failed: {result.stderr}"
-        assert "ruff" in result.stdout.lower(), f"Unexpected ruff version output: {result.stdout}"
+        assert (
+            "ruff" in result.stdout.lower()
+        ), f"Unexpected ruff version output: {result.stdout}"
 
     def test_ruff_check_runs_successfully(self, browser_root: Path) -> None:
         """Verify Ruff can run check on the module."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "ruff"), "check", str(browser_root), "--config", str(browser_root / "pyproject.toml")],
+            [
+                str(browser_root / ".venv" / "bin" / "ruff"),
+                "check",
+                str(browser_root),
+                "--config",
+                str(browser_root / "pyproject.toml"),
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
         # Should either pass (0) or find fixable issues (1)
-        assert result.returncode in (0, 1), f"Ruff check failed unexpectedly: {result.stderr}"
+        assert result.returncode in (
+            0,
+            1,
+        ), f"Ruff check failed unexpectedly: {result.stderr}"
 
     def test_ruff_format_check_runs_successfully(self, browser_root: Path) -> None:
         """Verify Ruff format checker runs."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "ruff"), "format", "--check", str(browser_root)],
+            [
+                str(browser_root / ".venv" / "bin" / "ruff"),
+                "format",
+                "--check",
+                str(browser_root),
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
         # Should either pass (0) or find formatting issues (1)
-        assert result.returncode in (0, 1), f"Ruff format check failed unexpectedly: {result.stderr}"
+        assert result.returncode in (
+            0,
+            1,
+        ), f"Ruff format check failed unexpectedly: {result.stderr}"
 
 
 class TestMypyTypeChecking:
@@ -67,7 +86,9 @@ class TestMypyTypeChecking:
             check=False,
         )
         assert result.returncode == 0, f"Mypy not found or failed: {result.stderr}"
-        assert "mypy" in result.stdout.lower(), f"Unexpected mypy version output: {result.stdout}"
+        assert (
+            "mypy" in result.stdout.lower()
+        ), f"Unexpected mypy version output: {result.stdout}"
 
     def test_mypy_config_exists(self, browser_root: Path) -> None:
         """Verify mypy.ini configuration file exists."""
@@ -91,7 +112,9 @@ class TestMypyTypeChecking:
             cwd=str(browser_root.parent),  # Run from repo root
         )
         # Mypy may find errors (non-zero) but should not crash
-        assert "error: " not in result.stderr.lower() or "found" in result.stdout.lower(), f"Mypy execution failed: {result.stderr}"
+        assert (
+            "error: " not in result.stderr.lower() or "found" in result.stdout.lower()
+        ), f"Mypy execution failed: {result.stderr}"
 
 
 class TestPreCommitHooks:
@@ -100,7 +123,9 @@ class TestPreCommitHooks:
     def test_precommit_config_exists(self, browser_root: Path) -> None:
         """Verify .pre-commit-config.yaml exists."""
         precommit_config = browser_root / ".pre-commit-config.yaml"
-        assert precommit_config.exists(), f".pre-commit-config.yaml not found at {precommit_config}"
+        assert (
+            precommit_config.exists()
+        ), f".pre-commit-config.yaml not found at {precommit_config}"
 
     def test_precommit_executable_exists(self, browser_root: Path) -> None:
         """Verify pre-commit is installed."""
@@ -121,7 +146,9 @@ class TestPreCommitHooks:
         # Find all hook definitions
         import re
 
-        hook_blocks = re.split(r"^\s*- id:", content, flags=re.MULTILINE)[1:]  # Split by hook ID
+        hook_blocks = re.split(r"^\s*- id:", content, flags=re.MULTILINE)[
+            1:
+        ]  # Split by hook ID
 
         for i, hook_block in enumerate(hook_blocks, 1):
             # Extract hook ID
@@ -131,7 +158,9 @@ class TestPreCommitHooks:
             hook_id = id_match.group(1)
 
             # Check if require_serial is present
-            has_require_serial = "require_serial:" in hook_block or "require_serial: true" in hook_block
+            has_require_serial = (
+                "require_serial:" in hook_block or "require_serial: true" in hook_block
+            )
 
             assert has_require_serial, (
                 f"Hook '{hook_id}' is missing 'require_serial: true' in .pre-commit-config.yaml. "
@@ -141,14 +170,20 @@ class TestPreCommitHooks:
     def test_precommit_hooks_can_be_installed(self, browser_root: Path) -> None:
         """Verify pre-commit hooks can be installed."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "pre-commit"), "install", "--install-hooks"],
+            [
+                str(browser_root / ".venv" / "bin" / "pre-commit"),
+                "install",
+                "--install-hooks",
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
         # May already be installed (exit code 0) or install fresh
-        assert result.returncode == 0, f"Failed to install pre-commit hooks: {result.stderr}"
+        assert (
+            result.returncode == 0
+        ), f"Failed to install pre-commit hooks: {result.stderr}"
 
 
 class TestPreCommitHookExecution:
@@ -158,39 +193,63 @@ class TestPreCommitHookExecution:
     def test_ruff_hook_executes(self, browser_root: Path) -> None:
         """Verify ruff hook can execute via pre-commit."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "pre-commit"), "run", "ruff", "--all-files"],
+            [
+                str(browser_root / ".venv" / "bin" / "pre-commit"),
+                "run",
+                "ruff",
+                "--all-files",
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
         # Hook may pass (0) or fail with linting errors
-        assert result.returncode in (0, 1), f"Ruff hook failed to execute: {result.stderr}"
+        assert result.returncode in (
+            0,
+            1,
+        ), f"Ruff hook failed to execute: {result.stderr}"
 
     @pytest.mark.slow
     def test_ruff_format_hook_executes(self, browser_root: Path) -> None:
         """Verify ruff-format hook can execute via pre-commit."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "pre-commit"), "run", "ruff-format", "--all-files"],
+            [
+                str(browser_root / ".venv" / "bin" / "pre-commit"),
+                "run",
+                "ruff-format",
+                "--all-files",
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
-        assert result.returncode in (0, 1), f"Ruff-format hook failed to execute: {result.stderr}"
+        assert result.returncode in (
+            0,
+            1,
+        ), f"Ruff-format hook failed to execute: {result.stderr}"
 
     @pytest.mark.slow
     def test_mypy_hook_executes(self, browser_root: Path) -> None:
         """Verify mypy hook can execute via pre-commit."""
         result = subprocess.run(
-            [str(browser_root / ".venv" / "bin" / "pre-commit"), "run", "mypy", "--all-files"],
+            [
+                str(browser_root / ".venv" / "bin" / "pre-commit"),
+                "run",
+                "mypy",
+                "--all-files",
+            ],
             capture_output=True,
             text=True,
             check=False,
             cwd=str(browser_root),
         )
         # Mypy may pass or fail with type errors
-        assert result.returncode in (0, 1), f"Mypy hook failed to execute: {result.stderr}"
+        assert result.returncode in (
+            0,
+            1,
+        ), f"Mypy hook failed to execute: {result.stderr}"
 
 
 class TestHookSerialization:

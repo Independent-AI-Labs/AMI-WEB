@@ -2,10 +2,13 @@
 
 import json
 import re
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from base.backend.utils.standard_imports import setup_imports
+
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: E402
 
 if TYPE_CHECKING:
     from ..models.browser_properties import BrowserProperties
@@ -16,7 +19,7 @@ class PropertyInjectionService:
 
     def __init__(self) -> None:
         """Initialize the service with Jinja2 template environment."""
-        template_dir = Path(__file__).parent.parent.parent / "web" / "templates"
+        template_dir = MODULE_ROOT / "web" / "templates"
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(["html", "xml"]),
@@ -64,11 +67,17 @@ class PropertyInjectionService:
             "device_pixel_ratio": properties.pixel_ratio,
             # Languages
             "languages": properties.languages,
-            "languages_json": json.dumps(properties.languages) if properties.languages else "[]",
-            "primary_language": properties.languages[0] if properties.languages else "en-US",
+            "languages_json": json.dumps(properties.languages)
+            if properties.languages
+            else "[]",
+            "primary_language": properties.languages[0]
+            if properties.languages
+            else "en-US",
             # Timezone
             "timezone": properties.timezone,
-            "timezone_offset": self._calculate_timezone_offset(properties.timezone) if properties.timezone else 0,
+            "timezone_offset": self._calculate_timezone_offset(properties.timezone)
+            if properties.timezone
+            else 0,
             # WebGL
             "webgl_vendor": properties.webgl_vendor,
             "webgl_renderer": properties.webgl_renderer,
@@ -93,7 +102,9 @@ class PropertyInjectionService:
             "permissions_json": self._get_permissions_json(properties),
             # Client hints
             "client_hints": properties.client_hints,
-            "client_hints_json": json.dumps(properties.client_hints) if properties.client_hints else "{}",
+            "client_hints_json": json.dumps(properties.client_hints)
+            if properties.client_hints
+            else "{}",
             "client_hints_brands_json": self._prepare_client_hints_brands(properties),
         }
 

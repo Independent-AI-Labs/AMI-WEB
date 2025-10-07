@@ -47,7 +47,10 @@ class ProfileManager:
 
         if default_name not in self.profiles:
             logger.info("Creating default profile for session persistence")
-            return self.create_profile(default_name, "Default profile for session persistence with HTTPS certificate exceptions")
+            return self.create_profile(
+                default_name,
+                "Default profile for session persistence with HTTPS certificate exceptions",
+            )
 
         return self.base_dir / default_name
 
@@ -77,7 +80,9 @@ class ProfileManager:
         self._ensure_initialized()
 
         if name not in self.profiles:
-            raise ProfileError(f"Profile '{name}' not found. Available profiles: {list(self.profiles.keys())}")
+            raise ProfileError(
+                f"Profile '{name}' not found. Available profiles: {list(self.profiles.keys())}"
+            )
 
         # Update last used
         self.profiles[name]["last_used"] = datetime.now().isoformat()

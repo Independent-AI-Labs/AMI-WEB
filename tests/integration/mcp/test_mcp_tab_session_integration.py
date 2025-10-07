@@ -42,13 +42,17 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
 
     try:
         # Step 1: Launch browser (similar to user's action)
-        response = await browser_session_tool(manager, action="launch", headless=True, profile="default", use_pool=False)
+        response = await browser_session_tool(
+            manager, action="launch", headless=True, profile="default", use_pool=False
+        )
         assert response.success, f"Launch failed: {response.error}"
         instance_id = response.instance_id
         await asyncio.sleep(0.5)
 
         # Step 2: Navigate first tab to x.com (like the user did)
-        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/x")
+        response = await browser_navigate_tool(
+            manager, action="goto", url="https://example.com/x"
+        )
         assert response.success, f"Navigate to x.com failed: {response.error}"
         await asyncio.sleep(0.5)
 
@@ -59,7 +63,9 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
         await asyncio.sleep(0.5)
 
         # Step 4: Navigate second tab to reddit.com
-        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/reddit")
+        response = await browser_navigate_tool(
+            manager, action="goto", url="https://example.com/reddit"
+        )
         assert response.success, f"Navigate to reddit failed: {response.error}"
         await asyncio.sleep(0.5)
 
@@ -67,7 +73,9 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
         response = await browser_navigate_tool(manager, action="list_tabs")
         assert response.success, f"List tabs failed: {response.error}"
         assert response.data is not None
-        print(f"DEBUG: Before save - tab count: {response.data['count']}, tabs: {response.data['tabs']}")
+        print(
+            f"DEBUG: Before save - tab count: {response.data['count']}, tabs: {response.data['tabs']}"
+        )
 
         # Get the actual instance to inspect it
         if instance_id:
@@ -82,10 +90,17 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
                 url = instance.driver.current_url
                 print(f"DEBUG: Tab {i}: handle={handle}, url={url}")
 
-        assert response.data["count"] == 2, f"Expected 2 tabs before save, got {response.data['count']}"
+        assert (
+            response.data["count"] == 2
+        ), f"Expected 2 tabs before save, got {response.data['count']}"
 
         # Step 5: Save session
-        response = await browser_session_tool(manager, action="save", instance_id=instance_id, session_name="x-reddit-test")
+        response = await browser_session_tool(
+            manager,
+            action="save",
+            instance_id=instance_id,
+            session_name="x-reddit-test",
+        )
         assert response.success, f"Save session failed: {response.error}"
         assert response.data is not None
         session_id = response.data["session_id"]
@@ -102,11 +117,17 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
         print(f"DEBUG: Saved session data: {json.dumps(saved_data, indent=2)}")
 
         assert "tabs" in saved_data, "Session data missing 'tabs' field"
-        assert len(saved_data["tabs"]) == 2, f"Expected 2 tabs in saved session, got {len(saved_data['tabs'])}"
+        assert (
+            len(saved_data["tabs"]) == 2
+        ), f"Expected 2 tabs in saved session, got {len(saved_data['tabs'])}"
 
         saved_urls = [tab["url"] for tab in saved_data["tabs"]]
-        assert any("example.com/x" in str(url) for url in saved_urls), f"x.com URL not in saved tabs: {saved_urls}"
-        assert any("example.com/reddit" in str(url) for url in saved_urls), f"reddit URL not in saved tabs: {saved_urls}"
+        assert any(
+            "example.com/x" in str(url) for url in saved_urls
+        ), f"x.com URL not in saved tabs: {saved_urls}"
+        assert any(
+            "example.com/reddit" in str(url) for url in saved_urls
+        ), f"reddit URL not in saved tabs: {saved_urls}"
 
         # Step 6: Terminate the instance
         assert instance_id is not None
@@ -114,33 +135,52 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
         await asyncio.sleep(0.5)
 
         # Step 7: Restore the session
-        response = await browser_session_tool(manager, action="restore", session_id=session_id)
+        response = await browser_session_tool(
+            manager, action="restore", session_id=session_id
+        )
         assert response.success, f"Restore session failed: {response.error}"
         restored_instance_id = response.instance_id
         await asyncio.sleep(1)
 
         # Step 8: Verify 2 tabs were restored
-        response = await browser_navigate_tool(manager, action="list_tabs", instance_id=restored_instance_id)
+        response = await browser_navigate_tool(
+            manager, action="list_tabs", instance_id=restored_instance_id
+        )
         assert response.success, f"List tabs after restore failed: {response.error}"
         assert response.data is not None
-        assert response.data["count"] == 2, f"Expected 2 tabs after restore, got {response.data['count']}"
+        assert (
+            response.data["count"] == 2
+        ), f"Expected 2 tabs after restore, got {response.data['count']}"
 
         # Step 9: Verify both URLs were restored correctly
         all_urls = []
         for tab_info in response.data["tabs"]:
             tab_id = tab_info["tab_id"]
             # Switch to tab
-            switch_response = await browser_navigate_tool(manager, action="switch_tab", tab_id=tab_id, instance_id=restored_instance_id)
-            assert switch_response.success, f"Switch to tab {tab_id} failed: {switch_response.error}"
+            switch_response = await browser_navigate_tool(
+                manager,
+                action="switch_tab",
+                tab_id=tab_id,
+                instance_id=restored_instance_id,
+            )
+            assert (
+                switch_response.success
+            ), f"Switch to tab {tab_id} failed: {switch_response.error}"
             # Get URL
-            url_response = await browser_navigate_tool(manager, action="get_url", instance_id=restored_instance_id)
+            url_response = await browser_navigate_tool(
+                manager, action="get_url", instance_id=restored_instance_id
+            )
             assert url_response.success, f"Get URL failed: {url_response.error}"
             all_urls.append(url_response.url)
 
         print(f"DEBUG: Restored URLs: {all_urls}")
 
-        assert any("example.com/x" in str(url) for url in all_urls), f"x.com URL not restored: {all_urls}"
-        assert any("example.com/reddit" in str(url) for url in all_urls), f"reddit URL not restored: {all_urls}"
+        assert any(
+            "example.com/x" in str(url) for url in all_urls
+        ), f"x.com URL not restored: {all_urls}"
+        assert any(
+            "example.com/reddit" in str(url) for url in all_urls
+        ), f"reddit URL not restored: {all_urls}"
 
         print("✓ MCP tab + session save/restore integration test PASSED")
 
@@ -172,17 +212,23 @@ async def test_mcp_multiple_tabs_with_navigation_errors() -> None:
         manager.set_current_instance(instance.id)
 
         # Navigate first tab
-        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/")
+        response = await browser_navigate_tool(
+            manager, action="goto", url="https://example.com/"
+        )
         assert response.success
         await asyncio.sleep(0.5)
 
         # Open second tab
-        response = await browser_navigate_tool(manager, action="open_tab", url="https://example.org/")
+        response = await browser_navigate_tool(
+            manager, action="open_tab", url="https://example.org/"
+        )
         assert response.success
         await asyncio.sleep(0.5)
 
         # Open third tab
-        response = await browser_navigate_tool(manager, action="open_tab", url="https://example.net/")
+        response = await browser_navigate_tool(
+            manager, action="open_tab", url="https://example.net/"
+        )
         assert response.success
         await asyncio.sleep(0.5)
 
@@ -190,17 +236,23 @@ async def test_mcp_multiple_tabs_with_navigation_errors() -> None:
         response = await browser_navigate_tool(manager, action="list_tabs")
         assert response.success
         assert response.data is not None
-        assert response.data["count"] == 3, f"Expected 3 tabs, got {response.data['count']}"
+        assert (
+            response.data["count"] == 3
+        ), f"Expected 3 tabs, got {response.data['count']}"
 
         # Attempt to navigate to an invalid/timeout URL (should fail gracefully)
-        response = await browser_navigate_tool(manager, action="goto", url="https://this-will-timeout.invalid/", timeout=2)
+        response = await browser_navigate_tool(
+            manager, action="goto", url="https://this-will-timeout.invalid/", timeout=2
+        )
         assert not response.success, "Expected navigation to invalid URL to fail"
 
         # CRITICAL: Verify the instance is still alive and tabs are preserved
         response = await browser_navigate_tool(manager, action="list_tabs")
         assert response.success, "Instance should still be alive after navigation error"
         assert response.data is not None
-        assert response.data["count"] == 3, f"Tabs should be preserved after error, got {response.data['count']}"
+        assert (
+            response.data["count"] == 3
+        ), f"Tabs should be preserved after error, got {response.data['count']}"
 
         print("✓ Navigation errors preserve instance and tabs")
 
@@ -233,8 +285,12 @@ async def test_hibernation_preserves_tabs() -> None:
 
         # Open multiple tabs
         await browser_navigate_tool(manager, action="goto", url="https://example.com/")
-        await browser_navigate_tool(manager, action="open_tab", url="https://example.org/")
-        await browser_navigate_tool(manager, action="open_tab", url="https://example.net/")
+        await browser_navigate_tool(
+            manager, action="open_tab", url="https://example.org/"
+        )
+        await browser_navigate_tool(
+            manager, action="open_tab", url="https://example.net/"
+        )
         await asyncio.sleep(0.5)
 
         # Verify 3 tabs
@@ -257,7 +313,9 @@ async def test_hibernation_preserves_tabs() -> None:
 
         # With close_tabs_on_hibernation=False, tabs should be preserved
         # Note: Hibernation navigates first tab to about:blank but preserves count
-        assert response.data["count"] >= 1, "At least one tab should remain after hibernation"
+        assert (
+            response.data["count"] >= 1
+        ), "At least one tab should remain after hibernation"
 
         print("✓ Hibernation with tab preservation works correctly")
 

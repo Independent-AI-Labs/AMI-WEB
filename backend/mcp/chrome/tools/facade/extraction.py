@@ -50,12 +50,29 @@ async def browser_extract_tool(  # noqa: PLR0913
 
     if action == "get_text":
         if not selector:
-            return BrowserResponse(success=False, error="selector required for get_text action")
+            return BrowserResponse(
+                success=False, error="selector required for get_text action"
+            )
 
         if use_chunking:
             return await browser_get_text_chunk_tool(
-                manager, selector, offset, length, snapshot_checksum, ellipsize_text_after, include_tag_names, skip_hidden, max_depth
+                manager,
+                selector,
+                offset,
+                length,
+                snapshot_checksum,
+                ellipsize_text_after,
+                include_tag_names,
+                skip_hidden,
+                max_depth,
             )
-        return await browser_get_text_tool(manager, selector, ellipsize_text_after, include_tag_names, skip_hidden, max_depth)
+        return await browser_get_text_tool(
+            manager,
+            selector,
+            ellipsize_text_after,
+            include_tag_names,
+            skip_hidden,
+            max_depth,
+        )
 
     return await browser_get_cookies_tool(manager)

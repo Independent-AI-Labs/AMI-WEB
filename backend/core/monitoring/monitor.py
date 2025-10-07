@@ -7,7 +7,12 @@ from typing import Any, cast
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from browser.backend.models.browser import ConsoleEntry, NetworkEntry, PerformanceMetrics, TabInfo
+from browser.backend.models.browser import (
+    ConsoleEntry,
+    NetworkEntry,
+    PerformanceMetrics,
+    TabInfo,
+)
 
 
 class BrowserMonitor:
@@ -69,8 +74,18 @@ class BrowserMonitor:
                 if message.get("message", {}).get("method", "").startswith("Network."):
                     # Extract URL from params if available
                     params = message["message"].get("params", {})
-                    url = params.get("request", {}).get("url", "") if "request" in params else ""
-                    entry = NetworkEntry(timestamp=datetime.fromtimestamp(log.get("timestamp", 0) / 1000), method=message["message"]["method"], url=url)
+                    url = (
+                        params.get("request", {}).get("url", "")
+                        if "request" in params
+                        else ""
+                    )
+                    entry = NetworkEntry(
+                        timestamp=datetime.fromtimestamp(
+                            log.get("timestamp", 0) / 1000
+                        ),
+                        method=message["message"]["method"],
+                        url=url,
+                    )
                     self._network_logs.append(entry)
         except Exception as e:
             logger.debug(f"Failed to get network logs: {e}")
@@ -80,7 +95,9 @@ class BrowserMonitor:
     async def get_performance_metrics(self, driver: WebDriver) -> PerformanceMetrics:
         """Get performance metrics from the browser."""
         if not driver:
-            return PerformanceMetrics(timestamp=datetime.now(), dom_content_loaded=0, load_complete=0)
+            return PerformanceMetrics(
+                timestamp=datetime.now(), dom_content_loaded=0, load_complete=0
+            )
 
         try:
             # Get navigation timing
@@ -119,12 +136,18 @@ class BrowserMonitor:
                 timestamp=datetime.now(),
                 dom_content_loaded=nav_timing.get("domContentLoaded", 0),
                 load_complete=nav_timing.get("loadComplete", 0),
-                first_paint=paint_timing.get("firstPaint", nav_timing.get("firstPaint", 0)),
-                first_contentful_paint=paint_timing.get("firstContentfulPaint", nav_timing.get("firstContentfulPaint", 0)),
+                first_paint=paint_timing.get(
+                    "firstPaint", nav_timing.get("firstPaint", 0)
+                ),
+                first_contentful_paint=paint_timing.get(
+                    "firstContentfulPaint", nav_timing.get("firstContentfulPaint", 0)
+                ),
             )
         except Exception as e:
             logger.warning(f"Failed to get performance metrics: {e}")
-            return PerformanceMetrics(timestamp=datetime.now(), dom_content_loaded=0, load_complete=0)
+            return PerformanceMetrics(
+                timestamp=datetime.now(), dom_content_loaded=0, load_complete=0
+            )
 
     async def get_tabs(self, driver: WebDriver) -> list[TabInfo]:
         """Get information about all open tabs."""
@@ -158,7 +181,13 @@ class BrowserMonitor:
 
     async def health_check(self, driver: WebDriver) -> dict[str, Any]:
         """Perform a health check on the browser."""
-        health = {"alive": False, "responsive": False, "tabs_count": 0, "memory_usage": 0, "last_activity": self.last_activity.isoformat()}
+        health = {
+            "alive": False,
+            "responsive": False,
+            "tabs_count": 0,
+            "memory_usage": 0,
+            "last_activity": self.last_activity.isoformat(),
+        }
 
         if not driver:
             return health

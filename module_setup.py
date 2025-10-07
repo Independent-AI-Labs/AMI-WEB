@@ -63,22 +63,36 @@ def get_chrome_paths_from_config() -> tuple[Path | None, Path | None]:
         try:
             import yaml  # noqa: PLC0415
         except Exception:
-            logger.warning("[WARNING] PyYAML not available; cannot parse config. Skipping Chrome path detection.")
+            logger.warning(
+                "[WARNING] PyYAML not available; cannot parse config. Skipping Chrome path detection."
+            )
             return None, None
 
         with config_path.open() as f:
             config = yaml.safe_load(f)
 
-        chrome_path = config.get("backend", {}).get("browser", {}).get("chrome_binary_path")
-        chromedriver_path = config.get("backend", {}).get("browser", {}).get("chromedriver_path")
+        chrome_path = (
+            config.get("backend", {}).get("browser", {}).get("chrome_binary_path")
+        )
+        chromedriver_path = (
+            config.get("backend", {}).get("browser", {}).get("chromedriver_path")
+        )
 
         if chrome_path:
             # Convert relative paths to absolute
-            chrome_path = MODULE_ROOT / chrome_path[2:] if chrome_path.startswith("./") else Path(chrome_path)
+            chrome_path = (
+                MODULE_ROOT / chrome_path[2:]
+                if chrome_path.startswith("./")
+                else Path(chrome_path)
+            )
 
         if chromedriver_path:
             # Convert relative paths to absolute
-            chromedriver_path = MODULE_ROOT / chromedriver_path[2:] if chromedriver_path.startswith("./") else Path(chromedriver_path)
+            chromedriver_path = (
+                MODULE_ROOT / chromedriver_path[2:]
+                if chromedriver_path.startswith("./")
+                else Path(chromedriver_path)
+            )
 
         return chrome_path, chromedriver_path
     except Exception as e:
@@ -114,15 +128,21 @@ def setup_chrome_if_needed() -> None:
         # Run the Chrome setup script
         setup_chrome_script = MODULE_ROOT / "scripts" / "setup_chrome.py"
         if setup_chrome_script.exists():
-            result = subprocess.run([sys.executable, str(setup_chrome_script)], check=False)
+            result = subprocess.run(
+                [sys.executable, str(setup_chrome_script)], check=False
+            )
             if result.returncode == 0:
                 logger.info("[OK] Chrome and ChromeDriver installed successfully")
             else:
                 logger.error("[ERROR] Failed to install Chrome/ChromeDriver")
-                logger.info("You can manually run: python browser/scripts/setup_chrome.py")
+                logger.info(
+                    "You can manually run: python browser/scripts/setup_chrome.py"
+                )
                 return
         else:
-            logger.error(f"[ERROR] setup_chrome.py script not found at {setup_chrome_script}")
+            logger.error(
+                f"[ERROR] setup_chrome.py script not found at {setup_chrome_script}"
+            )
             return
     else:
         logger.info("\n[OK] Chrome and ChromeDriver found at configured locations:")
@@ -141,7 +161,14 @@ def main() -> int:
         sys.exit(1)
 
     # Call base module_setup.py with appropriate arguments
-    cmd = [sys.executable, str(base_setup), "--project-dir", str(MODULE_ROOT), "--project-name", "Browser Module"]
+    cmd = [
+        sys.executable,
+        str(base_setup),
+        "--project-dir",
+        str(MODULE_ROOT),
+        "--project-name",
+        "Browser Module",
+    ]
 
     result = subprocess.run(cmd, check=False)
 

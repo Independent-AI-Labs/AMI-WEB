@@ -22,7 +22,9 @@ class TestScreenSpaceClicks:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_click_at_coordinates(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_click_at_coordinates(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test clicking at specific coordinates."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -50,11 +52,15 @@ class TestScreenSpaceClicks:
             return status ? status.textContent : null;
         """,
         )
-        assert status == "Incorrect text. Please try again."  # Should show error because no text entered
+        assert (
+            status == "Incorrect text. Please try again."
+        )  # Should show error because no text entered
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_double_click_at_coordinates(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_double_click_at_coordinates(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test double-clicking at coordinates."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -83,7 +89,9 @@ class TestScreenSpaceClicks:
         )
 
         # Double-click at coordinates
-        await mouse.click_at_coordinates(int(element_pos["x"]), int(element_pos["y"]), click_count=2)
+        await mouse.click_at_coordinates(
+            int(element_pos["x"]), int(element_pos["y"]), click_count=2
+        )
 
         await asyncio.sleep(0.5)
 
@@ -93,7 +101,9 @@ class TestScreenSpaceClicks:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_right_click_at_coordinates(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_right_click_at_coordinates(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test right-clicking at coordinates."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -135,7 +145,9 @@ class TestScreenSpaceDrag:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_drag_from_to_coordinates(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_drag_from_to_coordinates(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test dragging from one coordinate to another."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -208,12 +220,16 @@ class TestScreenSpaceDrag:
 
         # Should have moved approximately to the target position
         drag_margin = 50
-        assert abs(final_pos["left"] - 275) < drag_margin  # Allow margin for drag accuracy
+        assert (
+            abs(final_pos["left"] - 275) < drag_margin
+        )  # Allow margin for drag accuracy
         assert abs(final_pos["top"] - 275) < drag_margin
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_puzzle_captcha_drag(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_puzzle_captcha_drag(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test solving a puzzle CAPTCHA using drag."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -307,7 +323,9 @@ class TestScreenSpaceDrag:
         await asyncio.sleep(0.5)
 
         # Check if puzzle was solved
-        solved = await extractor.execute_script("return window.captchaState.solved.puzzle")
+        solved = await extractor.execute_script(
+            "return window.captchaState.solved.puzzle"
+        )
         assert solved is True
 
 
@@ -316,7 +334,9 @@ class TestZoomInteractions:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_zoom_scale(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_zoom_scale(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test zooming the page."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -326,7 +346,9 @@ class TestZoomInteractions:
 
         # Zoom in to 150%
         zoom_in = 1.5
-        await extractor.execute_script(f"document.body.style.transform = 'scale({zoom_in})'")
+        await extractor.execute_script(
+            f"document.body.style.transform = 'scale({zoom_in})'"
+        )
 
         # Check zoom was applied
         scale = await extractor.execute_script(
@@ -340,7 +362,9 @@ class TestZoomInteractions:
 
         # Zoom out to 75%
         zoom_out = 0.75
-        await extractor.execute_script(f"document.body.style.transform = 'scale({zoom_out})'")
+        await extractor.execute_script(
+            f"document.body.style.transform = 'scale({zoom_out})'"
+        )
 
         scale = await extractor.execute_script(
             """
@@ -356,7 +380,9 @@ class TestZoomInteractions:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_zoom_at_center(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_zoom_at_center(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test zooming at specific center point."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -374,7 +400,9 @@ class TestZoomInteractions:
 
         x_pos = int(button_pos["x"])
         y_pos = int(button_pos["y"])
-        await extractor.execute_script(f"document.body.style.transform = 'scale(2.0)'; document.body.style.transformOrigin = '{x_pos}px {y_pos}px'")
+        await extractor.execute_script(
+            f"document.body.style.transform = 'scale(2.0)'; document.body.style.transformOrigin = '{x_pos}px {y_pos}px'"
+        )
 
         # Check zoom and origin were set
         transform_data = await extractor.execute_script(
@@ -396,7 +424,9 @@ class TestSwipeGestures:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_swipe_horizontal(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_swipe_horizontal(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test horizontal swipe gesture."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -459,7 +489,9 @@ class TestSwipeGestures:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_swipe_vertical(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_swipe_vertical(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test vertical swipe gesture."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -525,7 +557,9 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_text_from_page(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_extract_text_from_page(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test extracting human-readable text from a page."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -548,7 +582,9 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_links(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_extract_links(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test extracting links from a page."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)
@@ -582,7 +618,9 @@ class TestTextExtraction:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    async def test_extract_forms(self, browser_instance: Any, test_html_server: str) -> None:
+    async def test_extract_forms(
+        self, browser_instance: Any, test_html_server: str
+    ) -> None:
         """Test extracting form information."""
         nav = Navigator(browser_instance)
         extractor = ContentExtractor(browser_instance)

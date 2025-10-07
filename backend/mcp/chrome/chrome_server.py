@@ -30,7 +30,9 @@ from browser.backend.mcp.chrome.tools.search_tools import browser_web_search_too
 class ChromeFastMCPServer:
     """Chrome MCP server using FastMCP."""
 
-    def __init__(self, data_root: Path | None = None, config: dict[str, Any | None] | None = None):
+    def __init__(
+        self, data_root: Path | None = None, config: dict[str, Any | None] | None = None
+    ):
         """Initialize Chrome FastMCP server."""
 
         self.config = config or {}
@@ -50,7 +52,9 @@ class ChromeFastMCPServer:
                 "backend.storage.screenshots_dir": str(self.data_root / "screenshots"),
             }
 
-        self.manager = ChromeManager(config_file=config_file, config_overrides=storage_config)
+        self.manager = ChromeManager(
+            config_file=config_file, config_overrides=storage_config
+        )
 
         # Manager will be started when needed, not in __init__
         # This avoids event loop issues when the server is already in an async context
@@ -58,7 +62,7 @@ class ChromeFastMCPServer:
         # Register tools
         self._register_tools()
 
-    def _register_tools(self) -> None:  # noqa: C901
+    def _register_tools(self) -> None:
         """Register V02 simplified facade tools with FastMCP."""
 
         # V02 Facade Tool 1: browser_session - Instance lifecycle and session persistence
@@ -72,7 +76,17 @@ class ChromeFastMCPServer:
             )
         )
         async def browser_session(
-            action: Literal["launch", "terminate", "list", "get_active", "save", "restore", "list_sessions", "delete_session", "rename_session"],
+            action: Literal[
+                "launch",
+                "terminate",
+                "list",
+                "get_active",
+                "save",
+                "restore",
+                "list_sessions",
+                "delete_session",
+                "rename_session",
+            ],
             instance_id: str | None = None,
             headless: bool = True,
             profile: str | None = None,
@@ -84,29 +98,55 @@ class ChromeFastMCPServer:
         ) -> BrowserResponse:
             """Manage browser sessions."""
             return await browser_session_tool(
-                self.manager, action, instance_id, headless, profile, anti_detect, use_pool, session_id, session_name, kill_orphaned
+                self.manager,
+                action,
+                instance_id,
+                headless,
+                profile,
+                anti_detect,
+                use_pool,
+                session_id,
+                session_name,
+                kill_orphaned,
             )
 
         # V02 Facade Tool 2: browser_navigate - Page navigation, history, and tab management
         @self.mcp.tool(
             description=(
-                "Navigate pages and manage browser history and tabs " "(goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
+                "Navigate pages and manage browser history and tabs "
+                "(goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
             )
         )
         async def browser_navigate(
-            action: Literal["goto", "back", "forward", "refresh", "get_url", "open_tab", "close_tab", "switch_tab", "list_tabs"],
+            action: Literal[
+                "goto",
+                "back",
+                "forward",
+                "refresh",
+                "get_url",
+                "open_tab",
+                "close_tab",
+                "switch_tab",
+                "list_tabs",
+            ],
             url: str | None = None,
             wait_for: str | None = None,
             timeout: float = 30,
             tab_id: str | None = None,
         ) -> BrowserResponse:
             """Navigate pages and manage tabs."""
-            return await browser_navigate_tool(self.manager, action, url, wait_for, timeout, tab_id)
+            return await browser_navigate_tool(
+                self.manager, action, url, wait_for, timeout, tab_id
+            )
 
         # V02 Facade Tool 3: browser_interact - Element interaction and waiting
-        @self.mcp.tool(description="Interact with page elements (click, type, select, hover, scroll, press, wait)")
+        @self.mcp.tool(
+            description="Interact with page elements (click, type, select, hover, scroll, press, wait)"
+        )
         async def browser_interact(
-            action: Literal["click", "type", "select", "hover", "scroll", "press", "wait"],
+            action: Literal[
+                "click", "type", "select", "hover", "scroll", "press", "wait"
+            ],
             selector: str | None = None,
             text: str | None = None,
             clear: bool = False,
@@ -125,11 +165,29 @@ class ChromeFastMCPServer:
         ) -> BrowserResponse:
             """Interact with elements."""
             return await browser_interact_tool(
-                self.manager, action, selector, text, clear, delay, button, click_count, value, index, label, direction, amount, key, modifiers, state, timeout
+                self.manager,
+                action,
+                selector,
+                text,
+                clear,
+                delay,
+                button,
+                click_count,
+                value,
+                index,
+                label,
+                direction,
+                amount,
+                key,
+                modifiers,
+                state,
+                timeout,
             )
 
         # V02 Facade Tool 4: browser_inspect - DOM structure inspection
-        @self.mcp.tool(description="Inspect DOM structure and element properties (get_html, exists, get_attribute)")
+        @self.mcp.tool(
+            description="Inspect DOM structure and element properties (get_html, exists, get_attribute)"
+        )
         async def browser_inspect(
             action: Literal["get_html", "exists", "get_attribute"],
             selector: str | None = None,
@@ -139,7 +197,15 @@ class ChromeFastMCPServer:
             attribute: str | None = None,
         ) -> BrowserResponse:
             """Inspect DOM."""
-            return await browser_inspect_tool(self.manager, action, selector, max_depth, collapse_depth, ellipsize_text_after, attribute)
+            return await browser_inspect_tool(
+                self.manager,
+                action,
+                selector,
+                max_depth,
+                collapse_depth,
+                ellipsize_text_after,
+                attribute,
+            )
 
         # V02 Facade Tool 5: browser_extract - Content extraction
         @self.mcp.tool(
@@ -177,7 +243,9 @@ class ChromeFastMCPServer:
             )
 
         # V02 Facade Tool 6: browser_capture - Visual capture
-        @self.mcp.tool(description="Capture screenshots (screenshot, element_screenshot)")
+        @self.mcp.tool(
+            description="Capture screenshots (screenshot, element_screenshot)"
+        )
         async def browser_capture(
             action: Literal["screenshot", "element_screenshot"],
             selector: str | None = None,
@@ -185,7 +253,9 @@ class ChromeFastMCPServer:
             save_to_disk: bool = True,
         ) -> BrowserResponse:
             """Capture screenshots."""
-            return await browser_capture_tool(self.manager, action, selector, full_page, save_to_disk)
+            return await browser_capture_tool(
+                self.manager, action, selector, full_page, save_to_disk
+            )
 
         # V02 Facade Tool 7: browser_execute - JavaScript execution with validation
         @self.mcp.tool(
@@ -207,7 +277,16 @@ class ChromeFastMCPServer:
             snapshot_checksum: str | None = None,
         ) -> BrowserResponse:
             """Execute JavaScript with validation."""
-            return await browser_execute_tool(self.manager, action, code, args, use_chunking, offset, length, snapshot_checksum)
+            return await browser_execute_tool(
+                self.manager,
+                action,
+                code,
+                args,
+                use_chunking,
+                offset,
+                length,
+                snapshot_checksum,
+            )
 
         # V02 Tool 8: web_search - Web search (unchanged from V01)
         @self.mcp.tool(description="Run a web search using the configured engine")
@@ -227,7 +306,9 @@ class ChromeFastMCPServer:
             )
 
         # V02 Tool 9: browser_storage - Download and screenshot storage management
-        @self.mcp.tool(description="Manage downloads and screenshots (list, clear, wait, set behavior)")
+        @self.mcp.tool(
+            description="Manage downloads and screenshots (list, clear, wait, set behavior)"
+        )
         async def browser_storage(
             action: Literal[
                 "list_downloads",
@@ -244,12 +325,28 @@ class ChromeFastMCPServer:
             download_path: str | None = None,
         ) -> BrowserResponse:
             """Manage storage."""
-            return await browser_storage_tool(self.manager, action, instance_id, filename, timeout, behavior, download_path)
+            return await browser_storage_tool(
+                self.manager,
+                action,
+                instance_id,
+                filename,
+                timeout,
+                behavior,
+                download_path,
+            )
 
         # V02 Tool 10: browser_react - React-specific interactions
-        @self.mcp.tool(description="React-specific helpers for triggering handlers and inspecting components")
+        @self.mcp.tool(
+            description="React-specific helpers for triggering handlers and inspecting components"
+        )
         async def browser_react(
-            action: Literal["trigger_handler", "get_props", "get_state", "find_component", "get_fiber_tree"],
+            action: Literal[
+                "trigger_handler",
+                "get_props",
+                "get_state",
+                "find_component",
+                "get_fiber_tree",
+            ],
             selector: str | None = None,
             handler_name: str | None = None,
             event_data: dict[str, Any] | None = None,
@@ -257,10 +354,20 @@ class ChromeFastMCPServer:
             max_depth: int = 10,
         ) -> BrowserResponse:
             """React-specific interactions."""
-            return await browser_react_tool(self.manager, action, selector, handler_name, event_data, component_name, max_depth)
+            return await browser_react_tool(
+                self.manager,
+                action,
+                selector,
+                handler_name,
+                event_data,
+                component_name,
+                max_depth,
+            )
 
         # V02 Tool 11: browser_profile - Profile management
-        @self.mcp.tool(description="Manage browser profiles (create, delete, list, copy)")
+        @self.mcp.tool(
+            description="Manage browser profiles (create, delete, list, copy)"
+        )
         async def browser_profile(
             action: Literal["create", "delete", "list", "copy"],
             profile_name: str | None = None,
@@ -269,9 +376,18 @@ class ChromeFastMCPServer:
             dest_profile: str | None = None,
         ) -> BrowserResponse:
             """Manage browser profiles."""
-            return await browser_profile_tool(self.manager, action, profile_name, description, source_profile, dest_profile)
+            return await browser_profile_tool(
+                self.manager,
+                action,
+                profile_name,
+                description,
+                source_profile,
+                dest_profile,
+            )
 
-    def run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
+    def run(
+        self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio"
+    ) -> None:
         """Run the server.
 
         Args:

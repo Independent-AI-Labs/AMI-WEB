@@ -17,7 +17,10 @@ def test_run_chrome_default_data_root() -> None:
 
     with (
         patch.object(sys, "argv", ["run_chrome.py"]),
-        patch("browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer", mock_server_class),
+        patch(
+            "browser.backend.mcp.chrome.chrome_server.ChromeFastMCPServer",
+            mock_server_class,
+        ),
         contextlib.suppress(SystemExit),
     ):
         main()
@@ -53,10 +56,18 @@ def test_chrome_manager_absolute_paths(tmp_path: Path) -> None:
     manager = ChromeManager(config_overrides=config_overrides)
 
     # Verify absolute paths are set in config (using get() method which handles nested keys)
-    assert manager.config.get("backend.storage.session_dir") == str(data_root / "sessions")
-    assert manager.config.get("backend.storage.profiles_dir") == str(data_root / "profiles")
-    assert manager.config.get("backend.storage.downloads_dir") == str(data_root / "downloads")
-    assert manager.config.get("backend.storage.screenshots_dir") == str(data_root / "screenshots")
+    assert manager.config.get("backend.storage.session_dir") == str(
+        data_root / "sessions"
+    )
+    assert manager.config.get("backend.storage.profiles_dir") == str(
+        data_root / "profiles"
+    )
+    assert manager.config.get("backend.storage.downloads_dir") == str(
+        data_root / "downloads"
+    )
+    assert manager.config.get("backend.storage.screenshots_dir") == str(
+        data_root / "screenshots"
+    )
 
     # Most importantly, verify SessionManager got the right path
     assert str(manager.session_manager.session_dir) == str(data_root / "sessions")

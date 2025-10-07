@@ -46,9 +46,13 @@ async def browser_execute_tool(
 
     if action == "execute":
         if use_chunking:
-            return await browser_execute_chunk_tool(manager, code, offset, length, snapshot_checksum, args)
+            return await browser_execute_chunk_tool(
+                manager, code, offset, length, snapshot_checksum, args
+            )
         return await browser_execute_impl(manager, code, args)
 
     if use_chunking:
-        return await browser_evaluate_chunk_tool(manager, code, offset, length, snapshot_checksum)
+        return await browser_evaluate_chunk_tool(
+            manager, code, offset, length, snapshot_checksum
+        )
     return await browser_evaluate_tool(manager, code)

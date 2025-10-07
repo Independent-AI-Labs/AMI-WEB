@@ -22,6 +22,11 @@ from browser.backend.facade.navigation.waiter import Waiter
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
+# Test constants
+HTTP_OK = 200
+EXPECTED_INITIAL_SCROLL_COUNT = 3
+PARALLEL_EXECUTION_MAX_DIFF_MS = 5000
+
 # Global instances
 _server_thread: Thread | None = None
 _server: HTTPServer | None = None
@@ -41,7 +46,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
             raise RuntimeError("test_fixtures_dir not set - fixture not initialized")
         super().__init__(*args, directory=str(self.test_fixtures_dir), **kwargs)
 
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+    def log_message(self, fmt: str, *args: Any) -> None:
         """Suppress HTTP server logs."""
 
 
@@ -134,7 +139,7 @@ class TestBrowserNavigation:
 
         assert result.url.endswith("login_form.html")
         assert "Login" in result.title
-        assert result.status_code == 200  # noqa: PLR2004
+        assert result.status_code == HTTP_OK
         assert result.load_time > 0
 
     @pytest.mark.slow
@@ -167,17 +172,25 @@ class TestBrowserNavigation:
         await nav.navigate(f"{_get_server_url()}/login_form.html")
 
         # Execute script to get form data
-        result = await extractor.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script(
+            "return window.testHelpers.getFormData()"
+        )
         assert result["username"] == ""
         assert result["password"] == ""
         assert result["remember"] is False
 
         # Execute script to fill form
         test_password = "password123"  # noqa: S105
-        await extractor.execute_script("window.testHelpers.fillForm(arguments[0], arguments[1])", "testuser", test_password)
+        await extractor.execute_script(
+            "window.testHelpers.fillForm(arguments[0], arguments[1])",
+            "testuser",
+            test_password,
+        )
 
         # Verify form was filled
-        result = await extractor.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script(
+            "return window.testHelpers.getFormData()"
+        )
         assert result["username"] == "testuser"
         assert result["password"] == test_password
 
@@ -197,7 +210,9 @@ class TestBrowserNavigation:
         assert "text-captcha" in html
 
         # Get inner HTML of specific element
-        element_html = await extractor.execute_script("return document.getElementById('text-captcha').innerHTML")
+        element_html = await extractor.execute_script(
+            "return document.getElementById('text-captcha').innerHTML"
+        )
         assert len(element_html) > 0
 
 
@@ -228,7 +243,9 @@ class TestInputSimulation:
         assert "login_form.html" in current_url
 
         # 2. Check if username is still empty (form wasn't cleared by submission)
-        username_value = await extractor.execute_script("return document.getElementById('username').value")
+        username_value = await extractor.execute_script(
+            "return document.getElementById('username').value"
+        )
         assert username_value == ""
 
     @pytest.mark.slow
@@ -250,7 +267,9 @@ class TestInputSimulation:
         await input_ctrl.type_text("#password", test_password, clear=True)
 
         # Verify input values
-        result = await extractor.execute_script("return window.testHelpers.getFormData()")
+        result = await extractor.execute_script(
+            "return window.testHelpers.getFormData()"
+        )
         assert result["username"] == "testuser"
         assert result["password"] == test_password
 
@@ -269,12 +288,16 @@ class TestInputSimulation:
         await mouse.click("#robot-checkbox")
 
         # Verify it's checked
-        is_checked = await extractor.execute_script("return document.getElementById('robot-checkbox').checked")
+        is_checked = await extractor.execute_script(
+            "return document.getElementById('robot-checkbox').checked"
+        )
         assert is_checked is True
 
         # Click again to uncheck
         await mouse.click("#robot-checkbox")
-        is_checked = await extractor.execute_script("return document.getElementById('robot-checkbox').checked")
+        is_checked = await extractor.execute_script(
+            "return document.getElementById('robot-checkbox').checked"
+        )
         assert is_checked is False
 
     @pytest.mark.slow
@@ -300,13 +323,17 @@ class TestInputSimulation:
         await asyncio.sleep(1.5)
 
         # Check submission data
-        data = await extractor.execute_script("return window.formInteractions.lastSubmittedData")
+        data = await extractor.execute_script(
+            "return window.formInteractions.lastSubmittedData"
+        )
         assert data["username"] == "testuser"
         assert data["password"] == test_password
         assert data["remember"] is True
 
         # Check login status
-        status = await extractor.execute_script("return sessionStorage.getItem('loggedInUser')")
+        status = await extractor.execute_script(
+            "return sessionStorage.getItem('loggedInUser')"
+        )
         assert status == "testuser"
 
 
@@ -381,7 +408,9 @@ class TestDynamicContent:
         await waiter.wait_for_element(".ajax-content", timeout=3)
 
         # Verify content loaded
-        ajax_count = await extractor.execute_script("return window.dynamicState.ajaxCallCount")
+        ajax_count = await extractor.execute_script(
+            "return window.dynamicState.ajaxCallCount"
+        )
         assert ajax_count == 1
 
     @pytest.mark.slow
@@ -400,7 +429,9 @@ class TestDynamicContent:
         await asyncio.sleep(0.5)
 
         # Check modal is visible
-        is_visible = await extractor.execute_script("return document.getElementById('modal').style.display === 'block'")
+        is_visible = await extractor.execute_script(
+            "return document.getElementById('modal').style.display === 'block'"
+        )
         assert is_visible is True
 
         # Type in modal input
@@ -412,7 +443,9 @@ class TestDynamicContent:
         await asyncio.sleep(0.5)
 
         # Verify modal data was saved
-        modal_data = await extractor.execute_script("return window.dynamicState.modalData")
+        modal_data = await extractor.execute_script(
+            "return window.dynamicState.modalData"
+        )
         assert modal_data == "Test modal input"
 
     @pytest.mark.slow
@@ -430,7 +463,9 @@ class TestDynamicContent:
         await asyncio.sleep(0.5)  # Wait for tab switch
 
         # Get initial item count (should be 3 by default)
-        initial_count = await extractor.execute_script("return window.dynamicState.scrollItemCount")
+        initial_count = await extractor.execute_script(
+            "return window.dynamicState.scrollItemCount"
+        )
 
         # The test helper may not work as expected, so let's directly manipulate the scroll
         # Scroll to bottom to trigger infinite scroll
@@ -447,10 +482,14 @@ class TestDynamicContent:
         await asyncio.sleep(1)  # Give time for the scroll event to process
 
         # Check new items were added
-        new_count = await extractor.execute_script("return window.dynamicState.scrollItemCount")
+        new_count = await extractor.execute_script(
+            "return window.dynamicState.scrollItemCount"
+        )
         # If still the same, the infinite scroll might not be working in test environment
         # So we'll just check the initial count is correct
-        assert initial_count == 3, f"Expected initial count to be 3, but got {initial_count}"  # noqa: PLR2004
+        assert (
+            initial_count == EXPECTED_INITIAL_SCROLL_COUNT
+        ), f"Expected initial count to be {EXPECTED_INITIAL_SCROLL_COUNT}, but got {initial_count}"
         # Skip the increment check as it may not work in headless mode
         logger.info(f"Infinite scroll test: initial={initial_count}, final={new_count}")
 
@@ -471,7 +510,9 @@ class TestCaptchaHandling:
         await nav.navigate(f"{_get_server_url()}/captcha_form.html")
 
         # Get CAPTCHA text
-        captcha_text = await extractor.execute_script("return window.captchaState.textCaptcha")
+        captcha_text = await extractor.execute_script(
+            "return window.captchaState.textCaptcha"
+        )
 
         # Enter CAPTCHA
         await input_ctrl.type_text("#text-captcha-input", captcha_text, clear=True)
@@ -481,7 +522,9 @@ class TestCaptchaHandling:
         await asyncio.sleep(0.5)
 
         # Check if solved
-        is_solved = await extractor.execute_script("return window.captchaState.solved.text")
+        is_solved = await extractor.execute_script(
+            "return window.captchaState.solved.text"
+        )
         assert is_solved is True
 
     @pytest.mark.slow
@@ -499,7 +542,9 @@ class TestCaptchaHandling:
         await asyncio.sleep(0.5)
 
         # Check if solved
-        is_solved = await extractor.execute_script("return window.captchaState.solved.math")
+        is_solved = await extractor.execute_script(
+            "return window.captchaState.solved.math"
+        )
         assert is_solved is True
 
 
@@ -558,7 +603,9 @@ class TestBrowserPool:
         # What matters is that we got it from the pool quickly without creating a new one
         stats_after_get = await session_manager.get_pool_stats()
         # Total instances shouldn't increase (no new instance created)
-        assert stats_after_get["total_instances"] == stats_after_return["total_instances"]
+        assert (
+            stats_after_get["total_instances"] == stats_after_return["total_instances"]
+        )
 
         # Return instance2 back to pool
         await session_manager.return_to_pool(instance2.id)
@@ -592,8 +639,12 @@ class TestBrowserPool:
             extractor1 = ContentExtractor(instance1)
             extractor2 = ContentExtractor(instance2)
             results = await asyncio.gather(
-                extractor1.execute_script("return {result: 'instance1', timestamp: Date.now()}"),
-                extractor2.execute_script("return {result: 'instance2', timestamp: Date.now()}"),
+                extractor1.execute_script(
+                    "return {result: 'instance1', timestamp: Date.now()}"
+                ),
+                extractor2.execute_script(
+                    "return {result: 'instance2', timestamp: Date.now()}"
+                ),
             )
 
             # Verify both instances executed scripts
@@ -604,7 +655,9 @@ class TestBrowserPool:
 
             # Test that they executed roughly at the same time (parallel)
             time_diff = abs(results[0]["timestamp"] - results[1]["timestamp"])
-            assert time_diff < 5000  # Should execute within 5 seconds of each other  # noqa: PLR2004
+            assert (
+                time_diff < PARALLEL_EXECUTION_MAX_DIFF_MS
+            )  # Should execute within 5 seconds of each other
 
         finally:
             # Always return instances to pool for reuse
@@ -654,7 +707,9 @@ class TestScriptInjection:
         assert result == "test-data"
 
         # Call injected function
-        result = await extractor.execute_script("return window.customInjected.function()")
+        result = await extractor.execute_script(
+            "return window.customInjected.function()"
+        )
         assert result == "injected-function-result"
 
     @pytest.mark.slow
@@ -685,7 +740,9 @@ class TestScriptInjection:
         assert exists is True
 
         # Get element text
-        text = await extractor.execute_script("return document.getElementById('injected-element').textContent")
+        text = await extractor.execute_script(
+            "return document.getElementById('injected-element').textContent"
+        )
         assert text == "Injected via script"
 
     @pytest.mark.slow

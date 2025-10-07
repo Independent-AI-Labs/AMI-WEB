@@ -6,30 +6,23 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from base.backend.utils.standard_imports import setup_imports
 
-def _ensure_repo_on_path() -> None:
-    current = Path(__file__).resolve().parent
-    while current != current.parent:
-        if (current / ".git").exists() and (current / "base").exists():
-            sys.path.insert(0, str(current))
-            return
-        current = current.parent
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
+from base.scripts.run_tests import TestRunner  # noqa: E402
 
 
 def main() -> int:
-    _ensure_repo_on_path()
-
-    from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: PLC0415
-    from base.scripts.run_tests import TestRunner  # noqa: PLC0415
-
     ensure_module_venv(Path(__file__))
 
-    module_root = Path(__file__).resolve().parent.parent
+    browser_root = ORCHESTRATOR_ROOT / "browser"
     args = sys.argv[1:]
     if "--timeout" not in " ".join(args):
         args = [*args, "--timeout", "600"]
 
-    runner = TestRunner(project_root=module_root, project_name="Browser")
+    runner = TestRunner(project_root=browser_root, project_name="Browser")
     return runner.run(args)
 
 

@@ -35,9 +35,13 @@ def _create_mock_manager(execute_script_return: Any = None) -> Any:
 @pytest.mark.asyncio
 async def test_trigger_handler_success() -> None:
     """Test successfully triggering a React handler."""
-    mock_manager = _create_mock_manager({"success": True, "message": "Handler triggered successfully"})
+    mock_manager = _create_mock_manager(
+        {"success": True, "message": "Handler triggered successfully"}
+    )
 
-    response = await browser_react_trigger_handler_tool(mock_manager, ".test-element", "onClick")
+    response = await browser_react_trigger_handler_tool(
+        mock_manager, ".test-element", "onClick"
+    )
 
     assert response.success is True
     assert response.result == "Handler triggered successfully"
@@ -46,10 +50,14 @@ async def test_trigger_handler_success() -> None:
 @pytest.mark.asyncio
 async def test_trigger_handler_with_event_data() -> None:
     """Test triggering a React handler with event data."""
-    mock_manager = _create_mock_manager({"success": True, "message": "Handler triggered"})
+    mock_manager = _create_mock_manager(
+        {"success": True, "message": "Handler triggered"}
+    )
 
     event_data = {"target": {"value": "test"}}
-    response = await browser_react_trigger_handler_tool(mock_manager, ".test-input", "onChange", event_data)
+    response = await browser_react_trigger_handler_tool(
+        mock_manager, ".test-input", "onChange", event_data
+    )
 
     assert response.success is True
     # Verify the script was called with event data
@@ -62,9 +70,13 @@ async def test_trigger_handler_with_event_data() -> None:
 @pytest.mark.asyncio
 async def test_trigger_handler_element_not_found() -> None:
     """Test triggering handler when element is not found."""
-    mock_manager = _create_mock_manager({"success": False, "error": "Element not found"})
+    mock_manager = _create_mock_manager(
+        {"success": False, "error": "Element not found"}
+    )
 
-    response = await browser_react_trigger_handler_tool(mock_manager, ".nonexistent", "onClick")
+    response = await browser_react_trigger_handler_tool(
+        mock_manager, ".nonexistent", "onClick"
+    )
 
     assert response.success is False
     assert "Element not found" in (response.error or "")
@@ -73,9 +85,16 @@ async def test_trigger_handler_element_not_found() -> None:
 @pytest.mark.asyncio
 async def test_trigger_handler_no_fiber() -> None:
     """Test triggering handler when React fiber is not found."""
-    mock_manager = _create_mock_manager({"success": False, "error": "React fiber not found - element may not be a React component"})
+    mock_manager = _create_mock_manager(
+        {
+            "success": False,
+            "error": "React fiber not found - element may not be a React component",
+        }
+    )
 
-    response = await browser_react_trigger_handler_tool(mock_manager, ".non-react-element", "onClick")
+    response = await browser_react_trigger_handler_tool(
+        mock_manager, ".non-react-element", "onClick"
+    )
 
     assert response.success is False
     assert "React fiber not found" in (response.error or "")
@@ -84,9 +103,13 @@ async def test_trigger_handler_no_fiber() -> None:
 @pytest.mark.asyncio
 async def test_trigger_handler_handler_not_found() -> None:
     """Test triggering handler when handler is not found."""
-    mock_manager = _create_mock_manager({"success": False, "error": "Handler not found: onMissingHandler"})
+    mock_manager = _create_mock_manager(
+        {"success": False, "error": "Handler not found: onMissingHandler"}
+    )
 
-    response = await browser_react_trigger_handler_tool(mock_manager, ".test-element", "onMissingHandler")
+    response = await browser_react_trigger_handler_tool(
+        mock_manager, ".test-element", "onMissingHandler"
+    )
 
     assert response.success is False
     assert "Handler not found" in (response.error or "")
@@ -109,7 +132,9 @@ async def test_get_props_with_max_depth() -> None:
     """Test getting props with custom max depth."""
     mock_manager = _create_mock_manager({"success": True, "props": {"test": "value"}})
 
-    response = await browser_react_get_props_tool(mock_manager, ".test-element", max_depth=5)
+    response = await browser_react_get_props_tool(
+        mock_manager, ".test-element", max_depth=5
+    )
 
     assert response.success is True
     # Verify max_depth was passed to the script
@@ -143,7 +168,9 @@ async def test_get_state_success() -> None:
 @pytest.mark.asyncio
 async def test_get_state_stateless_component() -> None:
     """Test getting state from a stateless component."""
-    mock_manager = _create_mock_manager({"success": False, "error": "No state found - component may be stateless"})
+    mock_manager = _create_mock_manager(
+        {"success": False, "error": "No state found - component may be stateless"}
+    )
 
     response = await browser_react_get_state_tool(mock_manager, ".test-element")
 
@@ -155,10 +182,20 @@ async def test_get_state_stateless_component() -> None:
 async def test_find_component_success() -> None:
     """Test successfully finding a React component."""
     found_components = [
-        {"selector": "#test-component", "componentName": "TestComponent", "props": ["onClick", "className"]},
-        {"selector": ".another-test", "componentName": "TestComponent", "props": ["id", "value"]},
+        {
+            "selector": "#test-component",
+            "componentName": "TestComponent",
+            "props": ["onClick", "className"],
+        },
+        {
+            "selector": ".another-test",
+            "componentName": "TestComponent",
+            "props": ["id", "value"],
+        },
     ]
-    mock_manager = _create_mock_manager({"success": True, "components": found_components})
+    mock_manager = _create_mock_manager(
+        {"success": True, "components": found_components}
+    )
 
     response = await browser_react_find_component_tool(mock_manager, "TestComponent")
 
@@ -171,7 +208,9 @@ async def test_find_component_success() -> None:
 @pytest.mark.asyncio
 async def test_find_component_not_found() -> None:
     """Test finding a component that doesn't exist."""
-    mock_manager = _create_mock_manager({"success": False, "error": "Component not found: MissingComponent"})
+    mock_manager = _create_mock_manager(
+        {"success": False, "error": "Component not found: MissingComponent"}
+    )
 
     response = await browser_react_find_component_tool(mock_manager, "MissingComponent")
 
@@ -186,7 +225,12 @@ async def test_get_fiber_tree_success() -> None:
         "type": "div",
         "props": ["className", "onClick"],
         "hasState": False,
-        "parent": {"type": "TestComponent", "props": ["children"], "hasState": True, "parent": None},
+        "parent": {
+            "type": "TestComponent",
+            "props": ["children"],
+            "hasState": True,
+            "parent": None,
+        },
     }
     mock_manager = _create_mock_manager({"success": True, "tree": tree_data})
 
@@ -201,9 +245,16 @@ async def test_get_fiber_tree_success() -> None:
 @pytest.mark.asyncio
 async def test_get_fiber_tree_custom_depth() -> None:
     """Test getting fiber tree with custom depth."""
-    mock_manager = _create_mock_manager({"success": True, "tree": {"type": "div", "props": [], "hasState": False, "parent": None}})
+    mock_manager = _create_mock_manager(
+        {
+            "success": True,
+            "tree": {"type": "div", "props": [], "hasState": False, "parent": None},
+        }
+    )
 
-    response = await browser_react_get_fiber_tree_tool(mock_manager, ".test-element", max_depth=3)
+    response = await browser_react_get_fiber_tree_tool(
+        mock_manager, ".test-element", max_depth=3
+    )
 
     assert response.success is True
     # Verify max_depth was passed to the script

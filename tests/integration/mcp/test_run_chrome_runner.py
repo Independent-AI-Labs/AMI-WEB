@@ -17,7 +17,9 @@ from mcp.client.stdio import stdio_client
 
 
 @pytest.mark.asyncio
-async def test_run_chrome_stdio_client_initialization(browser_root: Path, scripts_dir: Path) -> None:
+async def test_run_chrome_stdio_client_initialization(
+    browser_root: Path, scripts_dir: Path
+) -> None:
     """Launch Chrome via runner and validate MCP handshake and tools."""
     # Path to the Chrome runner script
     run_script = scripts_dir / "run_chrome.py"
@@ -32,7 +34,10 @@ async def test_run_chrome_stdio_client_initialization(browser_root: Path, script
         env=None,
     )
 
-    async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+    async with stdio_client(server_params) as (
+        read_stream,
+        write_stream,
+    ), ClientSession(read_stream, write_stream) as session:
         # Initialize the connection and check server info
         result = await session.initialize()
         assert result.serverInfo.name == "ChromeMCPServer"
@@ -59,7 +64,9 @@ async def test_run_chrome_stdio_client_initialization(browser_root: Path, script
 
         # Call a representative tool twice to ensure the server keeps responding.
         for attempt in range(2):
-            res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
+            res = await session.call_tool(
+                "browser_navigate", arguments={"action": "get_url"}
+            )
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":
                 try:

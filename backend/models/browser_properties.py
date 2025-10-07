@@ -2,12 +2,15 @@
 
 import json
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from base.backend.utils.standard_imports import setup_imports
 
-from browser.backend.services.property_injection import PropertyInjectionService
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from pydantic import BaseModel, Field  # noqa: E402
+
+from browser.backend.services.property_injection import PropertyInjectionService  # noqa: E402
 
 
 class WebGLVendor(str, Enum):
@@ -26,10 +29,16 @@ class WebGLVendor(str, Enum):
 class WebGLRenderer(str, Enum):
     """Common WebGL renderers for spoofing."""
 
-    ANGLE_INTEL_UHD = "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
-    ANGLE_NVIDIA_GTX = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    ANGLE_INTEL_UHD = (
+        "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    )
+    ANGLE_NVIDIA_GTX = (
+        "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    )
     ANGLE_AMD_RADEON = "ANGLE (AMD, AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0, D3D11)"
-    ANGLE_INTEL_IRIS = "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)"
+    ANGLE_INTEL_IRIS = (
+        "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)"
+    )
     MESA_INTEL = "Mesa DRI Intel(R) HD Graphics"
     APPLE_M1 = "Apple M1"
     APPLE_M2 = "Apple M2"
@@ -113,8 +122,16 @@ class BrowserProperties(BaseModel):
                 filename="internal-pdf-viewer",
                 description="Portable Document Format",
                 mime_types=[
-                    {"type": "application/pdf", "suffixes": "pdf", "description": "Portable Document Format"},
-                    {"type": "text/pdf", "suffixes": "pdf", "description": "Portable Document Format"},
+                    {
+                        "type": "application/pdf",
+                        "suffixes": "pdf",
+                        "description": "Portable Document Format",
+                    },
+                    {
+                        "type": "text/pdf",
+                        "suffixes": "pdf",
+                        "description": "Portable Document Format",
+                    },
                 ],
             ),
             PluginInfo(
@@ -122,8 +139,16 @@ class BrowserProperties(BaseModel):
                 filename="mhjfbmdgcfjbbpaeojofohoefgiehjai",
                 description="",
                 mime_types=[
-                    {"type": "application/pdf", "suffixes": "pdf", "description": "Portable Document Format"},
-                    {"type": "text/pdf", "suffixes": "pdf", "description": "Portable Document Format"},
+                    {
+                        "type": "application/pdf",
+                        "suffixes": "pdf",
+                        "description": "Portable Document Format",
+                    },
+                    {
+                        "type": "text/pdf",
+                        "suffixes": "pdf",
+                        "description": "Portable Document Format",
+                    },
                 ],
             ),
             PluginInfo(
@@ -131,8 +156,16 @@ class BrowserProperties(BaseModel):
                 filename="internal-nacl-plugin",
                 description="",
                 mime_types=[
-                    {"type": "application/x-nacl", "suffixes": "", "description": "Native Client Executable"},
-                    {"type": "application/x-pnacl", "suffixes": "", "description": "Portable Native Client Executable"},
+                    {
+                        "type": "application/x-nacl",
+                        "suffixes": "",
+                        "description": "Native Client Executable",
+                    },
+                    {
+                        "type": "application/x-pnacl",
+                        "suffixes": "",
+                        "description": "Portable Native Client Executable",
+                    },
                 ],
             ),
         ],
@@ -172,7 +205,11 @@ class BrowserProperties(BaseModel):
     # Client Hints
     client_hints: dict[str, Any] = Field(
         default_factory=lambda: {
-            "brands": [{"brand": "Not_A Brand", "version": "8"}, {"brand": "Chromium", "version": "120"}, {"brand": "Google Chrome", "version": "120"}],
+            "brands": [
+                {"brand": "Not_A Brand", "version": "8"},
+                {"brand": "Chromium", "version": "120"},
+                {"brand": "Google Chrome", "version": "120"},
+            ],
             "mobile": False,
             "platform": "Windows",
             "platformVersion": "10.0.0",
@@ -209,7 +246,9 @@ class BrowserProperties(BaseModel):
         options["args"].append(f"--lang={self.language}")
 
         # Window size from screen resolution
-        options["args"].append(f"--window-size={self.screen_resolution[0]},{self.screen_resolution[1]}")
+        options["args"].append(
+            f"--window-size={self.screen_resolution[0]},{self.screen_resolution[1]}"
+        )
 
         # Automation flags based on settings
         if not self.automation_controlled:
@@ -221,7 +260,9 @@ class BrowserProperties(BaseModel):
 
         # Notifications
         notification_map = {"granted": 1, "denied": 2, "default": 0}
-        options["prefs"]["profile.default_content_setting_values.notifications"] = notification_map.get(self.notification_permission, 0)
+        options["prefs"][
+            "profile.default_content_setting_values.notifications"
+        ] = notification_map.get(self.notification_permission, 0)
 
         # Extra arguments and preferences
         options["args"].extend(self.extra_chrome_args)
@@ -245,7 +286,7 @@ class BrowserPropertiesPreset(str, Enum):
 
 def _load_user_agents_config() -> dict[str, Any]:
     """Load user agents configuration from JSON file."""
-    config_path = Path(__file__).parent.parent / "config" / "user_agents.json"
+    config_path = MODULE_ROOT / "config" / "user_agents.json"
     if config_path.exists():
         with config_path.open() as f:
             return json.load(f)  # type: ignore[no-any-return]

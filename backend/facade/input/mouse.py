@@ -24,7 +24,9 @@ class MouseController(BaseController):
             raise InputError("Browser not initialized")
         if options.offset_x is not None or options.offset_y is not None:
             actions = ActionChains(self.driver)
-            actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
+            actions.move_to_element_with_offset(
+                element, options.offset_x or 0, options.offset_y or 0
+            )
             for _ in range(options.click_count):
                 if options.button == "right":
                     actions.context_click()
@@ -45,7 +47,12 @@ class MouseController(BaseController):
                 if i < options.click_count - 1 and options.delay > 0:
                     time.sleep(options.delay / 1000)
 
-    async def _perform_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
+    async def _perform_click(
+        self,
+        element: WebElement,
+        options: ClickOptions,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         """Asynchronous click operation."""
         if not self.driver:
             raise InputError("Browser not initialized")
@@ -55,12 +62,19 @@ class MouseController(BaseController):
         else:
             await self._perform_standard_click(element, options, loop)
 
-    async def _perform_offset_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
+    async def _perform_offset_click(
+        self,
+        element: WebElement,
+        options: ClickOptions,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         """Perform click with offset using ActionChains."""
         if not self.driver:
             raise InputError("Browser not initialized")
         actions = ActionChains(self.driver)
-        actions.move_to_element_with_offset(element, options.offset_x or 0, options.offset_y or 0)
+        actions.move_to_element_with_offset(
+            element, options.offset_x or 0, options.offset_y or 0
+        )
 
         for _ in range(options.click_count):
             self._add_click_action(actions, options.button)
@@ -69,7 +83,12 @@ class MouseController(BaseController):
 
         await loop.run_in_executor(None, actions.perform)
 
-    async def _perform_standard_click(self, element: WebElement, options: ClickOptions, loop: asyncio.AbstractEventLoop) -> None:
+    async def _perform_standard_click(
+        self,
+        element: WebElement,
+        options: ClickOptions,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         """Perform standard click without offset."""
         for i in range(options.click_count):
             if options.button == "right":
@@ -89,18 +108,28 @@ class MouseController(BaseController):
         else:
             actions.click()
 
-    async def _perform_context_click(self, element: WebElement, loop: asyncio.AbstractEventLoop) -> None:
+    async def _perform_context_click(
+        self, element: WebElement, loop: asyncio.AbstractEventLoop
+    ) -> None:
         """Perform right-click (context click) on element."""
         if not self.driver:
             raise InputError("Browser not initialized")
         actions = ActionChains(self.driver)
 
-        def context_click_perform(act: ActionChains = actions, el: WebElement = element) -> None:
+        def context_click_perform(
+            act: ActionChains = actions, el: WebElement = element
+        ) -> None:
             act.context_click(el).perform()
 
         await loop.run_in_executor(None, context_click_perform)
 
-    async def click(self, selector: str, options: ClickOptions | None = None, wait: bool = True, timeout: int = 10) -> None:
+    async def click(
+        self,
+        selector: str,
+        options: ClickOptions | None = None,
+        wait: bool = True,
+        timeout: int = 10,
+    ) -> None:
         """Click on an element.
 
         Args:
@@ -136,7 +165,9 @@ class MouseController(BaseController):
             logger.error(f"Click failed for {selector}: {e}")
             raise InputError(f"Failed to click {selector}: {e}") from e
 
-    async def click_at_coordinates(self, x: int, y: int, button: str = "left", click_count: int = 1) -> None:
+    async def click_at_coordinates(
+        self, x: int, y: int, button: str = "left", click_count: int = 1
+    ) -> None:
         """Click at specific screen coordinates.
 
         Args:
@@ -215,7 +246,13 @@ class MouseController(BaseController):
             logger.error(f"Click at coordinates failed: {e}")
             raise InputError(f"Failed to click at ({x}, {y}): {e}") from e
 
-    async def mouse_move(self, x: int | None = None, y: int | None = None, element: str | None = None, steps: int = 1) -> None:
+    async def mouse_move(
+        self,
+        x: int | None = None,
+        y: int | None = None,
+        element: str | None = None,
+        steps: int = 1,
+    ) -> None:
         """Move mouse to position or element.
 
         Args:
@@ -255,7 +292,9 @@ class MouseController(BaseController):
             logger.error(f"Mouse move failed: {e}")
             raise InputError(f"Failed to move mouse: {e}") from e
 
-    async def hover(self, selector: str, duration: float = 0, wait: bool = True, timeout: int = 10) -> None:
+    async def hover(
+        self, selector: str, duration: float = 0, wait: bool = True, timeout: int = 10
+    ) -> None:
         """Hover over an element.
 
         Args:
@@ -288,7 +327,9 @@ class MouseController(BaseController):
             logger.error(f"Hover failed for {selector}: {e}")
             raise InputError(f"Failed to hover over {selector}: {e}") from e
 
-    async def drag_and_drop(self, source: str, target: str, duration: float = 0.5) -> None:
+    async def drag_and_drop(
+        self, source: str, target: str, duration: float = 0.5
+    ) -> None:
         """Drag from source element to target element.
 
         Args:
@@ -323,7 +364,9 @@ class MouseController(BaseController):
             logger.error(f"Drag and drop failed: {e}")
             raise InputError(f"Failed to drag and drop: {e}") from e
 
-    async def drag_from_to(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.5) -> None:
+    async def drag_from_to(
+        self, start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.5
+    ) -> None:
         """Drag from one coordinate to another.
 
         Args:
@@ -411,9 +454,13 @@ class MouseController(BaseController):
 
         except Exception as e:
             logger.error(f"Drag from coordinates failed: {e}")
-            raise InputError(f"Failed to drag from ({start_x}, {start_y}) to ({end_x}, {end_y}): {e}") from e
+            raise InputError(
+                f"Failed to drag from ({start_x}, {start_y}) to ({end_x}, {end_y}): {e}"
+            ) from e
 
-    async def _find_element(self, selector: str, wait: bool = True, timeout: int = 10) -> WebElement | None:
+    async def _find_element(
+        self, selector: str, wait: bool = True, timeout: int = 10
+    ) -> WebElement | None:
         """Find an element on the page."""
         if not self.driver:
             raise InputError("Browser not initialized")
@@ -425,7 +472,9 @@ class MouseController(BaseController):
                 if self._is_in_thread_context():
                     return wait_obj.until(EC.presence_of_element_located((by, value)))
                 loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(None, wait_obj.until, EC.presence_of_element_located((by, value)))
+                return await loop.run_in_executor(
+                    None, wait_obj.until, EC.presence_of_element_located((by, value))
+                )
             return self.driver.find_element(by, value)
 
         except Exception as e:

@@ -50,7 +50,9 @@ def existing_metadata(profile_dir: Path) -> dict[str, Any]:
     return metadata
 
 
-def test_get_profile_dir_loads_existing_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_get_profile_dir_loads_existing_metadata(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that get_profile_dir loads metadata from disk before checking if profile exists."""
     # Create manager with empty self.profiles (metadata not loaded)
     manager = ProfileManager(base_dir=str(profile_dir))
@@ -65,7 +67,9 @@ def test_get_profile_dir_loads_existing_metadata(profile_dir: Path, existing_met
     assert manager.profiles["test_profile"]["description"] == "Test profile"
 
 
-def test_get_profile_dir_raises_for_nonexistent(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_get_profile_dir_raises_for_nonexistent(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that get_profile_dir raises error if profile not found in metadata."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
@@ -74,7 +78,9 @@ def test_get_profile_dir_raises_for_nonexistent(profile_dir: Path, existing_meta
         manager.get_profile_dir("new_profile")
 
 
-def test_delete_profile_loads_existing_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_delete_profile_loads_existing_metadata(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that delete_profile loads metadata before checking if profile exists."""
     manager = ProfileManager(base_dir=str(profile_dir))
     assert manager.profiles == {}  # Not loaded yet
@@ -87,7 +93,9 @@ def test_delete_profile_loads_existing_metadata(profile_dir: Path, existing_meta
     assert "test_profile" not in manager.profiles
 
 
-def test_delete_profile_returns_false_for_nonexistent(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_delete_profile_returns_false_for_nonexistent(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that delete_profile returns False for non-existent profile."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
@@ -96,7 +104,9 @@ def test_delete_profile_returns_false_for_nonexistent(profile_dir: Path, existin
     assert result is False
 
 
-def test_list_profiles_loads_existing_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_list_profiles_loads_existing_metadata(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that list_profiles loads metadata before returning list."""
     manager = ProfileManager(base_dir=str(profile_dir))
     assert manager.profiles == {}  # Not loaded yet
@@ -114,7 +124,9 @@ def test_list_profiles_loads_existing_metadata(profile_dir: Path, existing_metad
     assert test_prof["exists"] is True
 
 
-def test_copy_profile_loads_existing_metadata(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_copy_profile_loads_existing_metadata(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that copy_profile loads metadata before checking if profiles exist."""
     manager = ProfileManager(base_dir=str(profile_dir))
     assert manager.profiles == {}  # Not loaded yet
@@ -127,7 +139,9 @@ def test_copy_profile_loads_existing_metadata(profile_dir: Path, existing_metada
     assert "dest_profile" in manager.profiles
 
 
-def test_copy_profile_source_not_found(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_copy_profile_source_not_found(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that copy_profile raises error for non-existent source."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
@@ -135,11 +149,15 @@ def test_copy_profile_source_not_found(profile_dir: Path, existing_metadata: dic
         manager.copy_profile("nonexistent", "dest_profile")
 
 
-def test_copy_profile_dest_already_exists(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_copy_profile_dest_already_exists(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that copy_profile raises error when destination already exists."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
-    with pytest.raises(ProfileError, match="Destination profile test_profile already exists"):
+    with pytest.raises(
+        ProfileError, match="Destination profile test_profile already exists"
+    ):
         manager.copy_profile("source_profile", "test_profile")
 
 
@@ -205,7 +223,9 @@ def test_metadata_persists_across_manager_instances(profile_dir: Path) -> None:
     assert profiles[0]["description"] == "This should persist"
 
 
-def test_get_profile_dir_updates_last_used(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_get_profile_dir_updates_last_used(
+    profile_dir: Path, existing_metadata: dict[str, Any]
+) -> None:
     """Test that get_profile_dir updates last_used timestamp."""
     manager = ProfileManager(base_dir=str(profile_dir))
 
@@ -221,7 +241,9 @@ def test_get_profile_dir_updates_last_used(profile_dir: Path, existing_metadata:
     assert updated_metadata["test_profile"]["last_used"] != original_last_used
 
 
-def test_concurrent_profile_operations_after_initialization(profile_dir: Path, existing_metadata: dict[str, Any]) -> None:
+def test_concurrent_profile_operations_after_initialization(
+    profile_dir: Path, _existing_metadata: dict[str, Any]
+) -> None:
     """Test that multiple operations work correctly after metadata is loaded."""
     manager = ProfileManager(base_dir=str(profile_dir))
 

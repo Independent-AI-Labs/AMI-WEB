@@ -19,7 +19,9 @@ class TestProfileFacade:
         manager = Mock(spec=ChromeManager)
         manager._initialized = True
         manager.profile_manager = Mock()
-        manager.profile_manager.create_profile = Mock(return_value=Path("/path/to/profile"))
+        manager.profile_manager.create_profile = Mock(
+            return_value=Path("/path/to/profile")
+        )
 
         response = await browser_profile_tool(
             manager=manager,
@@ -33,7 +35,9 @@ class TestProfileFacade:
         assert response.data["name"] == "test_profile"
         assert response.data["path"] == "/path/to/profile"
         assert response.data["description"] == "Test description"
-        manager.profile_manager.create_profile.assert_called_once_with("test_profile", "Test description")
+        manager.profile_manager.create_profile.assert_called_once_with(
+            "test_profile", "Test description"
+        )
 
     @pytest.mark.asyncio
     async def test_create_profile_no_name(self) -> None:
@@ -55,7 +59,9 @@ class TestProfileFacade:
         manager = Mock(spec=ChromeManager)
         manager._initialized = True
         manager.profile_manager = Mock()
-        manager.profile_manager.create_profile = Mock(side_effect=ProfileError("Profile test_profile already exists"))
+        manager.profile_manager.create_profile = Mock(
+            side_effect=ProfileError("Profile test_profile already exists")
+        )
 
         response = await browser_profile_tool(
             manager=manager,
@@ -74,7 +80,9 @@ class TestProfileFacade:
         manager._initialized = False
         manager.initialize = AsyncMock()
         manager.profile_manager = Mock()
-        manager.profile_manager.create_profile = Mock(return_value=Path("/path/to/profile"))
+        manager.profile_manager.create_profile = Mock(
+            return_value=Path("/path/to/profile")
+        )
 
         response = await browser_profile_tool(
             manager=manager,
@@ -145,8 +153,18 @@ class TestProfileFacade:
         manager.profile_manager = Mock()
         manager.profile_manager.list_profiles = Mock(
             return_value=[
-                {"name": "profile1", "description": "First", "created_at": "2025-01-01", "exists": True},
-                {"name": "profile2", "description": "Second", "created_at": "2025-01-02", "exists": True},
+                {
+                    "name": "profile1",
+                    "description": "First",
+                    "created_at": "2025-01-01",
+                    "exists": True,
+                },
+                {
+                    "name": "profile2",
+                    "description": "Second",
+                    "created_at": "2025-01-02",
+                    "exists": True,
+                },
             ]
         )
 
@@ -237,7 +255,9 @@ class TestProfileFacade:
         manager = Mock(spec=ChromeManager)
         manager._initialized = True
         manager.profile_manager = Mock()
-        manager.profile_manager.copy_profile = Mock(side_effect=ProfileError("Source profile source not found"))
+        manager.profile_manager.copy_profile = Mock(
+            side_effect=ProfileError("Source profile source not found")
+        )
 
         response = await browser_profile_tool(
             manager=manager,

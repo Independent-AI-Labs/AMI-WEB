@@ -33,7 +33,9 @@ def mock_chrome_manager() -> Mock:
     return manager
 
 
-def create_test_session(session_dir: Path, session_id: str, url: str, cookies: list[Any]) -> None:
+def create_test_session(
+    session_dir: Path, session_id: str, url: str, cookies: list[Any]
+) -> None:
     """Helper to create a test session file."""
     session_path = session_dir / session_id
     session_path.mkdir(parents=True, exist_ok=True)
@@ -84,7 +86,9 @@ async def test_restore_detects_certificate_error_page(
     # Mock instance with certificate error page
     mock_instance = Mock()
     mock_instance.driver = Mock()
-    mock_instance.driver.current_url = "data:text/html,chromewebdata"  # Error page indicator
+    mock_instance.driver.current_url = (
+        "data:text/html,chromewebdata"  # Error page indicator
+    )
     mock_instance.driver.page_source = "<html><body>Your connection is not private NET::ERR_CERT_AUTHORITY_INVALID</body></html>"
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
@@ -169,8 +173,12 @@ async def test_restore_succeeds_on_normal_page(
     # Mock instance on successful page load
     mock_instance = Mock()
     mock_instance.driver = Mock()
-    mock_instance.driver.current_url = "https://example.com/"  # Successfully loaded domain root
-    mock_instance.driver.page_source = "<html><body><h1>Example Domain</h1></body></html>"
+    mock_instance.driver.current_url = (
+        "https://example.com/"  # Successfully loaded domain root
+    )
+    mock_instance.driver.page_source = (
+        "<html><body><h1>Example Domain</h1></body></html>"
+    )
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
 
@@ -248,13 +256,23 @@ async def test_restore_error_detection_case_insensitive(
         [{"name": "test", "value": "val"}],
     )
 
-    session_manager.sessions = {session_id: {"name": "test", "created_at": "2025-01-01", "profile": None, "url": "https://example.com", "title": "Test"}}
+    session_manager.sessions = {
+        session_id: {
+            "name": "test",
+            "created_at": "2025-01-01",
+            "profile": None,
+            "url": "https://example.com",
+            "title": "Test",
+        }
+    }
 
     # Mock instance with uppercase error text
     mock_instance = Mock()
     mock_instance.driver = Mock()
     mock_instance.driver.current_url = "https://example.com/"
-    mock_instance.driver.page_source = "<html>YOUR CONNECTION IS NOT PRIVATE</html>"  # Uppercase
+    mock_instance.driver.page_source = (
+        "<html>YOUR CONNECTION IS NOT PRIVATE</html>"  # Uppercase
+    )
 
     mock_chrome_manager.get_or_create_instance = AsyncMock(return_value=mock_instance)
 

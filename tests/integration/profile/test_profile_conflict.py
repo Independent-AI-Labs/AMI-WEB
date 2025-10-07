@@ -26,17 +26,25 @@ class TestProfileConflict:
         await manager.initialize()
 
         # Create test profile first
-        test_profile_dir = manager.profile_manager.create_profile("test_profile", "Test profile for conflict testing")
+        test_profile_dir = manager.profile_manager.create_profile(
+            "test_profile", "Test profile for conflict testing"
+        )
         logger.info(f"Created test profile at: {test_profile_dir}")
 
         # Check if any pool instances are using this directory (they shouldn't be!)
         for worker_id, worker in manager.pool._workers.items():
             worker_profile = worker.instance._profile_name
             worker_temp = worker.instance._options_builder.get_temp_profile_dir()
-            if worker_profile == "test_profile" or (worker_temp and "test_profile" in str(worker_temp)):
-                logger.error(f"PROBLEM: Pool worker {worker_id} is using test_profile! profile={worker_profile}, temp={worker_temp}")
+            if worker_profile == "test_profile" or (
+                worker_temp and "test_profile" in str(worker_temp)
+            ):
+                logger.error(
+                    f"PROBLEM: Pool worker {worker_id} is using test_profile! profile={worker_profile}, temp={worker_temp}"
+                )
             else:
-                logger.info(f"Pool worker {worker_id} OK: profile={worker_profile}, temp={worker_temp}")
+                logger.info(
+                    f"Pool worker {worker_id} OK: profile={worker_profile}, temp={worker_temp}"
+                )
 
         instance1 = None
         instance2 = None
@@ -57,7 +65,9 @@ class TestProfileConflict:
             )
             logger.info(f"Instance 1 ID: {instance1.id}")
             logger.info(f"Instance 1 profile: {instance1._profile_name}")
-            logger.info(f"Instance 1 temp dir: {instance1._options_builder.get_temp_profile_dir()}")
+            logger.info(
+                f"Instance 1 temp dir: {instance1._options_builder.get_temp_profile_dir()}"
+            )
 
             # List all pool instances
             for worker_id, worker in manager.pool._workers.items():
@@ -77,8 +87,17 @@ class TestProfileConflict:
                 lock_files = list(profile_dir.glob("Singleton*"))
                 logger.info(f"Lock files in profile: {lock_files}")
                 # Check if any process is using the directory
-                result = subprocess.run(["fuser", str(profile_dir)], capture_output=True, text=True, timeout=2, check=False)
-                logger.info(f"fuser result: returncode={result.returncode}, " f"stdout={result.stdout.strip()}, stderr={result.stderr.strip()}")
+                result = subprocess.run(
+                    ["fuser", str(profile_dir)],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                    check=False,
+                )
+                logger.info(
+                    f"fuser result: returncode={result.returncode}, "
+                    f"stdout={result.stdout.strip()}, stderr={result.stderr.strip()}"
+                )
 
             instance2 = await manager.get_or_create_instance(
                 headless=True,  # Try headless first to see if it's a headless vs non-headless issue
@@ -88,12 +107,18 @@ class TestProfileConflict:
             )
             logger.info(f"Instance 2 ID: {instance2.id}")
             logger.info(f"Instance 2 profile: {instance2._profile_name}")
-            logger.info(f"Instance 2 temp dir: {instance2._options_builder.get_temp_profile_dir()}")
+            logger.info(
+                f"Instance 2 temp dir: {instance2._options_builder.get_temp_profile_dir()}"
+            )
 
             # If we get here without error, instances are properly isolated
             assert instance1.id != instance2.id, "Instances should have different IDs"
-            assert instance1._profile_name is None, "Instance 1 should not have a profile"
-            assert instance2._profile_name == "test_profile", "Instance 2 should have test_profile"
+            assert (
+                instance1._profile_name is None
+            ), "Instance 1 should not have a profile"
+            assert (
+                instance2._profile_name == "test_profile"
+            ), "Instance 2 should have test_profile"
 
             # Verify both instances are alive
             assert instance1.is_alive(), "Instance 1 should be alive"

@@ -36,7 +36,9 @@ class TestSessionFacadePersistence:
         assert response.data["session_id"] == "session-abc"
         assert "saved" in response.data["message"].lower()
         manager.get_instance.assert_called_once_with("inst-123")
-        manager.session_manager.save_session.assert_called_once_with(instance, "my_session", profile_override=None)
+        manager.session_manager.save_session.assert_called_once_with(
+            instance, "my_session", profile_override=None
+        )
 
     @pytest.mark.asyncio
     async def test_save_session_no_instance_id(self) -> None:
@@ -90,7 +92,13 @@ class TestSessionFacadePersistence:
         assert response.data["instance_id"] == "inst-restored"
         assert response.data["session_id"] == "session-abc"
         assert "restored" in response.data["message"].lower()
-        manager.session_manager.restore_session.assert_called_once_with("session-abc", manager, profile_override=None, headless=True, kill_orphaned=False)
+        manager.session_manager.restore_session.assert_called_once_with(
+            "session-abc",
+            manager,
+            profile_override=None,
+            headless=True,
+            kill_orphaned=False,
+        )
 
     @pytest.mark.asyncio
     async def test_restore_session_no_session_id(self) -> None:
@@ -210,7 +218,9 @@ class TestSessionFacadePersistence:
 
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
-        manager.session_manager.save_session = AsyncMock(side_effect=Exception("Save failed"))
+        manager.session_manager.save_session = AsyncMock(
+            side_effect=Exception("Save failed")
+        )
         manager.profile_manager = Mock()
 
         response = await browser_session_tool(
@@ -229,7 +239,9 @@ class TestSessionFacadePersistence:
         manager = Mock(spec=ChromeManager)
         manager._initialized = True
         manager.session_manager = Mock()
-        manager.session_manager.restore_session = AsyncMock(side_effect=Exception("Restore failed"))
+        manager.session_manager.restore_session = AsyncMock(
+            side_effect=Exception("Restore failed")
+        )
 
         response = await browser_session_tool(
             manager=manager,
@@ -254,7 +266,9 @@ class TestTerminateWithAutoSave:
 
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
-        manager.session_manager.save_session = AsyncMock(return_value="session-autosaved")
+        manager.session_manager.save_session = AsyncMock(
+            return_value="session-autosaved"
+        )
         manager.profile_manager = Mock()
         manager.terminate_instance = AsyncMock()
 
@@ -294,7 +308,9 @@ class TestTerminateWithAutoSave:
         assert response.success is True
         assert response.data is not None
         assert response.data["session_id"] == "session-custom"
-        manager.session_manager.save_session.assert_called_once_with(instance, "my_custom_session")
+        manager.session_manager.save_session.assert_called_once_with(
+            instance, "my_custom_session"
+        )
 
     @pytest.mark.asyncio
     async def test_terminate_auto_generates_name(self) -> None:
@@ -329,7 +345,9 @@ class TestTerminateWithAutoSave:
 
         manager.get_instance = AsyncMock(return_value=instance)
         manager.session_manager = Mock()
-        manager.session_manager.save_session = AsyncMock(side_effect=Exception("Save failed"))
+        manager.session_manager.save_session = AsyncMock(
+            side_effect=Exception("Save failed")
+        )
         manager.terminate_instance = AsyncMock()
 
         response = await browser_session_tool(

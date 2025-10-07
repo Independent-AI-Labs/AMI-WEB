@@ -4,8 +4,12 @@ import platform
 from pathlib import Path
 from typing import Any
 
-import yaml
-from loguru import logger
+from base.backend.utils.standard_imports import setup_imports
+
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+import yaml  # noqa: E402
+from loguru import logger  # noqa: E402
 
 
 class Config:
@@ -49,12 +53,19 @@ class Config:
         result = self._get_env_override(key, value if value is not None else default)
 
         # Convert relative paths to absolute for key browser paths
-        if result and isinstance(result, str) and key in ["backend.browser.chrome_binary_path", "backend.browser.chromedriver_path"]:
+        if (
+            result
+            and isinstance(result, str)
+            and key
+            in [
+                "backend.browser.chrome_binary_path",
+                "backend.browser.chromedriver_path",
+            ]
+        ):
             path = Path(result)
             if not path.is_absolute():
-                # Make relative paths relative to project root
-                project_root = Path(__file__).parent.parent.parent
-                result = str(project_root / path)
+                # Make relative paths relative to module root
+                result = str(MODULE_ROOT / path)
 
         return result
 
@@ -74,8 +85,7 @@ class Config:
         """Get platform-specific default paths for Chrome and ChromeDriver."""
         system = platform.system()
 
-        # Look for local project binaries first
-        project_root = Path(__file__).parent.parent.parent
+        # Look for local project binaries first (in module root)
 
         chrome = None
         driver = None
@@ -83,41 +93,58 @@ class Config:
         if system == "Windows":
             # Check for Chrome in multiple locations
             chrome_paths = [
-                project_root / "build" / "chromium-win" / "chrome.exe",
-                project_root / "build" / "chrome-win64" / "chrome.exe",
+                MODULE_ROOT / "build" / "chromium-win" / "chrome.exe",
+                MODULE_ROOT / "build" / "chrome-win64" / "chrome.exe",
             ]
             driver_paths = [
-                project_root / "build" / "chromedriver.exe",
-                project_root / "build" / "chromedriver-win64" / "chromedriver.exe",
+                MODULE_ROOT / "build" / "chromedriver.exe",
+                MODULE_ROOT / "build" / "chromedriver-win64" / "chromedriver.exe",
             ]
         elif system == "Darwin":  # macOS
             # Check for Chrome in multiple locations (including our downloaded Chrome 141)
             chrome_paths = []
             # Look for any chrome-mac-* directories in build/
-            build_dir = project_root / "build"
+            build_dir = MODULE_ROOT / "build"
             if build_dir.exists():
                 for chrome_dir in build_dir.glob("chrome-mac-*"):
-                    chrome_paths.append(chrome_dir / "Google Chrome for Testing.app" / "Contents" / "MacOS" / "Google Chrome for Testing")
+                    chrome_paths.append(
+                        chrome_dir
+                        / "Google Chrome for Testing.app"
+                        / "Contents"
+                        / "MacOS"
+                        / "Google Chrome for Testing"
+                    )
             # Also check alternative install paths
             chrome_paths.extend(
                 [
-                    project_root / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
-                    project_root / "build" / "chromium-mac" / "Chromium.app" / "Contents" / "MacOS" / "Chromium",
+                    MODULE_ROOT
+                    / "chromium-mac"
+                    / "Chromium.app"
+                    / "Contents"
+                    / "MacOS"
+                    / "Chromium",
+                    MODULE_ROOT
+                    / "build"
+                    / "chromium-mac"
+                    / "Chromium.app"
+                    / "Contents"
+                    / "MacOS"
+                    / "Chromium",
                 ],
             )
             driver_paths = [
-                project_root / "build" / "chromedriver",
-                project_root / "chromedriver",
+                MODULE_ROOT / "build" / "chromedriver",
+                MODULE_ROOT / "chromedriver",
             ]
         else:  # Linux
             chrome_paths = [
-                project_root / "build" / "chromium-linux" / "chrome",
-                project_root / "build" / "chrome-linux64" / "chrome",
-                project_root / "chromium-linux" / "chrome",
+                MODULE_ROOT / "build" / "chromium-linux" / "chrome",
+                MODULE_ROOT / "build" / "chrome-linux64" / "chrome",
+                MODULE_ROOT / "chromium-linux" / "chrome",
             ]
             driver_paths = [
-                project_root / "build" / "chromedriver",
-                project_root / "build" / "chromedriver-linux64" / "chromedriver",
+                MODULE_ROOT / "build" / "chromedriver",
+                MODULE_ROOT / "build" / "chromedriver-linux64" / "chromedriver",
             ]
 
         # Find first existing Chrome path

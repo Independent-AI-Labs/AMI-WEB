@@ -50,11 +50,21 @@ def enforce_text_limit(config: Config, tool_key: str, payload: str) -> LimitedTe
     total_bytes = len(encoded)
 
     if total_bytes <= limit:
-        return LimitedText(text=payload, truncated=False, returned_bytes=total_bytes, total_bytes=total_bytes)
+        return LimitedText(
+            text=payload,
+            truncated=False,
+            returned_bytes=total_bytes,
+            total_bytes=total_bytes,
+        )
 
     truncated_bytes = encoded[:limit]
     truncated_text = truncated_bytes.decode("utf-8", errors="ignore")
-    return LimitedText(text=truncated_text, truncated=True, returned_bytes=len(truncated_bytes), total_bytes=total_bytes)
+    return LimitedText(
+        text=truncated_text,
+        truncated=True,
+        returned_bytes=len(truncated_bytes),
+        total_bytes=total_bytes,
+    )
 
 
 def compute_chunk(
@@ -73,7 +83,9 @@ def compute_chunk(
     checksum = hashlib.sha256(encoded).hexdigest()
 
     if snapshot_checksum is not None and snapshot_checksum != checksum:
-        raise ChunkComputationError("snapshot checksum mismatch; fetch a fresh snapshot")
+        raise ChunkComputationError(
+            "snapshot checksum mismatch; fetch a fresh snapshot"
+        )
 
     max_allowed = _resolve_global_max(config)
     chunk_length = _resolve_chunk_length(config, tool_key, requested=length)
@@ -98,7 +110,9 @@ def compute_chunk(
         )
 
     if end <= offset:
-        raise ChunkComputationError("computed chunk has no length; increase requested length")
+        raise ChunkComputationError(
+            "computed chunk has no length; increase requested length"
+        )
 
     chunk_bytes = encoded[offset:end]
     chunk_text = chunk_bytes.decode("utf-8", errors="ignore")
@@ -121,20 +135,29 @@ def compute_chunk(
 def _resolve_tool_limit(config: Config, tool_key: str) -> int:
     requested = config.get(f"backend.mcp.tool_limits.{tool_key}.response_bytes")
     if requested is None:
-        requested = config.get("backend.mcp.tool_limits.defaults.response_bytes", DEFAULT_TOOL_LIMIT_BYTES)
+        requested = config.get(
+            "backend.mcp.tool_limits.defaults.response_bytes", DEFAULT_TOOL_LIMIT_BYTES
+        )
 
     limit = _coerce_positive_int(requested, DEFAULT_TOOL_LIMIT_BYTES)
     global_max = _resolve_global_max(config)
     return min(limit, global_max)
 
 
-def _resolve_chunk_length(config: Config, tool_key: str, *, requested: int | None) -> int:
+def _resolve_chunk_length(
+    config: Config, tool_key: str, *, requested: int | None
+) -> int:
     default_size = _coerce_positive_int(
-        config.get("backend.mcp.tool_limits.chunks.default_chunk_size_bytes", DEFAULT_CHUNK_SIZE_BYTES),
+        config.get(
+            "backend.mcp.tool_limits.chunks.default_chunk_size_bytes",
+            DEFAULT_CHUNK_SIZE_BYTES,
+        ),
         DEFAULT_CHUNK_SIZE_BYTES,
     )
     max_chunk = _coerce_positive_int(
-        config.get("backend.mcp.tool_limits.chunks.max_chunk_bytes", DEFAULT_MAX_CHUNK_BYTES),
+        config.get(
+            "backend.mcp.tool_limits.chunks.max_chunk_bytes", DEFAULT_MAX_CHUNK_BYTES
+        ),
         DEFAULT_MAX_CHUNK_BYTES,
     )
     chunk_length = default_size
@@ -151,7 +174,9 @@ def _resolve_chunk_length(config: Config, tool_key: str, *, requested: int | Non
 
 def _resolve_global_max(config: Config) -> int:
     return _coerce_positive_int(
-        config.get("backend.mcp.tool_limits.global_max_bytes", DEFAULT_GLOBAL_MAX_BYTES),
+        config.get(
+            "backend.mcp.tool_limits.global_max_bytes", DEFAULT_GLOBAL_MAX_BYTES
+        ),
         DEFAULT_GLOBAL_MAX_BYTES,
     )
 

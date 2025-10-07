@@ -125,8 +125,16 @@ class ThreadedHTMLServer:
         password = data.get("password")
 
         if username == "testuser" and password == "password123":  # noqa: S105
-            return web.json_response({"success": True, "message": "Login successful", "token": "test-token-123"})
-        return web.json_response({"success": False, "message": "Invalid credentials"}, status=401)
+            return web.json_response(
+                {
+                    "success": True,
+                    "message": "Login successful",
+                    "token": "test-token-123",
+                }
+            )
+        return web.json_response(
+            {"success": False, "message": "Invalid credentials"}, status=401
+        )
 
     async def _handle_api_data(self, _request: web.Request) -> web.Response:
         """Handle API data requests."""
@@ -147,4 +155,6 @@ class ThreadedHTMLServer:
         """Handle form submissions."""
         data = await request.json()
 
-        return web.json_response({"success": True, "received": data, "processed_at": time.time()})
+        return web.json_response(
+            {"success": True, "received": data, "processed_at": time.time()}
+        )

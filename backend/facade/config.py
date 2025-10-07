@@ -17,7 +17,9 @@ class FacadeConfig:
     type_delay_default: float = 0.01  # Default delay between keystrokes (seconds)
 
     # Screenshot timings
-    screenshot_stitch_delay: float = 0.2  # Delay between screenshots for stitching (seconds)
+    screenshot_stitch_delay: float = (
+        0.2  # Delay between screenshots for stitching (seconds)
+    )
 
     # Video recording
     recording_fps_default: int = 30  # Default FPS for video recording

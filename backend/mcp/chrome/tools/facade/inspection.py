@@ -13,7 +13,7 @@ from browser.backend.mcp.chrome.tools.extraction_tools import (
 )
 
 
-async def browser_inspect_tool(  # noqa: PLR0911
+async def browser_inspect_tool(
     manager: ChromeManager,
     action: Literal["get_html", "exists", "get_attribute"],
     selector: str | None = None,
@@ -40,16 +40,24 @@ async def browser_inspect_tool(  # noqa: PLR0911
     """
     logger.debug(f"browser_inspect: action={action}")
 
-    if action == "get_html":
-        return await browser_get_html_tool(manager, selector, max_depth, collapse_depth, ellipsize_text_after)
-
-    if action == "exists":
-        if not selector:
-            return BrowserResponse(success=False, error="selector required for exists action")
-        return await browser_exists_tool(manager, selector)
-
-    if not selector:
-        return BrowserResponse(success=False, error="selector required for get_attribute action")
-    if not attribute:
-        return BrowserResponse(success=False, error="attribute required for get_attribute action")
-    return await browser_get_attribute_tool(manager, selector, attribute)
+    match action:
+        case "get_html":
+            return await browser_get_html_tool(
+                manager, selector, max_depth, collapse_depth, ellipsize_text_after
+            )
+        case "exists":
+            if not selector:
+                return BrowserResponse(
+                    success=False, error="selector required for exists action"
+                )
+            return await browser_exists_tool(manager, selector)
+        case "get_attribute":
+            if not selector:
+                return BrowserResponse(
+                    success=False, error="selector required for get_attribute action"
+                )
+            if not attribute:
+                return BrowserResponse(
+                    success=False, error="attribute required for get_attribute action"
+                )
+            return await browser_get_attribute_tool(manager, selector, attribute)

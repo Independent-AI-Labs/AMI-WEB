@@ -1,7 +1,11 @@
 """Navigation tools for Chrome MCP server."""
 
 from loguru import logger
-from selenium.common.exceptions import InvalidSessionIdException, NoSuchWindowException, WebDriverException
+from selenium.common.exceptions import (
+    InvalidSessionIdException,
+    NoSuchWindowException,
+    WebDriverException,
+)
 
 from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.core.management.manager import ChromeManager
@@ -39,7 +43,9 @@ def _is_fatal_error(exc: Exception) -> bool:
     return False
 
 
-async def _acquire_healthy_instance(manager: ChromeManager, instance_id: str | None = None) -> tuple[bool, BrowserInstance | None]:
+async def _acquire_healthy_instance(
+    manager: ChromeManager, instance_id: str | None = None
+) -> tuple[bool, BrowserInstance | None]:
     """Return a healthy browser instance.
 
     Returns a tuple (from_pool, instance). Returns (False, None) if no instance available.
@@ -58,7 +64,9 @@ async def _acquire_healthy_instance(manager: ChromeManager, instance_id: str | N
     # Use current instance context
     instance = await manager.get_current_instance()
     if not instance:
-        logger.error("No current instance - launch browser first using browser_session tool")
+        logger.error(
+            "No current instance - launch browser first using browser_session tool"
+        )
         return False, None
 
     # Determine if current instance is from pool
@@ -67,14 +75,22 @@ async def _acquire_healthy_instance(manager: ChromeManager, instance_id: str | N
 
 
 async def browser_navigate_tool(
-    manager: ChromeManager, url: str, instance_id: str | None = None, wait_for: str | None = None, timeout: float = 30
+    manager: ChromeManager,
+    url: str,
+    instance_id: str | None = None,
+    wait_for: str | None = None,
+    timeout: float = 30,
 ) -> BrowserResponse:
     """Navigate to a URL."""
-    logger.debug(f"Navigating to: {url} with instance_id={instance_id}, wait_for={wait_for}, timeout={timeout}")
+    logger.debug(
+        f"Navigating to: {url} with instance_id={instance_id}, wait_for={wait_for}, timeout={timeout}"
+    )
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     nav = Navigator(instance)
     try:
@@ -83,7 +99,9 @@ async def browser_navigate_tool(
         # Only retire instance on fatal errors (session dead, chrome crashed)
         # Preserve instance and tabs on recoverable errors (timeouts, network issues)
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error during navigation, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error during navigation, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Navigation failed but instance preserved: {exc}")
@@ -92,20 +110,26 @@ async def browser_navigate_tool(
     return BrowserResponse(success=True, url=url, data={"status": "navigated"})
 
 
-async def browser_back_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_back_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """Navigate back in browser history."""
     logger.debug(f"Navigating back with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     nav = Navigator(instance)
     try:
         await nav.back()
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error navigating back, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error navigating back, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Navigate back failed but instance preserved: {exc}")
@@ -114,42 +138,56 @@ async def browser_back_tool(manager: ChromeManager, instance_id: str | None = No
     return BrowserResponse(success=True, data={"status": "navigated_back"})
 
 
-async def browser_forward_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_forward_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """Navigate forward in browser history."""
     logger.debug(f"Navigating forward with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     nav = Navigator(instance)
     try:
         await nav.forward()
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error navigating forward, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error navigating forward, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Navigate forward failed but instance preserved: {exc}")
-        return BrowserResponse(success=False, error=f"Failed to navigate forward: {exc}")
+        return BrowserResponse(
+            success=False, error=f"Failed to navigate forward: {exc}"
+        )
 
     return BrowserResponse(success=True, data={"status": "navigated_forward"})
 
 
-async def browser_refresh_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_refresh_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """Refresh the current page."""
     logger.debug(f"Refreshing page with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     nav = Navigator(instance)
     try:
         await nav.refresh()
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error refreshing page, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error refreshing page, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Refresh failed but instance preserved: {exc}")
@@ -158,7 +196,9 @@ async def browser_refresh_tool(manager: ChromeManager, instance_id: str | None =
     return BrowserResponse(success=True, data={"status": "refreshed"})
 
 
-async def browser_get_url_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_get_url_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """Get the current page URL."""
     logger.debug(f"Getting current URL with instance_id={instance_id}")
 
@@ -166,29 +206,39 @@ async def browser_get_url_tool(manager: ChromeManager, instance_id: str | None =
     if not instance or not instance.driver:
         if instance and from_pool and _is_fatal_error(Exception("No driver")):
             await manager.retire_instance(instance.id)
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     try:
         url = instance.driver.current_url
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error getting URL, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error getting URL, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Get URL failed but instance preserved: {exc}")
-        return BrowserResponse(success=False, error=f"Failed to resolve current URL: {exc}")
+        return BrowserResponse(
+            success=False, error=f"Failed to resolve current URL: {exc}"
+        )
 
     return BrowserResponse(success=True, url=url)
 
 
-async def browser_open_tab_tool(manager: ChromeManager, url: str | None = None, instance_id: str | None = None) -> BrowserResponse:
+async def browser_open_tab_tool(
+    manager: ChromeManager, url: str | None = None, instance_id: str | None = None
+) -> BrowserResponse:
     """Open a new tab, optionally navigating to a URL."""
     logger.debug(f"Opening new tab with url={url}, instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance or not instance.driver:
         # No driver is a configuration error, not necessarily fatal
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     if not instance._lifecycle.tab_manager:
         # No tab manager is a configuration error, not necessarily fatal
@@ -199,20 +249,26 @@ async def browser_open_tab_tool(manager: ChromeManager, url: str | None = None, 
         return BrowserResponse(success=True, data={"tab_id": tab_handle, "url": url})
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error opening tab, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error opening tab, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Open tab failed but instance preserved: {exc}")
         return BrowserResponse(success=False, error=f"Failed to open new tab: {exc}")
 
 
-async def browser_list_tabs_tool(manager: ChromeManager, instance_id: str | None = None) -> BrowserResponse:
+async def browser_list_tabs_tool(
+    manager: ChromeManager, instance_id: str | None = None
+) -> BrowserResponse:
     """List all open tabs."""
     logger.debug(f"Listing tabs with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance or not instance.driver:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     try:
         handles = instance.driver.window_handles
@@ -221,20 +277,26 @@ async def browser_list_tabs_tool(manager: ChromeManager, instance_id: str | None
         return BrowserResponse(success=True, data={"tabs": tabs, "count": len(tabs)})
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error listing tabs, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error listing tabs, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"List tabs failed but instance preserved: {exc}")
         return BrowserResponse(success=False, error=f"Failed to list tabs: {exc}")
 
 
-async def browser_switch_tab_tool(manager: ChromeManager, tab_id: str, instance_id: str | None = None) -> BrowserResponse:
+async def browser_switch_tab_tool(
+    manager: ChromeManager, tab_id: str, instance_id: str | None = None
+) -> BrowserResponse:
     """Switch to a specific tab by handle."""
     logger.debug(f"Switching to tab {tab_id} with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance or not instance.driver:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     if not instance._lifecycle.tab_manager:
         return BrowserResponse(success=False, error="Tab manager not initialized")
@@ -248,20 +310,26 @@ async def browser_switch_tab_tool(manager: ChromeManager, tab_id: str, instance_
         return BrowserResponse(success=False, error=f"Tab not found: {tab_id}")
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error switching tab, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error switching tab, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Switch tab failed but instance preserved: {exc}")
         return BrowserResponse(success=False, error=f"Failed to switch tab: {exc}")
 
 
-async def browser_close_tab_tool(manager: ChromeManager, tab_id: str | None = None, instance_id: str | None = None) -> BrowserResponse:
+async def browser_close_tab_tool(
+    manager: ChromeManager, tab_id: str | None = None, instance_id: str | None = None
+) -> BrowserResponse:
     """Close a tab (current if no tab_id specified)."""
     logger.debug(f"Closing tab {tab_id or 'current'} with instance_id={instance_id}")
 
     from_pool, instance = await _acquire_healthy_instance(manager, instance_id)
     if not instance or not instance.driver:
-        return BrowserResponse(success=False, error="No healthy browser instance available")
+        return BrowserResponse(
+            success=False, error="No healthy browser instance available"
+        )
 
     try:
         if tab_id:
@@ -277,7 +345,9 @@ async def browser_close_tab_tool(manager: ChromeManager, tab_id: str | None = No
         return BrowserResponse(success=False, error=f"Tab not found: {tab_id}")
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):
-            logger.error(f"Fatal error closing tab, retiring instance {instance.id}: {exc}")
+            logger.error(
+                f"Fatal error closing tab, retiring instance {instance.id}: {exc}"
+            )
             await manager.retire_instance(instance.id)
         else:
             logger.warning(f"Close tab failed but instance preserved: {exc}")

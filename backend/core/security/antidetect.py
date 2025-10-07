@@ -7,9 +7,13 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
+from base.backend.utils.standard_imports import setup_imports
 
-from browser.backend.utils.compute_profile import get_compute_profile
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from loguru import logger  # noqa: E402
+
+from browser.backend.utils.compute_profile import get_compute_profile  # noqa: E402
 
 
 def _adjust_gpu_arguments_for_cpu(args: list[str]) -> list[str]:
@@ -83,7 +87,10 @@ def _validate_file_path(file_path: str) -> bool:
             return False
 
     # Ensure the path points to our expected file type
-    return file_path.endswith(("chromedriver", "chromedriver.exe")) or "_patched" in file_path
+    return (
+        file_path.endswith(("chromedriver", "chromedriver.exe"))
+        or "_patched" in file_path
+    )
 
 
 class ChromeDriverPatcher:
@@ -99,8 +106,7 @@ class ChromeDriverPatcher:
 
         # Use provided drivers_dir or default to project root/build
         if drivers_dir is None:
-            project_root = Path(__file__).parent.parent.parent.parent
-            drivers_dir = project_root / "build"
+            drivers_dir = MODULE_ROOT / "build"
 
         drivers_dir.mkdir(exist_ok=True, parents=True)
         self.chromedriver_path = drivers_dir / patched_name
@@ -129,18 +135,24 @@ class ChromeDriverPatcher:
             codesign_path = shutil.which("codesign")
 
             if not xattr_path:
-                logger.warning("xattr command not found - unable to remove extended attributes")
+                logger.warning(
+                    "xattr command not found - unable to remove extended attributes"
+                )
             else:
                 # Remove any existing extended attributes
                 # Validate executable and file paths to avoid S603 security warning
                 driver_path_str = str(self.chromedriver_path.resolve())
 
                 if not _validate_executable_path(xattr_path):
-                    logger.error(f"Invalid or unsafe xattr executable path: {xattr_path}")
+                    logger.error(
+                        f"Invalid or unsafe xattr executable path: {xattr_path}"
+                    )
                     return
 
                 if not _validate_file_path(driver_path_str):
-                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
+                    logger.error(
+                        f"Invalid or unsafe chromedriver file path: {driver_path_str}"
+                    )
                     return
 
                 # Use validated paths in subprocess call - S603 suppressed with validation
@@ -151,23 +163,36 @@ class ChromeDriverPatcher:
                 )
 
             if not codesign_path:
-                logger.warning("codesign command not found - unable to sign patched driver")
+                logger.warning(
+                    "codesign command not found - unable to sign patched driver"
+                )
             else:
                 # Sign with ad-hoc signature
                 # Validate executable and file paths to avoid S603 security warning
                 driver_path_str = str(self.chromedriver_path.resolve())
 
                 if not _validate_executable_path(codesign_path):
-                    logger.error(f"Invalid or unsafe codesign executable path: {codesign_path}")
+                    logger.error(
+                        f"Invalid or unsafe codesign executable path: {codesign_path}"
+                    )
                     return
 
                 if not _validate_file_path(driver_path_str):
-                    logger.error(f"Invalid or unsafe chromedriver file path: {driver_path_str}")
+                    logger.error(
+                        f"Invalid or unsafe chromedriver file path: {driver_path_str}"
+                    )
                     return
 
                 # Use validated paths in subprocess call - S603 suppressed with validation
                 subprocess.run(  # noqa: S603
-                    [codesign_path, "--force", "--deep", "--sign", "-", driver_path_str],
+                    [
+                        codesign_path,
+                        "--force",
+                        "--deep",
+                        "--sign",
+                        "-",
+                        driver_path_str,
+                    ],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -237,7 +262,9 @@ class ChromeDriverPatcher:
             logger.info("ChromeDriver restored from backup")
 
 
-def get_anti_detection_arguments(user_agent: str | None = None, window_size: tuple[int, int] | None = None) -> list[str]:
+def get_anti_detection_arguments(
+    user_agent: str | None = None, window_size: tuple[int, int] | None = None
+) -> list[str]:
     """
     Get Chrome arguments for anti-detection.
 
@@ -375,9 +402,7 @@ def execute_anti_detection_scripts(driver: Any) -> None:
     This should be called after the driver is initialized.
     """
     # Load complete anti-detect script
-    # Path: backend/core/security -> web/scripts
-    scripts_dir = Path(__file__).parent.parent.parent.parent / "web" / "scripts"
-    script_path = scripts_dir / "complete-antidetect.js"
+    script_path = MODULE_ROOT / "web" / "scripts" / "complete-antidetect.js"
 
     if not script_path.exists():
         logger.error(f"Complete anti-detect script not found at {script_path}")
@@ -417,7 +442,9 @@ def execute_anti_detection_scripts(driver: Any) -> None:
             driver.execute_script(script_content)
         except Exception as e:
             # This is expected for about:blank or other special pages
-            logger.debug(f"Script injection failed on current page (likely about:blank): {e}")
+            logger.debug(
+                f"Script injection failed on current page (likely about:blank): {e}"
+            )
 
         logger.debug("Complete anti-detection script injected into main target")
 

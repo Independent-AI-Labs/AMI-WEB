@@ -18,7 +18,9 @@ class Waiter(BaseController):
         """Wait for page navigation to complete."""
         await self._wait_for_load(timeout)
 
-    async def wait_for_element(self, selector: str, timeout: int = 30, visible: bool = True) -> bool:
+    async def wait_for_element(
+        self, selector: str, timeout: int = 30, visible: bool = True
+    ) -> bool:
         """Wait for an element to be present or visible.
 
         Args:
@@ -35,7 +37,11 @@ class Waiter(BaseController):
         try:
             wait = WebDriverWait(self.driver, timeout)
             by, value = self._parse_selector(selector)
-            condition = EC.visibility_of_element_located((by, value)) if visible else EC.presence_of_element_located((by, value))
+            condition = (
+                EC.visibility_of_element_located((by, value))
+                if visible
+                else EC.presence_of_element_located((by, value))
+            )
 
             if self._is_in_thread_context():
                 element = wait.until(condition)
@@ -55,7 +61,10 @@ class Waiter(BaseController):
             raise NavigationError("Browser not initialized")
         try:
             wait = WebDriverWait(self.driver, timeout)
-            wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
+            wait.until(
+                lambda driver: driver.execute_script("return document.readyState")
+                == "complete"
+            )
         except Exception as e:
             logger.warning(f"Page load wait timeout: {e}")
 
@@ -63,7 +72,9 @@ class Waiter(BaseController):
         """Synchronous version of _wait_for_condition for thread context."""
         if not self.driver:
             raise NavigationError("Browser not initialized")
-        wait = WebDriverWait(self.driver, timeout, poll_frequency=condition.poll_frequency)
+        wait = WebDriverWait(
+            self.driver, timeout, poll_frequency=condition.poll_frequency
+        )
 
         if condition.type == "load":
             self._wait_for_load_sync(timeout)
@@ -95,7 +106,12 @@ class Waiter(BaseController):
             wait = WebDriverWait(self.driver, timeout)
             loop = asyncio.get_event_loop()
 
-            await loop.run_in_executor(None, wait.until, lambda driver: driver.execute_script("return document.readyState") == "complete")
+            await loop.run_in_executor(
+                None,
+                wait.until,
+                lambda driver: driver.execute_script("return document.readyState")
+                == "complete",
+            )
         except Exception as e:
             logger.warning(f"Page load wait timeout: {e}")
 
@@ -103,7 +119,9 @@ class Waiter(BaseController):
         """Wait for a specific condition to be met."""
         if not self.driver:
             raise NavigationError("Browser not initialized")
-        wait = WebDriverWait(self.driver, timeout, poll_frequency=condition.poll_frequency)
+        wait = WebDriverWait(
+            self.driver, timeout, poll_frequency=condition.poll_frequency
+        )
         loop = asyncio.get_event_loop()
 
         if condition.type == "load":
@@ -123,12 +141,18 @@ class Waiter(BaseController):
 
         elif condition.type == "element" and condition.target:
             by, value = self._parse_selector(condition.target)
-            await loop.run_in_executor(None, wait.until, EC.presence_of_element_located((by, value)))
+            await loop.run_in_executor(
+                None, wait.until, EC.presence_of_element_located((by, value))
+            )
 
         elif condition.type == "function" and condition.target:
             target_script = condition.target
             if target_script is not None:
-                await loop.run_in_executor(None, wait.until, lambda driver: driver.execute_script(target_script))
+                await loop.run_in_executor(
+                    None,
+                    wait.until,
+                    lambda driver: driver.execute_script(target_script),
+                )
 
     async def wait_for_url_change(self, current_url: str, timeout: int = 30) -> str:
         """Wait for the URL to change from the current one.
@@ -150,9 +174,13 @@ class Waiter(BaseController):
                 wait.until(lambda driver: driver.current_url != current_url)
                 return str(self.driver.current_url)
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, wait.until, lambda driver: driver.current_url != current_url)
+            await loop.run_in_executor(
+                None, wait.until, lambda driver: driver.current_url != current_url
+            )
             return str(self.driver.current_url)
 
         except Exception as e:
             logger.warning(f"URL change wait timeout: {e}")
-            raise NavigationError(f"URL did not change from {current_url} within {timeout} seconds") from e
+            raise NavigationError(
+                f"URL did not change from {current_url} within {timeout} seconds"
+            ) from e

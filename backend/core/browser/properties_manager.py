@@ -1,14 +1,20 @@
 """Browser properties injection and management system."""
 
 import json
-from pathlib import Path
 from typing import Any
 
+from base.backend.utils.standard_imports import setup_imports
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from browser.backend.models.browser_properties import BrowserProperties, BrowserPropertiesPreset, get_preset_properties
-from browser.backend.utils.config import Config
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from browser.backend.models.browser_properties import (  # noqa: E402
+    BrowserProperties,
+    BrowserPropertiesPreset,
+    get_preset_properties,
+)
+from browser.backend.utils.config import Config  # noqa: E402
 
 
 class PropertiesManager:
@@ -17,7 +23,9 @@ class PropertiesManager:
     def __init__(self, config: Config | None = None):
         self.config = config or Config()
         self._instance_properties: dict[str, BrowserProperties] = {}
-        self._tab_properties: dict[str, dict[str, BrowserProperties]] = {}  # instance_id -> {tab_id: properties}
+        self._tab_properties: dict[
+            str, dict[str, BrowserProperties]
+        ] = {}  # instance_id -> {tab_id: properties}
         self._default_properties = self._load_default_properties()
 
     def _load_default_properties(self) -> BrowserProperties:
@@ -43,20 +51,26 @@ class PropertiesManager:
                     if key == "codec_support" and isinstance(value, dict):
                         for codec_key, codec_value in value.items():
                             if hasattr(properties.codec_support, codec_key):
-                                setattr(properties.codec_support, codec_key, codec_value)
+                                setattr(
+                                    properties.codec_support, codec_key, codec_value
+                                )
                     else:
                         setattr(properties, key, value)
                 else:
                     logger.warning(f"Unknown browser property override: {key}")
 
-        logger.info(f"Loaded browser properties with preset '{preset_name}' and {len(overrides)} overrides")
+        logger.info(
+            f"Loaded browser properties with preset '{preset_name}' and {len(overrides)} overrides"
+        )
         return properties
 
     def get_default_properties(self) -> BrowserProperties:
         """Get the default properties."""
         return self._default_properties
 
-    def set_default_properties(self, properties: BrowserProperties | dict[str, Any]) -> None:
+    def set_default_properties(
+        self, properties: BrowserProperties | dict[str, Any]
+    ) -> None:
         """Set the default properties."""
         if isinstance(properties, dict):
             # Create new properties from dict, using current defaults as base
@@ -66,7 +80,9 @@ class PropertiesManager:
                     if key == "codec_support" and isinstance(value, dict):
                         for codec_key, codec_value in value.items():
                             if hasattr(base_props.codec_support, codec_key):
-                                setattr(base_props.codec_support, codec_key, codec_value)
+                                setattr(
+                                    base_props.codec_support, codec_key, codec_value
+                                )
                     else:
                         setattr(base_props, key, value)
             self._default_properties = base_props
@@ -78,7 +94,9 @@ class PropertiesManager:
         """Get properties for a specific instance."""
         return self._instance_properties.get(instance_id, self._default_properties)
 
-    def set_instance_properties(self, instance_id: str, properties: BrowserProperties | dict[str, Any]) -> None:
+    def set_instance_properties(
+        self, instance_id: str, properties: BrowserProperties | dict[str, Any]
+    ) -> None:
         """Set properties for a specific instance."""
         if isinstance(properties, dict):
             # Create new properties from dict, using defaults as base
@@ -88,7 +106,9 @@ class PropertiesManager:
                     if key == "codec_support" and isinstance(value, dict):
                         for codec_key, codec_value in value.items():
                             if hasattr(base_props.codec_support, codec_key):
-                                setattr(base_props.codec_support, codec_key, codec_value)
+                                setattr(
+                                    base_props.codec_support, codec_key, codec_value
+                                )
                     else:
                         setattr(base_props, key, value)
             self._instance_properties[instance_id] = base_props
@@ -99,11 +119,19 @@ class PropertiesManager:
 
     def get_tab_properties(self, instance_id: str, tab_id: str) -> BrowserProperties:
         """Get properties for a specific tab."""
-        if instance_id in self._tab_properties and tab_id in self._tab_properties[instance_id]:
+        if (
+            instance_id in self._tab_properties
+            and tab_id in self._tab_properties[instance_id]
+        ):
             return self._tab_properties[instance_id][tab_id]
         return self.get_instance_properties(instance_id)
 
-    def set_tab_properties(self, instance_id: str, tab_id: str, properties: BrowserProperties | dict[str, Any]) -> None:
+    def set_tab_properties(
+        self,
+        instance_id: str,
+        tab_id: str,
+        properties: BrowserProperties | dict[str, Any],
+    ) -> None:
         """Set properties for a specific tab."""
         if instance_id not in self._tab_properties:
             self._tab_properties[instance_id] = {}
@@ -116,7 +144,9 @@ class PropertiesManager:
                     if key == "codec_support" and isinstance(value, dict):
                         for codec_key, codec_value in value.items():
                             if hasattr(base_props.codec_support, codec_key):
-                                setattr(base_props.codec_support, codec_key, codec_value)
+                                setattr(
+                                    base_props.codec_support, codec_key, codec_value
+                                )
                     else:
                         setattr(base_props, key, value)
             self._tab_properties[instance_id][tab_id] = base_props
@@ -125,7 +155,12 @@ class PropertiesManager:
 
         logger.info(f"Updated properties for tab {tab_id} in instance {instance_id}")
 
-    def inject_properties(self, driver: WebDriver, properties: BrowserProperties | None = None, tab_id: str | None = None) -> None:
+    def inject_properties(
+        self,
+        driver: WebDriver,
+        properties: BrowserProperties | None = None,
+        tab_id: str | None = None,
+    ) -> None:
         """Inject browser properties into the current page."""
         if properties is None:
             properties = self._default_properties
@@ -135,13 +170,19 @@ class PropertiesManager:
 
         # Inject via CDP for persistence across navigation
         try:
-            driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": script})
-            logger.debug(f"Injected browser properties via CDP{f' for tab {tab_id}' if tab_id else ''}")
+            driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument", {"source": script}
+            )
+            logger.debug(
+                f"Injected browser properties via CDP{f' for tab {tab_id}' if tab_id else ''}"
+            )
         except Exception as e:
             logger.error(f"Failed to inject properties via CDP: {e}")
             raise
 
-    def apply_to_chrome_options(self, options: Any, properties: BrowserProperties | None = None) -> None:
+    def apply_to_chrome_options(
+        self, options: Any, properties: BrowserProperties | None = None
+    ) -> None:
         """Apply browser properties to Chrome options before launch."""
         if properties is None:
             properties = self._default_properties
@@ -169,7 +210,9 @@ class PropertiesManager:
 
         logger.debug("Applied browser properties to Chrome options")
 
-    def generate_extension_injection(self, properties: BrowserProperties | None = None) -> str:
+    def generate_extension_injection(
+        self, properties: BrowserProperties | None = None
+    ) -> str:
         """Generate injection script for the Chrome extension."""
         if properties is None:
             properties = self._default_properties
@@ -197,7 +240,15 @@ class PropertiesManager:
         # Add plugin spoofing if needed
         if properties.plugins:
             plugins_json = json.dumps(
-                [{"name": p.name, "filename": p.filename, "description": p.description, "mimeTypes": p.mime_types} for p in properties.plugins],
+                [
+                    {
+                        "name": p.name,
+                        "filename": p.filename,
+                        "description": p.description,
+                        "mimeTypes": p.mime_types,
+                    }
+                    for p in properties.plugins
+                ],
             )
             script += f"""
     // Plugin spoofing
@@ -212,13 +263,15 @@ class PropertiesManager:
 """
         return script
 
-    def update_extension_script(self, properties: BrowserProperties | None = None) -> None:
+    def update_extension_script(
+        self, properties: BrowserProperties | None = None
+    ) -> None:
         """Update the antidetect extension inject.js with current properties."""
         if properties is None:
             properties = self._default_properties
 
         # Path to extension inject.js
-        inject_path = Path(__file__).parent.parent / "extensions" / "antidetect" / "inject.js"
+        inject_path = MODULE_ROOT / "extensions" / "antidetect" / "inject.js"
 
         if not inject_path.exists():
             logger.warning(f"Extension inject.js not found at {inject_path}")
@@ -351,7 +404,9 @@ class PropertiesManager:
             del self._tab_properties[instance_id]
         logger.debug(f"Cleared properties for instance {instance_id}")
 
-    def export_properties(self, properties: BrowserProperties | None = None) -> dict[str, Any]:
+    def export_properties(
+        self, properties: BrowserProperties | None = None
+    ) -> dict[str, Any]:
         """Export properties as a dictionary."""
         if properties is None:
             properties = self._default_properties

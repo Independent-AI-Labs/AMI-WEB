@@ -39,7 +39,9 @@ class FrameController(BaseController):
                 # Validate index is within range
                 frames = await self.count_frames()
                 if frame >= frames:
-                    raise NavigationError(f"Frame index {frame} out of range (0-{frames - 1})")
+                    raise NavigationError(
+                        f"Frame index {frame} out of range (0-{frames - 1})"
+                    )
 
             await loop.run_in_executor(None, self.driver.switch_to.frame, frame)
 
@@ -205,7 +207,9 @@ class FrameController(BaseController):
                 count = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                count = await loop.run_in_executor(None, self.driver.execute_script, script)
+                count = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
 
             return int(count)
 
@@ -251,7 +255,9 @@ class FrameController(BaseController):
                 frames = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                frames = await loop.run_in_executor(None, self.driver.execute_script, script)
+                frames = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
 
             return frames or []
 
@@ -275,7 +281,9 @@ class FrameController(BaseController):
                 result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                result = await loop.run_in_executor(
+                    None, self.driver.execute_script, script
+                )
 
             return bool(result)
 
@@ -283,7 +291,9 @@ class FrameController(BaseController):
             logger.error(f"Failed to check frame context: {e}")
             return False
 
-    async def execute_in_frame(self, frame: int | str | WebElement, script: str, *args: Any) -> Any:
+    async def execute_in_frame(
+        self, frame: int | str | WebElement, script: str, *args: Any
+    ) -> Any:
         """Execute script in a specific frame and return to current context.
 
         Args:
@@ -309,7 +319,9 @@ class FrameController(BaseController):
                 result = self.driver.execute_script(script, *args)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script, *args)
+                result = await loop.run_in_executor(
+                    None, self.driver.execute_script, script, *args
+                )
 
             return result
 

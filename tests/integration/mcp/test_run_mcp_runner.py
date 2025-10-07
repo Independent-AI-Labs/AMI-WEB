@@ -32,7 +32,10 @@ async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
         env=None,
     )
 
-    async with stdio_client(server_params) as (read_stream, write_stream), ClientSession(read_stream, write_stream) as session:
+    async with stdio_client(server_params) as (
+        read_stream,
+        write_stream,
+    ), ClientSession(read_stream, write_stream) as session:
         # Initialize the connection and check server info
         result = await session.initialize()
         assert result.serverInfo.name == "ChromeMCPServer"
@@ -41,12 +44,19 @@ async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
         # Basic capability check: list tools and ensure key tools are present (V02 API)
         tools = await session.list_tools()
         tool_names = {t.name for t in tools.tools}
-        expected = {"browser_session", "browser_navigate", "browser_interact", "browser_capture"}
+        expected = {
+            "browser_session",
+            "browser_navigate",
+            "browser_interact",
+            "browser_capture",
+        }
         assert expected.issubset(tool_names)
 
         # Optional: if navigate is available, it should respond without a running instance
         if "browser_navigate" in tool_names:
-            res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
+            res = await session.call_tool(
+                "browser_navigate", arguments={"action": "get_url"}
+            )
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":
                 try:

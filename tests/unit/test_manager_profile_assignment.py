@@ -27,7 +27,9 @@ async def test_no_profile_uses_temp_profile(manager: ChromeManager) -> None:
     await manager.initialize()
 
     # Mock BrowserInstance to avoid actual browser launch
-    with patch("browser.backend.core.management.manager.BrowserInstance") as mock_instance_cls:
+    with patch(
+        "browser.backend.core.management.manager.BrowserInstance"
+    ) as mock_instance_cls:
         mock_instance = Mock()
         mock_instance.id = "test-instance"
         mock_instance._profile_name = None  # No profile (temp)
@@ -53,7 +55,9 @@ async def test_explicit_profile_uses_that_profile(manager: ChromeManager) -> Non
     """Test that explicitly specified profile is used."""
     await manager.initialize()
 
-    with patch("browser.backend.core.management.manager.BrowserInstance") as mock_instance_cls:
+    with patch(
+        "browser.backend.core.management.manager.BrowserInstance"
+    ) as mock_instance_cls:
         mock_instance = Mock()
         mock_instance.id = "test-instance"
         mock_instance._profile_name = "custom"
@@ -79,7 +83,9 @@ async def test_profile_disables_pooling(manager: ChromeManager) -> None:
     """Test that specifying a profile disables pool usage."""
     await manager.initialize()
 
-    with patch("browser.backend.core.management.manager.BrowserInstance") as mock_instance_cls:
+    with patch(
+        "browser.backend.core.management.manager.BrowserInstance"
+    ) as mock_instance_cls:
         mock_instance = Mock()
         mock_instance.id = "test-instance"
         mock_instance._profile_name = "test-profile"

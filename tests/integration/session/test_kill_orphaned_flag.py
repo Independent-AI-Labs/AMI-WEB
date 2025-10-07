@@ -28,7 +28,9 @@ async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
     # Create/recreate test-profile
     if "test-profile" in manager1.profile_manager.profiles:
         manager1.profile_manager.delete_profile("test-profile")
-    manager1.profile_manager.create_profile("test-profile", "Test profile for kill_orphaned tests")
+    manager1.profile_manager.create_profile(
+        "test-profile", "Test profile for kill_orphaned tests"
+    )
 
     # Launch with test-profile and KEEP reference to prevent garbage collection
     instance1 = await manager1.get_or_create_instance(
@@ -89,14 +91,18 @@ async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
 
     # Verify the error message mentions the lock and suggests kill_orphaned
     error_msg = str(exc_info.value)
-    assert "locked" in error_msg.lower() or "orphaned" in error_msg.lower() or "in use" in error_msg.lower()
+    assert (
+        "locked" in error_msg.lower()
+        or "orphaned" in error_msg.lower()
+        or "in use" in error_msg.lower()
+    )
 
     # Cleanup: Kill the orphaned process manually
     try:
         os.kill(chrome_pid, 9)
         print(f"✓ Cleaned up orphaned Chrome process {chrome_pid}")
     except ProcessLookupError:
-        pass
+        print(f"Process {chrome_pid} already terminated")
 
     # Clean up locks
     for lock_file in [
@@ -129,7 +135,9 @@ async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
     # Create/recreate test-profile
     if "test-profile" in manager1.profile_manager.profiles:
         manager1.profile_manager.delete_profile("test-profile")
-    manager1.profile_manager.create_profile("test-profile", "Test profile for kill_orphaned tests")
+    manager1.profile_manager.create_profile(
+        "test-profile", "Test profile for kill_orphaned tests"
+    )
 
     # Launch with test-profile and KEEP reference to prevent garbage collection
     instance1 = await manager1.get_or_create_instance(
@@ -221,7 +229,9 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
     # Create/recreate test-profile
     if "test-profile" in manager1.profile_manager.profiles:
         manager1.profile_manager.delete_profile("test-profile")
-    manager1.profile_manager.create_profile("test-profile", "Test profile for kill_orphaned tests")
+    manager1.profile_manager.create_profile(
+        "test-profile", "Test profile for kill_orphaned tests"
+    )
 
     instance1 = await manager1.get_or_create_instance(
         headless=True,
@@ -305,5 +315,7 @@ if __name__ == "__main__":
     # Note: These tests require data_dir fixture from pytest, cannot run standalone
     import sys
 
-    print("These tests require pytest fixtures. Run with: pytest test_kill_orphaned_flag.py")
+    print(
+        "These tests require pytest fixtures. Run with: pytest test_kill_orphaned_flag.py"
+    )
     sys.exit(1)

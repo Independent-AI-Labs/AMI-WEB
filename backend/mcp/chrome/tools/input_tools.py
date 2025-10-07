@@ -11,10 +11,16 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 
 
 async def browser_click_tool(
-    manager: ChromeManager, selector: str, button: str = "left", click_count: int = 1, instance_id: str | None = None
+    manager: ChromeManager,
+    selector: str,
+    button: str = "left",
+    click_count: int = 1,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Click on an element."""
-    logger.debug(f"Clicking element: {selector} with button={button}, count={click_count}, instance_id={instance_id}")
+    logger.debug(
+        f"Clicking element: {selector} with button={button}, count={click_count}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance:
@@ -27,7 +33,12 @@ async def browser_click_tool(
 
 
 async def browser_type_tool(
-    manager: ChromeManager, selector: str, text: str, clear: bool = False, delay: float = 0, instance_id: str | None = None
+    manager: ChromeManager,
+    selector: str,
+    text: str,
+    clear: bool = False,
+    delay: float = 0,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Type text into an element."""
     logger.debug(f"Typing into element: {selector}, instance_id={instance_id}")
@@ -44,7 +55,12 @@ async def browser_type_tool(
 
 
 async def browser_select_tool(
-    manager: ChromeManager, selector: str, value: str | None = None, index: int | None = None, label: str | None = None, instance_id: str | None = None
+    manager: ChromeManager,
+    selector: str,
+    value: str | None = None,
+    index: int | None = None,
+    label: str | None = None,
+    instance_id: str | None = None,
 ) -> BrowserResponse:
     """Select an option from a dropdown."""
     logger.debug(f"Selecting from dropdown: {selector}, instance_id={instance_id}")
@@ -62,12 +78,16 @@ async def browser_select_tool(
     elif label:
         await forms.select_option(selector, text=label)
     else:
-        return BrowserResponse(success=False, error="Must provide value, index, or label")
+        return BrowserResponse(
+            success=False, error="Must provide value, index, or label"
+        )
 
     return BrowserResponse(success=True, data={"status": "selected"})
 
 
-async def browser_hover_tool(manager: ChromeManager, selector: str, instance_id: str | None = None) -> BrowserResponse:
+async def browser_hover_tool(
+    manager: ChromeManager, selector: str, instance_id: str | None = None
+) -> BrowserResponse:
     """Hover over an element."""
     logger.debug(f"Hovering over element: {selector}, instance_id={instance_id}")
 
@@ -81,7 +101,12 @@ async def browser_hover_tool(manager: ChromeManager, selector: str, instance_id:
     return BrowserResponse(success=True, data={"status": "hovered"})
 
 
-async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", amount: int = 100, instance_id: str | None = None) -> BrowserResponse:
+async def browser_scroll_tool(
+    manager: ChromeManager,
+    direction: str = "down",
+    amount: int = 100,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Scroll page or element."""
     logger.debug(f"Scrolling {direction} by {amount}, instance_id={instance_id}")
 
@@ -101,9 +126,16 @@ async def browser_scroll_tool(manager: ChromeManager, direction: str = "down", a
     return BrowserResponse(success=True, data={"status": "scrolled"})
 
 
-async def browser_press_tool(manager: ChromeManager, key: str, modifiers: list[str | None] | None = None, instance_id: str | None = None) -> BrowserResponse:
+async def browser_press_tool(
+    manager: ChromeManager,
+    key: str,
+    modifiers: list[str | None] | None = None,
+    instance_id: str | None = None,
+) -> BrowserResponse:
     """Press keyboard keys."""
-    logger.debug(f"Pressing key: {key} with modifiers: {modifiers}, instance_id={instance_id}")
+    logger.debug(
+        f"Pressing key: {key} with modifiers: {modifiers}, instance_id={instance_id}"
+    )
 
     instance = await manager.get_instance_or_current(instance_id)
     if not instance:

@@ -21,7 +21,9 @@ class ContentExtractor(BaseController):
             if self._is_in_thread_context():
                 return str(self.driver.page_source)
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, lambda: str(self.driver.page_source) if self.driver else "")
+            return await loop.run_in_executor(
+                None, lambda: str(self.driver.page_source) if self.driver else ""
+            )
         except Exception as e:
             raise NavigationError(f"Failed to get page source: {e}") from e
 
@@ -42,7 +44,9 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            script = parameterized_js_execution("return document.querySelector({selector}).innerHTML", selector=selector)
+            script = parameterized_js_execution(
+                "return document.querySelector({selector}).innerHTML", selector=selector
+            )
             result = await self.execute_script(script)
             return str(result) if result is not None else ""
         except Exception as e:
@@ -61,7 +65,10 @@ class ContentExtractor(BaseController):
             raise NavigationError("Browser not initialized")
 
         try:
-            script = parameterized_js_execution("return document.querySelector({selector}).textContent", selector=selector)
+            script = parameterized_js_execution(
+                "return document.querySelector({selector}).textContent",
+                selector=selector,
+            )
             result = await self.execute_script(script)
             return str(result) if result is not None else ""
         except Exception as e:
@@ -153,12 +160,21 @@ class ContentExtractor(BaseController):
         """
 
         try:
-            result = await self.execute_script(script, selector, ellipsize_text_after, include_tag_names, skip_hidden, max_depth)
+            result = await self.execute_script(
+                script,
+                selector,
+                ellipsize_text_after,
+                include_tag_names,
+                skip_hidden,
+                max_depth,
+            )
             return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get text with tags: {e}") from e
 
-    async def execute_script(self, script: str, *args: Any, async_script: bool = False) -> Any:
+    async def execute_script(
+        self, script: str, *args: Any, async_script: bool = False
+    ) -> Any:
         """Execute JavaScript in the page context.
 
         Args:
@@ -180,12 +196,27 @@ class ContentExtractor(BaseController):
 
             loop = asyncio.get_event_loop()
             if async_script:
-                return await loop.run_in_executor(None, lambda: self.driver.execute_async_script(script, *args) if self.driver else None)
-            return await loop.run_in_executor(None, lambda: self.driver.execute_script(script, *args) if self.driver else None)
+                return await loop.run_in_executor(
+                    None,
+                    lambda: self.driver.execute_async_script(script, *args)
+                    if self.driver
+                    else None,
+                )
+            return await loop.run_in_executor(
+                None,
+                lambda: self.driver.execute_script(script, *args)
+                if self.driver
+                else None,
+            )
         except Exception as e:
             raise NavigationError(f"Failed to execute script: {e}") from e
 
-    async def get_html_with_depth_limit(self, max_depth: int | None = None, collapse_depth: int | None = None, ellipsize_text_after: int | None = None) -> str:
+    async def get_html_with_depth_limit(
+        self,
+        max_depth: int | None = None,
+        collapse_depth: int | None = None,
+        ellipsize_text_after: int | None = None,
+    ) -> str:
         """Get HTML with depth limitations to reduce size.
 
         Args:
@@ -248,25 +279,37 @@ class ContentExtractor(BaseController):
         """
 
         try:
-            result = await self.execute_script(script, max_depth, collapse_depth, ellipsize_text_after)
+            result = await self.execute_script(
+                script, max_depth, collapse_depth, ellipsize_text_after
+            )
             return str(result) if result is not None else ""
         except Exception as e:
             raise NavigationError(f"Failed to get HTML with depth limit: {e}") from e
 
-    async def get_parsed_html(self, max_depth: int | None = None, max_tokens: int = 25000) -> str:  # noqa: ARG002
+    async def get_parsed_html(
+        self, max_depth: int | None = None, max_tokens: int = 25000
+    ) -> str:
         """Get parsed and limited HTML suitable for LLM consumption.
 
         Args:
-            max_depth: Maximum depth to traverse
+            max_depth: Maximum depth to traverse (None = unlimited)
             max_tokens: Maximum tokens (approx 4 chars per token)
 
         Returns:
-            Parsed and limited HTML
+            Parsed and limited HTML, truncated if needed
         """
-        # Note: max_tokens and max_depth are not supported yet
-        # For now, just return the HTML as-is
-        # TODO: Implement token/depth limiting
-        return await self.get_page_source()
+        html = await self.get_page_source()
+
+        # Apply depth limiting if specified
+        if max_depth is not None:
+            html = await self.get_html_with_depth_limit(max_depth=max_depth)
+
+        # Apply token limiting (approx 4 chars per token)
+        max_chars = max_tokens * 4
+        if len(html) > max_chars:
+            html = html[:max_chars] + "\n<!-- Content truncated -->"
+
+        return html
 
     async def get_text(self) -> str:
         """Get the text content of the page.

@@ -46,7 +46,16 @@ def mock_instance() -> Mock:
     instance.driver = Mock()
     instance.driver.current_url = "https://example.com/test"
     instance.driver.title = "Test Page"
-    instance.driver.get_cookies = Mock(return_value=[{"name": "session", "value": "abc123", "secure": True, "domain": "example.com"}])
+    instance.driver.get_cookies = Mock(
+        return_value=[
+            {
+                "name": "session",
+                "value": "abc123",
+                "secure": True,
+                "domain": "example.com",
+            }
+        ]
+    )
     instance.driver.window_handles = ["handle1"]
     return instance
 
@@ -54,9 +63,9 @@ def mock_instance() -> Mock:
 @pytest.mark.asyncio
 async def test_save_https_session_with_default_profile(
     session_manager: SessionManager,
-    profile_manager: ProfileManager,
+    _profile_manager: ProfileManager,
     mock_instance: Mock,
-    profile_dir: Path,
+    _profile_dir: Path,
 ) -> None:
     """Test that saving HTTPS session with default profile persists correctly."""
     # Simulate browser instance created with default profile (new behavior)

@@ -69,7 +69,9 @@ class SessionManager:
         """Check if URL is a real page (not chrome:// or about:blank)."""
         return not ("chrome://" in url or "about:blank" in url or url == "data:,")
 
-    def _collect_tab_cookies(self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]) -> None:
+    def _collect_tab_cookies(
+        self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]
+    ) -> None:
         """Collect cookies from a tab if it's a real page."""
         if not tab_url.startswith(("http://", "https://")):
             return
@@ -78,40 +80,62 @@ class SessionManager:
             tab_cookies = driver.get_cookies()
             for cookie in tab_cookies:
                 cookie_key = (cookie.get("name"), cookie.get("domain"))
-                if not any((c.get("name"), c.get("domain")) == cookie_key for c in all_cookies):
+                if not any(
+                    (c.get("name"), c.get("domain")) == cookie_key for c in all_cookies
+                ):
                     all_cookies.append(cookie)
         except Exception as e:
             logger.warning(f"Failed to get cookies from tab {tab_url}: {e}")
 
-    def _determine_active_tab(self, tabs: list[dict[str, str]], current_handle: str | None, last_real_tab: str | None) -> str | None:
-        """Determine which tab is actually active based on current handle and real pages."""
+    def _determine_active_tab(
+        self, tabs: list[dict[str, str]], current_handle: str | None
+    ) -> str | None:
+        """Determine which tab is actually active - fails if state is ambiguous."""
         if not tabs:
             return None
 
-        current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None) if current_handle else None
+        if not current_handle:
+            from browser.backend.utils.exceptions import SessionError
 
-        if current_tab_data:
-            if self._is_real_page(current_tab_data["url"]):
-                return str(current_handle)
-            if last_real_tab:
-                return last_real_tab
-            return str(current_handle)
+            raise SessionError(
+                "No current window handle available - cannot determine active tab"
+            )
 
-        return last_real_tab if last_real_tab else (tabs[0]["handle"] if tabs else None)
+        current_tab_data = next(
+            (t for t in tabs if t["handle"] == str(current_handle)), None
+        )
 
-    def _get_active_tab_data(self, tabs: list[dict[str, str]], actual_active_tab: str | None) -> dict[str, str] | None:
-        """Get tab data for the active tab, with fallback to first real tab."""
-        if actual_active_tab and tabs:
+        if not current_tab_data:
+            from browser.backend.utils.exceptions import SessionError
+
+            raise SessionError(
+                f"Current window handle {current_handle} not found in tab list - browser state corrupted"
+            )
+
+        # Return the actual current handle - explicit failure on any ambiguity
+        return str(current_handle)
+
+    def _get_active_tab_data(
+        self, tabs: list[dict[str, str]], actual_active_tab: str | None
+    ) -> dict[str, str] | None:
+        """Get tab data for the active tab - fails if active tab not found."""
+        if not tabs:
+            return None
+
+        if actual_active_tab:
             tab_data = next((t for t in tabs if t["handle"] == actual_active_tab), None)
-            if tab_data:
-                return tab_data
+            if not tab_data:
+                from browser.backend.utils.exceptions import SessionError
 
-        # Fallback: use first non-chrome tab, or first tab
-        if tabs:
-            real_tabs = [t for t in tabs if self._is_real_page(t["url"])]
-            return real_tabs[0] if real_tabs else tabs[0]
+                raise SessionError(
+                    f"Active tab {actual_active_tab} not found in tab list - cannot save corrupted session state"
+                )
+            return tab_data
 
-        return None
+        # No active tab specified - fail explicitly
+        from browser.backend.utils.exceptions import SessionError
+
+        raise SessionError("No active tab specified - cannot determine session state")
 
     def _is_error_page(self, current_url: str, page_source: str) -> bool:
         """Check if we're on an error page."""
@@ -122,7 +146,9 @@ class SessionManager:
             or "your connection is not private" in page_source
         )
 
-    def _restore_cookies_to_tab(self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]) -> int:
+    def _restore_cookies_to_tab(
+        self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]
+    ) -> int:
         """Restore cookies to a single tab. Returns count of cookies restored."""
         # Navigate to domain root for cookie setting
         domain_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
@@ -140,19 +166,25 @@ class SessionManager:
         for cookie in cookies:
             cookie_domain = cookie.get("domain", "")
             if cookie_domain and (
-                parsed_url.netloc == cookie_domain.lstrip(".") or parsed_url.netloc.endswith(cookie_domain) or cookie_domain.lstrip(".") in parsed_url.netloc
+                parsed_url.netloc == cookie_domain.lstrip(".")
+                or parsed_url.netloc.endswith(cookie_domain)
+                or cookie_domain.lstrip(".") in parsed_url.netloc
             ):
                 try:
                     driver.add_cookie(cookie)
                     count += 1
                 except Exception as e:
-                    logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
+                    logger.warning(
+                        f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}"
+                    )
 
         # Navigate back to the actual tab URL
         driver.get(tab_url)
         return count
 
-    def _restore_all_tabs(self, driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
+    def _restore_all_tabs(
+        self, driver: Any, tabs: list[dict[str, str]]
+    ) -> dict[str, str]:
         """Restore all tabs from session data. Returns mapping of old handles to new handles."""
         handle_mapping = {}
 
@@ -172,7 +204,13 @@ class SessionManager:
 
         return handle_mapping
 
-    def _restore_all_cookies(self, driver: Any, tabs: list[dict[str, str]], handle_mapping: dict[str, str], cookies: list[dict[str, Any]]) -> int:
+    def _restore_all_cookies(
+        self,
+        driver: Any,
+        tabs: list[dict[str, str]],
+        handle_mapping: dict[str, str],
+        cookies: list[dict[str, Any]],
+    ) -> int:
         """Restore cookies to all tabs. Returns total count of cookies restored."""
         total = 0
         for tab in tabs:
@@ -195,7 +233,12 @@ class SessionManager:
 
         return total
 
-    async def save_session(self, instance: "BrowserInstance", name: str | None = None, profile_override: str | None = None) -> str:
+    async def save_session(
+        self,
+        instance: "BrowserInstance",
+        name: str | None = None,
+        profile_override: str | None = None,
+    ) -> str:
         """Save a browser session.
 
         Args:
@@ -211,13 +254,14 @@ class SessionManager:
         session_dir.mkdir(exist_ok=True)
 
         # Use profile_override if provided, otherwise use instance profile
-        session_profile = profile_override if profile_override is not None else instance._profile_name
+        session_profile = (
+            profile_override if profile_override is not None else instance._profile_name
+        )
 
         # Capture all tabs
         tabs = []
         current_handle = None
         actual_active_tab = None  # The tab user is actually viewing
-        last_real_tab = None  # Fallback: last real page we saw
         all_cookies: list[dict[str, Any]] = []  # Collect cookies from ALL tabs
         if instance.driver:
             try:
@@ -243,14 +287,12 @@ class SessionManager:
                         # Collect cookies from this tab
                         self._collect_tab_cookies(instance.driver, tab_url, all_cookies)
 
-                        # Track the last real page we see (for fallback)
-                        if self._is_real_page(tab_url):
-                            last_real_tab = str(handle)
-
                     except Exception as e:
-                        logger.warning(f"Failed to capture tab {handle}: {e}")
-                        # Use fallback values if we couldn't get tab state
-                        handle_states[handle] = ("about:blank", "")
+                        from browser.backend.utils.exceptions import SessionError
+
+                        raise SessionError(
+                            f"Failed to capture tab {handle}: {e} - cannot save incomplete session"
+                        ) from e
 
                 # Build tabs list from captured state
                 for handle in all_handles:
@@ -258,16 +300,20 @@ class SessionManager:
                     tabs.append({"handle": str(handle), "url": url, "title": title})
 
                 # Determine which tab is actually active
-                actual_active_tab = self._determine_active_tab(tabs, original_handle, last_real_tab)
+                actual_active_tab = self._determine_active_tab(tabs, original_handle)
 
                 # Switch back to the original active tab
                 if original_handle and original_handle in all_handles:
                     instance.driver.switch_to.window(original_handle)
-                elif actual_active_tab and actual_active_tab in [str(h) for h in all_handles]:
+                elif actual_active_tab and actual_active_tab in [
+                    str(h) for h in all_handles
+                ]:
                     instance.driver.switch_to.window(actual_active_tab)
 
             except Exception as e:
-                logger.warning(f"Failed to capture all tabs: {e}. Falling back to single tab capture.")
+                logger.warning(
+                    f"Failed to capture all tabs: {e}. Falling back to single tab capture."
+                )
                 # If something goes wrong, use current handle
                 actual_active_tab = str(current_handle) if current_handle else None
 
@@ -282,10 +328,16 @@ class SessionManager:
             "name": name or f"session_{session_id[:8]}",
             "created_at": datetime.now().isoformat(),
             "profile": session_profile,
-            "url": active_tab_data["url"] if active_tab_data else (instance.driver.current_url if instance.driver else None),
-            "title": active_tab_data["title"] if active_tab_data else (instance.driver.title if instance.driver else None),
+            "url": active_tab_data["url"]
+            if active_tab_data
+            else (instance.driver.current_url if instance.driver else None),
+            "title": active_tab_data["title"]
+            if active_tab_data
+            else (instance.driver.title if instance.driver else None),
             "cookies": all_cookies,  # All cookies from all tabs
-            "window_handles": len(instance.driver.window_handles) if instance.driver else 0,
+            "window_handles": len(instance.driver.window_handles)
+            if instance.driver
+            else 0,
             "tabs": tabs,
             "active_tab_handle": actual_active_tab,
         }
@@ -308,7 +360,53 @@ class SessionManager:
         logger.info(f"Saved session {session_id}")
         return session_id
 
-    async def restore_session(  # noqa: C901
+    def _load_session_data(self, session_id: str) -> dict[str, Any]:
+        """Load and validate session data from disk."""
+        if session_id not in self.sessions:
+            raise SessionError(f"Session {session_id} not found")
+
+        session_file = self.session_dir / session_id / "session.json"
+        if not session_file.exists():
+            raise SessionError(f"Session file not found for {session_id}")
+
+        with session_file.open() as f:
+            data: dict[str, Any] = json.load(f)
+            return data
+
+    def _restore_tabs_format(
+        self,
+        driver: Any,
+        session_data: dict[str, Any],
+    ) -> None:
+        """Restore session using new multi-tab format."""
+        tabs = session_data.get("tabs", [])
+        active_tab_handle = session_data.get("active_tab_handle")
+
+        if not tabs:
+            return
+
+        # Restore all tabs first
+        handle_mapping = self._restore_all_tabs(driver, tabs)
+
+        # Restore cookies to ALL tabs that can accept them
+        if session_data.get("cookies"):
+            cookies_restored = self._restore_all_cookies(
+                driver, tabs, handle_mapping, session_data["cookies"]
+            )
+            logger.info(
+                f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies"
+            )
+
+        # Switch to the originally active tab
+        if active_tab_handle and active_tab_handle in handle_mapping:
+            driver.switch_to.window(handle_mapping[active_tab_handle])
+            logger.info(
+                f"Restored {len(tabs)} tabs and switched to original active tab"
+            )
+        else:
+            logger.info(f"Restored {len(tabs)} tabs")
+
+    async def restore_session(
         self,
         session_id: str,
         manager: "ChromeManager",
@@ -328,84 +426,31 @@ class SessionManager:
         Returns:
             A new browser instance with the restored session
         """
-        if session_id not in self.sessions:
-            raise SessionError(f"Session {session_id} not found")
-
-        session_dir = self.session_dir / session_id
-        session_file = session_dir / "session.json"
-
-        if not session_file.exists():
-            raise SessionError(f"Session file not found for {session_id}")
-
         # Load session data
-        with session_file.open() as f:
-            session_data = json.load(f)
+        session_data = self._load_session_data(session_id)
 
-        # Use override profile if provided, otherwise use saved profile
-        profile_name = profile_override if profile_override is not None else session_data.get("profile")
+        # Determine profile to use
+        profile_name = (
+            profile_override
+            if profile_override is not None
+            else session_data.get("profile")
+        )
         if profile_override is not None:
-            logger.info(f"Overriding saved profile with '{profile_override}' for session {session_id}")
+            logger.info(
+                f"Overriding saved profile with '{profile_override}' for session {session_id}"
+            )
 
-        # Use headless override if provided, otherwise default to False (interactive)
+        # Create browser instance
         use_headless = headless if headless is not None else False
-
         instance = await manager.get_or_create_instance(
             profile=profile_name,
             headless=use_headless,
             kill_orphaned=kill_orphaned,
         )
 
-        # Restore the session state
+        # Restore session state
         if instance.driver:
-            # Restore all tabs
-            tabs = session_data.get("tabs", [])
-            active_tab_handle = session_data.get("active_tab_handle")
-
-            if tabs:
-                # Restore all tabs first
-                handle_mapping = self._restore_all_tabs(instance.driver, tabs)
-
-                # Now restore cookies to ALL tabs that can accept them
-                if session_data.get("cookies"):
-                    cookies_restored_total = self._restore_all_cookies(instance.driver, tabs, handle_mapping, session_data["cookies"])
-                    logger.info(f"Restored {cookies_restored_total}/{len(session_data['cookies'])} cookies")
-
-                # Switch to the originally active tab
-                if active_tab_handle and active_tab_handle in handle_mapping:
-                    instance.driver.switch_to.window(handle_mapping[active_tab_handle])
-                    logger.info(f"Restored {len(tabs)} tabs and switched to original active tab")
-                else:
-                    logger.info(f"Restored {len(tabs)} tabs")
-            else:
-                # Old format: single URL
-                saved_url = session_data.get("url")
-                if session_data.get("cookies") and saved_url:
-                    parsed = urlparse(saved_url)
-                    domain_url = f"{parsed.scheme}://{parsed.netloc}/"
-                    instance.driver.get(domain_url)
-
-                    current_url = instance.driver.current_url
-                    page_source = instance.driver.page_source.lower() if instance.driver.page_source else ""
-
-                    is_error_page = (
-                        "data:text/html,chromewebdata" in current_url
-                        or "chrome-error:" in current_url
-                        or "net::err_cert" in page_source
-                        or "your connection is not private" in page_source
-                    )
-
-                    if not is_error_page:
-                        cookies_restored = 0
-                        for cookie in session_data["cookies"]:
-                            try:
-                                instance.driver.add_cookie(cookie)
-                                cookies_restored += 1
-                            except Exception as e:
-                                logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
-                        logger.info(f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies")
-
-                if saved_url:
-                    instance.driver.get(saved_url)
+            self._restore_tabs_format(instance.driver, session_data)
 
         logger.info(f"Restored session {session_id} with profile {profile_name}")
         return instance

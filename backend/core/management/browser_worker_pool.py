@@ -159,15 +159,21 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
 
             # CRITICAL CHANGE: Only close extra tabs if explicitly configured
             # This prevents silent tab loss that was the root cause of the bug
-            close_tabs = self._browser_config.get("backend.pool.close_tabs_on_hibernation", False)
+            close_tabs = self._browser_config.get(
+                "backend.pool.close_tabs_on_hibernation", False
+            )
             if close_tabs and len(handles) > 1:
-                logger.warning(f"Closing {len(handles) - 1} tabs during hibernation for worker {worker.id}")
+                logger.warning(
+                    f"Closing {len(handles) - 1} tabs during hibernation for worker {worker.id}"
+                )
                 for handle in handles[1:]:
                     worker.instance.driver.switch_to.window(handle)
                     worker.instance.driver.close()
                 worker.instance.driver.switch_to.window(handles[0])
             elif len(handles) > 1:
-                logger.info(f"Preserving {len(handles)} tabs during hibernation for worker {worker.id}")
+                logger.info(
+                    f"Preserving {len(handles)} tabs during hibernation for worker {worker.id}"
+                )
 
             # Clean up temporary profile directory to prevent resource leaks
             worker.instance._options_builder.cleanup_temp_profile()
@@ -218,7 +224,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
     def _store_worker_instance(self, worker_id: str, worker: BrowserWorker) -> None:
         """Store a worker instance."""
         self._workers[worker_id] = worker
-        logger.debug(f"Stored worker {worker_id} in pool, total workers: {len(self._workers)}")
+        logger.debug(
+            f"Stored worker {worker_id} in pool, total workers: {len(self._workers)}"
+        )
 
     async def _reset_worker(self, worker: BrowserWorker) -> None:
         """Reset a worker to clean state."""
@@ -229,7 +237,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
         """Destroy a worker."""
         await self._cleanup_worker(worker)
 
-    async def acquire_browser(self, _options: ChromeOptions | None = None) -> BrowserInstance:
+    async def acquire_browser(
+        self, _options: ChromeOptions | None = None
+    ) -> BrowserInstance:
         """Acquire a browser instance from the pool (convenience method).
 
         Args:
@@ -239,7 +249,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             A browser instance from the pool
         """
         # Determine acquire timeout: prefer explicit backend.pool.acquire_timeout, otherwise use PoolConfig default
-        timeout = self._browser_config.get("backend.pool.acquire_timeout", self.config.acquire_timeout)
+        timeout = self._browser_config.get(
+            "backend.pool.acquire_timeout", self.config.acquire_timeout
+        )
 
         # Get a worker from the pool
         worker_id = await self.acquire_worker(timeout=timeout)
@@ -264,7 +276,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
                 break
 
         if worker:
-            logger.debug(f"Found worker {worker.id} for instance {instance_id}, releasing...")
+            logger.debug(
+                f"Found worker {worker.id} for instance {instance_id}, releasing..."
+            )
             await self.release_worker(worker.id)
             logger.debug(f"Released worker {worker.id}")
         else:
@@ -282,7 +296,9 @@ class BrowserWorkerPool(WorkerPool[BrowserWorker, Any]):
             logger.debug(f"Attempted to retire unknown browser instance {instance_id}")
             return
 
-        logger.warning(f"Retiring browser worker {instance_id} after invalid session detected")
+        logger.warning(
+            f"Retiring browser worker {instance_id} after invalid session detected"
+        )
         await self._remove_worker(worker.id)
 
         # Ensure we still meet the minimum warm pool size

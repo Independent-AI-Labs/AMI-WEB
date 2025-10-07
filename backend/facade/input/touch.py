@@ -13,7 +13,9 @@ from browser.backend.utils.exceptions import InputError
 class TouchController(BaseController):
     """Handles touch gestures and mobile interactions."""
 
-    async def zoom(self, scale: float, center_x: int | None = None, center_y: int | None = None) -> None:
+    async def zoom(
+        self, scale: float, center_x: int | None = None, center_y: int | None = None
+    ) -> None:
         """Perform a zoom gesture using JavaScript.
 
         Args:
@@ -29,7 +31,11 @@ class TouchController(BaseController):
 
             # Get viewport dimensions if center not specified
             if center_x is None or center_y is None:
-                viewport = await loop.run_in_executor(None, self.driver.execute_script, "return {width: window.innerWidth, height: window.innerHeight}")
+                viewport = await loop.run_in_executor(
+                    None,
+                    self.driver.execute_script,
+                    "return {width: window.innerWidth, height: window.innerHeight}",
+                )
                 center_x = center_x or viewport["width"] // 2
                 center_y = center_y or viewport["height"] // 2
 
@@ -52,7 +58,9 @@ class TouchController(BaseController):
             logger.error(f"Zoom failed: {e}")
             raise InputError(f"Failed to zoom: {e}") from e
 
-    async def pinch_zoom(self, scale: float, center_x: int | None = None, center_y: int | None = None) -> None:
+    async def pinch_zoom(
+        self, scale: float, center_x: int | None = None, center_y: int | None = None
+    ) -> None:
         """Simulate a pinch zoom gesture (for touch-enabled pages).
 
         Args:
@@ -68,7 +76,11 @@ class TouchController(BaseController):
 
             # Get viewport center if not specified
             if center_x is None or center_y is None:
-                viewport = await loop.run_in_executor(None, self.driver.execute_script, "return {width: window.innerWidth, height: window.innerHeight}")
+                viewport = await loop.run_in_executor(
+                    None,
+                    self.driver.execute_script,
+                    "return {width: window.innerWidth, height: window.innerHeight}",
+                )
                 center_x = center_x or viewport["width"] // 2
                 center_y = center_y or viewport["height"] // 2
 
@@ -150,7 +162,9 @@ class TouchController(BaseController):
             logger.error(f"Pinch zoom failed: {e}")
             raise InputError(f"Failed to pinch zoom: {e}") from e
 
-    async def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.3) -> None:
+    async def swipe(
+        self, start_x: int, start_y: int, end_x: int, end_y: int, duration: float = 0.3
+    ) -> None:
         """Perform a swipe gesture.
 
         Args:

@@ -12,7 +12,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from browser.backend.core.browser.tab_manager import TabManager
-from browser.backend.core.security.antidetect import ChromeDriverPatcher, execute_anti_detection_scripts
+from browser.backend.core.security.antidetect import (
+    ChromeDriverPatcher,
+    execute_anti_detection_scripts,
+)
 from browser.backend.core.security.tab_injector import SimpleTabInjector
 from browser.backend.models.browser import BrowserStatus
 from browser.backend.models.security import SecurityConfig, SecurityLevel
@@ -32,7 +35,12 @@ PROCESS_TERMINATION_TIMEOUT = 5  # seconds
 class BrowserLifecycle:
     """Manages browser lifecycle - launch, terminate, restart."""
 
-    def __init__(self, instance_id: str, config: Config | None = None, security_config: SecurityConfig | None = None):
+    def __init__(
+        self,
+        instance_id: str,
+        config: Config | None = None,
+        security_config: SecurityConfig | None = None,
+    ):
         self.instance_id = instance_id
         self.driver: WebDriver | None = None
         self.status = BrowserStatus.IDLE
@@ -50,15 +58,22 @@ class BrowserLifecycle:
         else:
             # Load from config or use default
             security_level = self._config.get("backend.security.level", "standard")
-            self._security_config = SecurityConfig.from_level(SecurityLevel(security_level))
+            self._security_config = SecurityConfig.from_level(
+                SecurityLevel(security_level)
+            )
 
-    async def launch(self, chrome_options: Options, anti_detect: bool = False) -> WebDriver:
+    async def launch(
+        self, chrome_options: Options, anti_detect: bool = False
+    ) -> WebDriver:
         """Launch the browser with given options."""
         try:
             self.status = BrowserStatus.STARTING
 
             # Store launch options for restart
-            self._launch_options = {"options": chrome_options, "anti_detect": anti_detect}
+            self._launch_options = {
+                "options": chrome_options,
+                "anti_detect": anti_detect,
+            }
 
             # Launch based on mode
             if anti_detect:
@@ -77,7 +92,9 @@ class BrowserLifecycle:
             # Setup tab injection monitor if anti-detect
             if anti_detect and driver:
                 self.window_monitor = SimpleTabInjector(driver)
-                logger.debug(f"Tab injection monitor setup for instance {self.instance_id}")
+                logger.debug(
+                    f"Tab injection monitor setup for instance {self.instance_id}"
+                )
 
             logger.info(f"Browser instance {self.instance_id} launched successfully")
             return driver
@@ -113,13 +130,18 @@ class BrowserLifecycle:
                     logger.error("Failed to patch ChromeDriver")
             else:
                 patched_driver_path = str(patcher.get_patched_path())
-                logger.info(f"Using already patched ChromeDriver: {patched_driver_path}")
+                logger.info(
+                    f"Using already patched ChromeDriver: {patched_driver_path}"
+                )
         # Create service and driver (explicit path required; do not rely on PATH)
         if not patched_driver_path:
             raise InstanceError("ChromeDriver path is not set after patching")
         self._service = Service(executable_path=patched_driver_path)
         try:
-            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+            driver = await loop.run_in_executor(
+                None,
+                lambda: webdriver.Chrome(service=self._service, options=chrome_options),
+            )
         except WebDriverException as e:
             logger.error(f"Chrome launch failed: {e}")
             raise
@@ -150,7 +172,10 @@ class BrowserLifecycle:
             raise InstanceError("ChromeDriver path is not set")
         self._service = Service(executable_path=chromedriver_path)
         try:
-            driver = await loop.run_in_executor(None, lambda: webdriver.Chrome(service=self._service, options=chrome_options))
+            driver = await loop.run_in_executor(
+                None,
+                lambda: webdriver.Chrome(service=self._service, options=chrome_options),
+            )
         except WebDriverException as e:
             logger.error(f"Chrome launch failed: {e}")
             raise
@@ -161,34 +186,30 @@ class BrowserLifecycle:
 
         return driver
 
-    def _ensure_chrome_ready(self) -> tuple[str, str]:  # noqa: C901
+    def _ensure_chrome_ready(self) -> tuple[str, str]:
         """Ensure Chrome and ChromeDriver are available and return their paths.
 
         Paths must be configured explicitly in browser/config.yaml. This helper verifies
         they exist and refuses to launch when binaries are missing so operators can take
         corrective action (for example by running browser/scripts/setup_chrome.py).
         """
-        # Resolve module root
         # Load configured paths
         chrome_binary_path = self._config.get("backend.browser.chrome_binary_path")
         chromedriver_path = self._config.get("backend.browser.chromedriver_path")
 
-        def exists(p: str | None) -> bool:
-            return bool(p) and Path(str(p)).exists()
-
-        # If any are missing, stop immediately so the operator can provision binaries
-        if not exists(chrome_binary_path) or not exists(chromedriver_path):
+        # Validate Chrome binary
+        if not chrome_binary_path or not Path(str(chrome_binary_path)).exists():
             raise InstanceError(
-                "Chrome or ChromeDriver path not configured. Configure 'backend.browser.chrome_binary_path' "
-                "and 'backend.browser.chromedriver_path', then run browser/scripts/setup_chrome.py if you need to "
-                "install managed binaries."
+                f"Chrome binary not found: {chrome_binary_path}. "
+                "Configure 'backend.browser.chrome_binary_path' and run browser/scripts/setup_chrome.py"
             )
 
-        # Validate final paths
-        if not exists(chrome_binary_path):
-            raise InstanceError(f"Chrome binary not found: {chrome_binary_path}")
-        if not exists(chromedriver_path):
-            raise InstanceError(f"ChromeDriver not found: {chromedriver_path}")
+        # Validate ChromeDriver
+        if not chromedriver_path or not Path(str(chromedriver_path)).exists():
+            raise InstanceError(
+                f"ChromeDriver not found: {chromedriver_path}. "
+                "Configure 'backend.browser.chromedriver_path' and run browser/scripts/setup_chrome.py"
+            )
 
         return str(chrome_binary_path), str(chromedriver_path)
 
@@ -209,7 +230,9 @@ class BrowserLifecycle:
             if not force:
                 try:
                     self.driver.quit()
-                    logger.debug(f"Browser instance {self.instance_id} terminated gracefully")
+                    logger.debug(
+                        f"Browser instance {self.instance_id} terminated gracefully"
+                    )
                 except Exception as e:
                     logger.warning(f"Graceful quit failed: {e}, forcing termination")
                     force = True
@@ -218,7 +241,9 @@ class BrowserLifecycle:
             if self._service:
                 try:
                     self._service.stop()
-                    logger.debug(f"ChromeDriver service stopped for instance {self.instance_id}")
+                    logger.debug(
+                        f"ChromeDriver service stopped for instance {self.instance_id}"
+                    )
                 except Exception as e:
                     logger.error(f"Failed to stop ChromeDriver service: {e}")
 
@@ -237,7 +262,9 @@ class BrowserLifecycle:
             return None
 
         await self.terminate()
-        return await self.launch(self._launch_options["options"], self._launch_options["anti_detect"])
+        return await self.launch(
+            self._launch_options["options"], self._launch_options["anti_detect"]
+        )
 
     def is_alive(self) -> bool:
         """Check if browser is still alive."""

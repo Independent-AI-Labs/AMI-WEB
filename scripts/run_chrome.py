@@ -7,30 +7,22 @@ import argparse
 import sys
 from pathlib import Path
 
+from base.backend.utils.standard_imports import setup_imports
 
-def _ensure_repo_on_path() -> None:
-    current = Path(__file__).resolve().parent
-    while current != current.parent:
-        if (current / ".git").exists() and (current / "base").exists():
-            sys.path.insert(0, str(current))
-            return
-        current = current.parent
+ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: E402
 
 
 def main() -> None:
-    _ensure_repo_on_path()
-
-    from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: PLC0415
-
     ensure_module_venv(Path(__file__))
 
     # Configure loguru to write to stderr instead of stdout (MCP uses stdout for JSON-RPC)
-    from loguru import logger  # noqa: PLC0415
-
     logger.remove()  # Remove default handler
     logger.add(sys.stderr, level="DEBUG")  # Add stderr handler
-
-    from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(description="Chrome MCP Server")
     parser.add_argument(
@@ -53,9 +45,8 @@ def main() -> None:
     if args.data_root:
         data_root = Path(args.data_root).resolve()
     else:
-        # Default: find browser module and use browser/data
-        script_path = Path(__file__).resolve()
-        browser_root = script_path.parent.parent
+        # Default: browser module data directory
+        browser_root = ORCHESTRATOR_ROOT / "browser"
         data_root = browser_root / "data"
 
     server = ChromeFastMCPServer(data_root=data_root)
