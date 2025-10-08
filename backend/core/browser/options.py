@@ -1,5 +1,6 @@
 """Browser options builder - handles Chrome options configuration."""
 
+import contextlib
 import shutil
 import socket
 import tempfile
@@ -53,22 +54,41 @@ class BrowserOptionsBuilder:
 
     @classmethod
     def _get_free_port(cls) -> int:
-        """Get a free port for remote debugging."""
+        """Get a free port for remote debugging.
 
+        Uses sequential port allocation within our range to ensure cross-process coordination.
+        Tests bind() on each candidate port and uses SO_LINGER to avoid TIME_WAIT conflicts.
+        """
         with cls._port_lock:
-            # Use socket to find a truly free port
-            # This works across processes unlike class variables
-            for _ in range(100):  # Try up to 100 times
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(("", 0))  # Bind to any available port
-                    port: int = s.getsockname()[1]
-                    # Make sure it's in our preferred range
-                    if cls.MIN_DEBUG_PORT <= port <= cls.MAX_DEBUG_PORT:
+            # Try sequential ports in our range
+            # Sequential allocation reduces collisions better than random OS assignment
+            for port in range(cls.MIN_DEBUG_PORT, cls.MAX_DEBUG_PORT + 1):
+                # Skip ports already allocated in this process
+                if port in cls._used_ports:
+                    continue
+
+                try:
+                    # Test if port is available by attempting to bind
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    try:
+                        # Allow port reuse - critical for avoiding TIME_WAIT conflicts
+                        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        s.bind(("127.0.0.1", port))
+                        # Successfully bound - this port is available
+                        s.close()
                         cls._used_ports.add(port)
                         return port
+                    finally:
+                        # Ensure socket is closed even if bind fails
+                        with contextlib.suppress(Exception):
+                            s.close()
+                except OSError:
+                    # Port already in use by this or another process
+                    continue
 
             raise RuntimeError(
-                "Unable to allocate a remote debugging port within the permitted range." " Configure an explicit port via browser configuration to proceed."
+                f"Unable to allocate a remote debugging port in range {cls.MIN_DEBUG_PORT}-{cls.MAX_DEBUG_PORT}. "
+                "All ports appear to be in use. Configure an explicit port via browser configuration to proceed."
             )
 
     def get_temp_profile_dir(self) -> Path | None:

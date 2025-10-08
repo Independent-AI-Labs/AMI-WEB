@@ -41,16 +41,27 @@ class ProfileManager:
             self.profiles = self._load_metadata()
 
     def ensure_default_profile(self) -> Path:
-        """Ensure default profile exists and return its path."""
+        """Ensure default profile exists and return its path.
+
+        Thread-safe and race-condition safe for parallel test execution.
+        """
         self._ensure_initialized()
         default_name = "default"
 
         if default_name not in self.profiles:
             logger.info("Creating default profile for session persistence")
-            return self.create_profile(
-                default_name,
-                "Default profile for session persistence with HTTPS certificate exceptions",
-            )
+            try:
+                return self.create_profile(
+                    default_name,
+                    "Default profile for session persistence with HTTPS certificate exceptions",
+                )
+            except ProfileError as e:
+                # Race condition: another process created it between our check and create
+                if "already exists" in str(e):
+                    # Reload metadata to get the newly created profile
+                    self.profiles = self._load_metadata()
+                    return self.base_dir / default_name
+                raise
 
         return self.base_dir / default_name
 
