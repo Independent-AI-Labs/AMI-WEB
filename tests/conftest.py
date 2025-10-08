@@ -25,9 +25,10 @@ from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from browser.tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
-# Configure logging
+# Configure logging for pytest-xdist parallel execution
+# Use diagnose=False to suppress internal loguru errors during pytest teardown
 logger.remove()
-logger.add(sys.stderr, level="INFO")
+logger.add(sys.stderr, level="INFO", enqueue=True, catch=True, diagnose=False)
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
