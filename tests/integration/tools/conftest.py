@@ -1,4 +1,5 @@
 """Shared fixtures for MCP tool tests."""
+
 import os
 
 # Test configuration

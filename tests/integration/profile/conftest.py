@@ -1,4 +1,5 @@
 """Shared fixtures for profile management tests."""
+
 import os
 from collections.abc import AsyncIterator
 

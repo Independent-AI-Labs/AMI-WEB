@@ -26,10 +26,13 @@ class TestChromeFastMCPServer:
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
         # Use the stdio client to connect
-        async with stdio_client(server_params) as (
-            read_stream,
-            write_stream,
-        ), ClientSession(read_stream, write_stream) as session:
+        async with (
+            stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
+        ):
             # Initialize the connection
             result = await session.initialize()
 
@@ -60,10 +63,13 @@ class TestChromeFastMCPServer:
         venv_python = get_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
-        async with stdio_client(server_params) as (
-            read_stream,
-            write_stream,
-        ), ClientSession(read_stream, write_stream) as session:
+        async with (
+            stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
+        ):
             # Initialize
             await session.initialize()
 
@@ -116,10 +122,13 @@ class TestChromeFastMCPServer:
         venv_python = get_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
-        async with stdio_client(server_params) as (
-            read_stream,
-            write_stream,
-        ), ClientSession(read_stream, write_stream) as session:
+        async with (
+            stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
+        ):
             # Initialize
             await session.initialize()
 
@@ -253,10 +262,13 @@ class TestChromeFastMCPServer:
         venv_python = get_venv_python(browser_root)
         server_params = StdioServerParameters(command=str(venv_python), args=["-u", str(server_script)], env=None)
 
-        async with stdio_client(server_params) as (
-            read_stream,
-            write_stream,
-        ), ClientSession(read_stream, write_stream) as session:
+        async with (
+            stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
+        ):
             # Initialize
             await session.initialize()
 

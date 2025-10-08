@@ -32,10 +32,13 @@ async def test_run_mcp_chrome_stdio_client(browser_root: Path) -> None:
         env=None,
     )
 
-    async with stdio_client(server_params) as (
-        read_stream,
-        write_stream,
-    ), ClientSession(read_stream, write_stream) as session:
+    async with (
+        stdio_client(server_params) as (
+            read_stream,
+            write_stream,
+        ),
+        ClientSession(read_stream, write_stream) as session,
+    ):
         # Initialize the connection and check server info
         result = await session.initialize()
         assert result.serverInfo.name == "ChromeMCPServer"

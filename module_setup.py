@@ -49,13 +49,9 @@ def sync_dependencies(module_root: Path) -> bool:
 
 
 def install_precommit(module_root: Path) -> None:
-    """Install pre-commit hooks if config exists."""
-    cfg = module_root / ".pre-commit-config.yaml"
-    if not cfg.exists():
-        return
-    logger.info("Installing pre-commit hooks...")
-    subprocess.run(["uv", "run", "pre-commit", "install"], cwd=module_root, check=False)
-    subprocess.run(["uv", "run", "pre-commit", "install", "--hook-type", "pre-push"], cwd=module_root, check=False)
+    """Native git hooks are installed via propagate.py script."""
+    # Native hooks are managed by base/scripts/meta/propagate.py
+    # They are automatically installed during propagation
 
 
 def setup(module_root: Path, project_name: str | None) -> int:

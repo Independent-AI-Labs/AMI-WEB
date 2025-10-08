@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from browser.backend.core.management.manager import ChromeManager
+from browser.backend.mcp.chrome.tools.javascript_tools import browser_execute_tool
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
@@ -33,7 +34,6 @@ async def test_window_open_blank_is_blocked(worker_data_dirs: dict[str, Path]) -
     await asyncio.sleep(0.5)
 
     # Try to execute forbidden window.open script
-    from browser.backend.mcp.chrome.tools.javascript_tools import browser_execute_tool
 
     script = "window.open('https://reddit.com', '_blank')"
     result = await browser_execute_tool(manager, script)
@@ -74,7 +74,6 @@ async def test_safe_script_is_allowed(worker_data_dirs: dict[str, Path]) -> None
     await asyncio.sleep(0.5)
 
     # Try to execute safe script
-    from browser.backend.mcp.chrome.tools.javascript_tools import browser_execute_tool
 
     script = "return document.title"
     result = await browser_execute_tool(manager, script)
@@ -110,7 +109,6 @@ async def test_window_close_is_blocked(worker_data_dirs: dict[str, Path]) -> Non
     await asyncio.sleep(0.5)
 
     # Try to execute forbidden window.close script
-    from browser.backend.mcp.chrome.tools.javascript_tools import browser_execute_tool
 
     script = "window.close()"
     result = await browser_execute_tool(manager, script)

@@ -24,10 +24,13 @@ async def test_client_error_handling(browser_root: Path) -> None:
     server_params = StdioServerParameters(command=str(venv_python), args=["-c", "import sys; sys.exit(1)"], env=None)
 
     with pytest.raises((McpError, ExceptionGroup)):
-        async with stdio_client(server_params) as (
-            read_stream,
-            write_stream,
-        ), ClientSession(read_stream, write_stream) as session:
+        async with (
+            stdio_client(server_params) as (
+                read_stream,
+                write_stream,
+            ),
+            ClientSession(read_stream, write_stream) as session,
+        ):
             await session.initialize()
 
 
@@ -39,8 +42,11 @@ async def test_client_timeout(browser_root: Path) -> None:
 
     with pytest.raises(TimeoutError):
         async with asyncio.timeout(2.0):
-            async with stdio_client(server_params) as (
-                read_stream,
-                write_stream,
-            ), ClientSession(read_stream, write_stream) as session:
+            async with (
+                stdio_client(server_params) as (
+                    read_stream,
+                    write_stream,
+                ),
+                ClientSession(read_stream, write_stream) as session,
+            ):
                 await session.initialize()

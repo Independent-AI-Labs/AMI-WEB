@@ -1,4 +1,5 @@
 """Shared fixtures for browser pool tests."""
+
 import os
 
 # Test configuration

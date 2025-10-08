@@ -124,7 +124,7 @@ class ScriptValidator:
                 elif pattern.severity == "warning":
                     warnings.append((pattern, matched_text))
 
-                logger.warning(f"Script validation {pattern.severity}: {pattern.category} - " f"{pattern.reason}\n" f"Matched: {matched_text}")
+                logger.warning(f"Script validation {pattern.severity}: {pattern.category} - {pattern.reason}\nMatched: {matched_text}")
 
         # Determine if script is allowed
         allowed = True

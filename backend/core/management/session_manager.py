@@ -89,15 +89,11 @@ class SessionManager:
             return None
 
         if not current_handle:
-            from browser.backend.utils.exceptions import SessionError
-
             raise SessionError("No current window handle available - cannot determine active tab")
 
         current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None)
 
         if not current_tab_data:
-            from browser.backend.utils.exceptions import SessionError
-
             raise SessionError(f"Current window handle {current_handle} not found in tab list - browser state corrupted")
 
         # Return the actual current handle - explicit failure on any ambiguity
@@ -111,14 +107,10 @@ class SessionManager:
         if actual_active_tab:
             tab_data = next((t for t in tabs if t["handle"] == actual_active_tab), None)
             if not tab_data:
-                from browser.backend.utils.exceptions import SessionError
-
                 raise SessionError(f"Active tab {actual_active_tab} not found in tab list - cannot save corrupted session state")
             return tab_data
 
         # No active tab specified - fail explicitly
-        from browser.backend.utils.exceptions import SessionError
-
         raise SessionError("No active tab specified - cannot determine session state")
 
     def _is_error_page(self, current_url: str, page_source: str) -> bool:
@@ -262,8 +254,6 @@ class SessionManager:
                         self._collect_tab_cookies(instance.driver, tab_url, all_cookies)
 
                     except Exception as e:
-                        from browser.backend.utils.exceptions import SessionError
-
                         raise SessionError(f"Failed to capture tab {handle}: {e} - cannot save incomplete session") from e
 
                 # Build tabs list from captured state

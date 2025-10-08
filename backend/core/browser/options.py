@@ -1,8 +1,9 @@
 """Browser options builder - handles Chrome options configuration."""
 
-import contextlib
+import os
 import shutil
 import socket
+import subprocess
 import tempfile
 import threading
 import uuid
@@ -67,24 +68,21 @@ class BrowserOptionsBuilder:
                 if port in cls._used_ports:
                     continue
 
+                # Test if port is available by attempting to bind
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    # Test if port is available by attempting to bind
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    try:
-                        # Allow port reuse - critical for avoiding TIME_WAIT conflicts
-                        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                        s.bind(("127.0.0.1", port))
-                        # Successfully bound - this port is available
-                        s.close()
-                        cls._used_ports.add(port)
-                        return port
-                    finally:
-                        # Ensure socket is closed even if bind fails
-                        with contextlib.suppress(Exception):
-                            s.close()
+                    # Allow port reuse - critical for avoiding TIME_WAIT conflicts
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.bind(("127.0.0.1", port))
+                    # Successfully bound - this port is available
+                    cls._used_ports.add(port)
+                    return port
                 except OSError:
                     # Port already in use by this or another process
                     continue
+                finally:
+                    # Always close socket, whether bind succeeded or failed
+                    s.close()
 
             raise RuntimeError(
                 f"Unable to allocate a remote debugging port in range {cls.MIN_DEBUG_PORT}-{cls.MAX_DEBUG_PORT}. "
@@ -127,8 +125,6 @@ class BrowserOptionsBuilder:
 
     def _kill_orphaned_process(self, pid: int, profile_dir: Path, lock_files: list[Path]) -> None:
         """Kill an orphaned Chrome process and remove locks."""
-        import os
-
         logger.warning(f"Profile {profile_dir} is locked by orphaned Chrome process {pid}. Killing process and removing locks...")
         try:
             os.kill(pid, 9)
@@ -141,8 +137,6 @@ class BrowserOptionsBuilder:
 
     def _check_process_using_profile(self, pid: int, profile_dir: Path, lock_files: list[Path], kill_orphaned: bool) -> bool:
         """Check if process is using the profile and handle accordingly. Returns True if locks should be removed."""
-        import subprocess
-
         try:
             result = subprocess.run(
                 ["ps", "-p", str(pid), "-ww", "-o", "cmd="],
@@ -193,8 +187,6 @@ class BrowserOptionsBuilder:
             profile_dir: Profile directory to check for locks
             kill_orphaned: If True, kill orphaned Chrome processes holding the lock
         """
-        import os
-
         lock_files = [
             profile_dir / "SingletonLock",
             profile_dir / "SingletonSocket",
@@ -340,8 +332,6 @@ class BrowserOptionsBuilder:
 
     def _add_basic_options(self, chrome_options: Options, headless: bool) -> None:
         """Add basic Chrome options."""
-        import os
-
         compute_profile = get_compute_profile()
 
         # Always add --no-sandbox to ensure consistent singleton detection across headless/non-headless modes

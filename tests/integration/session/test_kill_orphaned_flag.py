@@ -1,6 +1,7 @@
 """Integration tests for kill_orphaned flag when restoring sessions with profile locks."""
 
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -44,7 +45,6 @@ async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
     singleton_lock = profile_dir / "SingletonLock"
 
     # Wait a moment for Chrome to create the lock file
-    import time
 
     time.sleep(0.5)
 
@@ -145,7 +145,6 @@ async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
     singleton_lock = profile_dir / "SingletonLock"
 
     # Wait a moment for Chrome to create the lock file
-    import time
 
     time.sleep(0.5)
 
@@ -240,7 +239,6 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
     singleton_lock = profile_dir / "SingletonLock"
 
     # Wait for lock file
-    import time
 
     time.sleep(0.5)
 

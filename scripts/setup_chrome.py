@@ -11,6 +11,7 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
+from urllib.parse import urlparse
 from urllib.request import urlopen, urlretrieve
 
 from loguru import logger
@@ -46,8 +47,6 @@ def print_colored(message: str, color: str = "") -> None:
 
 def _validate_google_url(url: str) -> None:
     """Validate that URL is from trusted Google domains."""
-    from urllib.parse import urlparse
-
     parsed = urlparse(url)
     allowed_hosts = {
         "www.googleapis.com",

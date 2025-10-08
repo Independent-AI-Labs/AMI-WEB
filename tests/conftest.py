@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import atexit
 import contextlib
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import AsyncIterator, Iterator
@@ -19,6 +21,7 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from loguru import logger  # noqa: E402
 
+from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from browser.tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
 
@@ -91,12 +94,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     # Optional preflight: attempt a minimal launch to detect container runtime issues
     def _preflight_can_launch() -> bool:
         try:
-            from browser.backend.core.management.manager import (
-                ChromeManager as _Mgr,
-            )
-
-            mgr = _Mgr(config_file="config.yaml" if Path("config.yaml").exists() else "config.sample.yaml")
-            import asyncio as _asyncio  # noqa: PLC0415
+            mgr = ChromeManager(config_file="config.yaml" if Path("config.yaml").exists() else "config.sample.yaml")
 
             async def _run() -> bool:
                 try:
@@ -112,7 +110,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
                         await mgr.shutdown()
                     return False
 
-            return _asyncio.get_event_loop().run_until_complete(_run())
+            return asyncio.get_event_loop().run_until_complete(_run())
         except Exception:
             return False
 
@@ -142,7 +140,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 # Import heavy browser modules only after environment check
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
-from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
 
 # NO GLOBAL STATE - Each test gets its own manager instance
@@ -414,9 +411,6 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def cleanup_test_data() -> None:
     """Clean up accumulated test data directories to prevent resource exhaustion."""
-    import shutil
-    from pathlib import Path
-
     data_dir = Path("data")
     if not data_dir.exists():
         return

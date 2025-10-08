@@ -124,9 +124,9 @@ class TestAntidetectionScripts:
             content = f.read()
 
         # Check that the entire script is wrapped in IIFE or try block
-        assert (
-            content.strip().startswith("/*") or content.strip().startswith("//") or content.strip().startswith("(function")
-        ), "Script should start with comment or IIFE"
+        assert content.strip().startswith("/*") or content.strip().startswith("//") or content.strip().startswith("(function"), (
+            "Script should start with comment or IIFE"
+        )
 
         # Remove comments for analysis
         content_no_comments = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)

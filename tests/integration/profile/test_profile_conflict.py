@@ -1,5 +1,7 @@
 """Test case to reproduce Chrome launch failure with profile conflicts."""
 
+import subprocess
+
 import pytest
 from loguru import logger
 
@@ -71,8 +73,6 @@ class TestProfileConflict:
             logger.info("=== Step 2: Launching non-headless instance with profile ===")
 
             # Check if test_profile directory exists and if it has any locks
-            import subprocess
-
             profile_dir = manager.profile_manager.base_dir / "test_profile"
             logger.info(f"Profile directory exists: {profile_dir.exists()}")
             if profile_dir.exists():
@@ -86,7 +86,7 @@ class TestProfileConflict:
                     timeout=2,
                     check=False,
                 )
-                logger.info(f"fuser result: returncode={result.returncode}, " f"stdout={result.stdout.strip()}, stderr={result.stderr.strip()}")
+                logger.info(f"fuser result: returncode={result.returncode}, stdout={result.stdout.strip()}, stderr={result.stderr.strip()}")
 
             instance2 = await manager.get_or_create_instance(
                 headless=True,  # Try headless first to see if it's a headless vs non-headless issue

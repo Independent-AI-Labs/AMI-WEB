@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 from urllib.parse import quote_plus
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
@@ -19,7 +19,7 @@ from browser.backend.mcp.chrome.response import BrowserResponse
 _DEFAULT_PRIMARY_URL = "http://127.0.0.1:8888/search?q={query}&format=json"
 _HTTP_OK = 200
 
-type SearchResult = dict[str, str | int | None]
+SearchResult: TypeAlias = dict[str, str | int | None]
 
 
 class _NoResultsError(RuntimeError):

@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from browser.backend.core.management.manager import ChromeManager
+from browser.backend.core.management.session_manager import SessionManager
 from browser.scripts.run_chrome import main
 
 
@@ -45,7 +47,6 @@ def test_run_chrome_default_data_root() -> None:
 
 def test_chrome_manager_absolute_paths(tmp_path: Path) -> None:
     """Verify ChromeManager uses absolute paths from config_overrides."""
-    from browser.backend.core.management.manager import ChromeManager
 
     data_root = tmp_path / "browser_data"
     config_overrides = {
@@ -69,7 +70,6 @@ def test_chrome_manager_absolute_paths(tmp_path: Path) -> None:
 
 def test_session_manager_absolute_path(tmp_path: Path) -> None:
     """Verify SessionManager uses absolute path and creates directory."""
-    from browser.backend.core.management.session_manager import SessionManager
 
     session_dir = tmp_path / "test_sessions"
 

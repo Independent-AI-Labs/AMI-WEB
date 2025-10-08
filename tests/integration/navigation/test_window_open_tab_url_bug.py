@@ -8,6 +8,7 @@ This test reproduces the specific issue where:
 """
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -86,8 +87,6 @@ async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str,
     # Read the saved session file to inspect what was actually saved
     session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:
-        import json
-
         saved_data = json.load(f)
 
     saved_tabs = saved_data.get("tabs", [])
@@ -106,9 +105,7 @@ async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str,
     print(f"Actual saved first tab URL: {first_saved_url}")
 
     # This assertion will FAIL if the bug exists
-    assert first_url in first_saved_url, (
-        f"BUG REPRODUCED: First tab URL was saved as '{first_saved_url}' " f"instead of '{first_url}' after using window.open()!"
-    )
+    assert first_url in first_saved_url, f"BUG REPRODUCED: First tab URL was saved as '{first_saved_url}' instead of '{first_url}' after using window.open()!"
 
     # Also verify the second tab was saved correctly
     second_saved_tab = saved_tabs[1]

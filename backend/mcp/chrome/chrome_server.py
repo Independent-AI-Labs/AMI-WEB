@@ -109,7 +109,7 @@ class ChromeFastMCPServer:
         # V02 Facade Tool 2: browser_navigate - Page navigation, history, and tab management
         @self.mcp.tool(
             description=(
-                "Navigate pages and manage browser history and tabs " "(goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
+                "Navigate pages and manage browser history and tabs (goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
             )
         )
         async def browser_navigate(

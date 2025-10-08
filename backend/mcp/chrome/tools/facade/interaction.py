@@ -1,6 +1,7 @@
 """Browser interaction facade tool."""
 
-from typing import Literal
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal
 
 from loguru import logger
 
@@ -17,7 +18,69 @@ from browser.backend.mcp.chrome.tools.input_tools import (
 )
 
 
-async def browser_interact_tool(  # noqa: PLR0913, PLR0911
+async def _handle_click(manager: ChromeManager, selector: str | None, button: str, click_count: int, **_kwargs: Any) -> BrowserResponse:
+    """Handle click action."""
+    if not selector:
+        return BrowserResponse(success=False, error="selector required for click action")
+    return await browser_click_tool(manager, selector, button, click_count)
+
+
+async def _handle_type(manager: ChromeManager, selector: str | None, text: str | None, clear: bool, delay: float, **_kwargs: Any) -> BrowserResponse:
+    """Handle type action."""
+    if not selector:
+        return BrowserResponse(success=False, error="selector required for type action")
+    if text is None:
+        return BrowserResponse(success=False, error="text required for type action")
+    return await browser_type_tool(manager, selector, text, clear, delay)
+
+
+async def _handle_select(
+    manager: ChromeManager, selector: str | None, value: str | None, index: int | None, label: str | None, **_kwargs: Any
+) -> BrowserResponse:
+    """Handle select action."""
+    if not selector:
+        return BrowserResponse(success=False, error="selector required for select action")
+    return await browser_select_tool(manager, selector, value, index, label)
+
+
+async def _handle_hover(manager: ChromeManager, selector: str | None, **_kwargs: Any) -> BrowserResponse:
+    """Handle hover action."""
+    if not selector:
+        return BrowserResponse(success=False, error="selector required for hover action")
+    return await browser_hover_tool(manager, selector)
+
+
+async def _handle_scroll(manager: ChromeManager, direction: str, amount: int, **_kwargs: Any) -> BrowserResponse:
+    """Handle scroll action."""
+    return await browser_scroll_tool(manager, direction, amount)
+
+
+async def _handle_press(manager: ChromeManager, key: str | None, modifiers: list[str | None] | None, **_kwargs: Any) -> BrowserResponse:
+    """Handle press action."""
+    if not key:
+        return BrowserResponse(success=False, error="key required for press action")
+    return await browser_press_tool(manager, key, modifiers)
+
+
+async def _handle_wait(manager: ChromeManager, selector: str | None, state: str, timeout: float, **_kwargs: Any) -> BrowserResponse:
+    """Handle wait action."""
+    if not selector:
+        return BrowserResponse(success=False, error="selector required for wait action")
+    return await browser_wait_for_tool(manager, selector, state, timeout)
+
+
+_ACTION_HANDLERS: dict[str, Callable[..., Awaitable[BrowserResponse]]] = {
+    "click": _handle_click,
+    "type": _handle_type,
+    "select": _handle_select,
+    "hover": _handle_hover,
+    "scroll": _handle_scroll,
+    "press": _handle_press,
+    "wait": _handle_wait,
+}
+
+
+async def browser_interact_tool(  # noqa: PLR0913
     manager: ChromeManager,
     action: Literal["click", "type", "select", "hover", "scroll", "press", "wait"],
     selector: str | None = None,
@@ -68,32 +131,25 @@ async def browser_interact_tool(  # noqa: PLR0913, PLR0911
     """
     logger.debug(f"browser_interact: action={action}")
 
-    match action:
-        case "click":
-            if not selector:
-                return BrowserResponse(success=False, error="selector required for click action")
-            return await browser_click_tool(manager, selector, button, click_count)
-        case "type":
-            if not selector:
-                return BrowserResponse(success=False, error="selector required for type action")
-            if text is None:
-                return BrowserResponse(success=False, error="text required for type action")
-            return await browser_type_tool(manager, selector, text, clear, delay)
-        case "select":
-            if not selector:
-                return BrowserResponse(success=False, error="selector required for select action")
-            return await browser_select_tool(manager, selector, value, index, label)
-        case "hover":
-            if not selector:
-                return BrowserResponse(success=False, error="selector required for hover action")
-            return await browser_hover_tool(manager, selector)
-        case "scroll":
-            return await browser_scroll_tool(manager, direction, amount)
-        case "press":
-            if not key:
-                return BrowserResponse(success=False, error="key required for press action")
-            return await browser_press_tool(manager, key, modifiers)
-        case "wait":
-            if not selector:
-                return BrowserResponse(success=False, error="selector required for wait action")
-            return await browser_wait_for_tool(manager, selector, state, timeout)
+    handler = _ACTION_HANDLERS.get(action)
+    if not handler:
+        return BrowserResponse(success=False, error=f"Unknown action: {action}")
+
+    return await handler(
+        manager=manager,
+        selector=selector,
+        text=text,
+        clear=clear,
+        delay=delay,
+        button=button,
+        click_count=click_count,
+        value=value,
+        index=index,
+        label=label,
+        direction=direction,
+        amount=amount,
+        key=key,
+        modifiers=modifiers,
+        state=state,
+        timeout=timeout,
+    )

@@ -1,4 +1,5 @@
 """Shared fixtures for browser navigation tests."""
+
 import os
 
 # Test configuration

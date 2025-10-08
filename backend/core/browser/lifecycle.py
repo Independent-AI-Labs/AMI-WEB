@@ -192,13 +192,13 @@ class BrowserLifecycle:
         # Validate Chrome binary
         if not chrome_binary_path or not Path(str(chrome_binary_path)).exists():
             raise InstanceError(
-                f"Chrome binary not found: {chrome_binary_path}. " "Configure 'backend.browser.chrome_binary_path' and run browser/scripts/setup_chrome.py"
+                f"Chrome binary not found: {chrome_binary_path}. Configure 'backend.browser.chrome_binary_path' and run browser/scripts/setup_chrome.py"
             )
 
         # Validate ChromeDriver
         if not chromedriver_path or not Path(str(chromedriver_path)).exists():
             raise InstanceError(
-                f"ChromeDriver not found: {chromedriver_path}. " "Configure 'backend.browser.chromedriver_path' and run browser/scripts/setup_chrome.py"
+                f"ChromeDriver not found: {chromedriver_path}. Configure 'backend.browser.chromedriver_path' and run browser/scripts/setup_chrome.py"
             )
 
         return str(chrome_binary_path), str(chromedriver_path)

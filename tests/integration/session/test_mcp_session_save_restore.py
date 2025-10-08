@@ -1,6 +1,7 @@
 """Test that reproduces the MCP session save/restore bug where profile is null."""
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -50,7 +51,6 @@ async def test_mcp_profile_not_captured_in_session_save(worker_data_dirs: dict[s
     session_id = await manager.session_manager.save_session(instance, "mcp-test-session")
 
     # Read the saved session to check profile
-    import json
 
     session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:

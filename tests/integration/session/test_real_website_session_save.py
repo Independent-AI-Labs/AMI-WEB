@@ -107,16 +107,16 @@ async def test_save_session_captures_actual_loaded_url(worker_data_dirs: dict[st
         f"Browser was on {current_url_before_save} but session saved {saved_url}. "
         f"Window handles: {len(all_handles)}, Active handle: {current_handle_before_save}"
     )
-    assert test_url in saved_url, f"BUG: Session did not save the actual URL! " f"Browser was on {current_url_before_save} but session saved {saved_url}"
+    assert test_url in saved_url, f"BUG: Session did not save the actual URL! Browser was on {current_url_before_save} but session saved {saved_url}"
 
     # Verify the active tab handle matches what we had
     assert active_tab_handle == str(current_handle_before_save), (
-        f"BUG: Active tab handle mismatch! " f"Current was {current_handle_before_save} but saved {active_tab_handle}"
+        f"BUG: Active tab handle mismatch! Current was {current_handle_before_save} but saved {active_tab_handle}"
     )
 
     # Also check tabs array - find the tab with our URL
     matching_tabs = [tab for tab in saved_tabs if test_url in tab["url"]]
-    assert len(matching_tabs) >= 1, f"BUG: No tab with {test_url} found in saved tabs! " f"Saved tabs: {[tab['url'] for tab in saved_tabs]}"
+    assert len(matching_tabs) >= 1, f"BUG: No tab with {test_url} found in saved tabs! Saved tabs: {[tab['url'] for tab in saved_tabs]}"
 
     # The saved primary URL should match the active tab
     active_tab = next((tab for tab in saved_tabs if tab["handle"] == active_tab_handle), None)
@@ -204,13 +204,13 @@ async def test_save_session_when_tab_focus_was_switched_by_browser(worker_data_d
 
     # BUG: Session saves whatever tab Chrome has focused, not what user was viewing
     assert "chrome://new-tab-page" not in saved_url, (
-        f"BUG: Session saved chrome://new-tab-page instead of user's actual tab! " f"User was viewing {user_visible_url} but session saved {saved_url}"
+        f"BUG: Session saved chrome://new-tab-page instead of user's actual tab! User was viewing {user_visible_url} but session saved {saved_url}"
     )
 
-    assert test_url in saved_url, f"BUG: Session should save the URL user was viewing ({user_visible_url}), " f"but saved {saved_url}"
+    assert test_url in saved_url, f"BUG: Session should save the URL user was viewing ({user_visible_url}), but saved {saved_url}"
 
     assert saved_active_handle == str(user_visible_handle), (
-        f"BUG: Saved wrong active tab! User was on handle {user_visible_handle}, " f"but session saved handle {saved_active_handle} as active"
+        f"BUG: Saved wrong active tab! User was on handle {user_visible_handle}, but session saved handle {saved_active_handle} as active"
     )
 
     # The session should capture BOTH tabs

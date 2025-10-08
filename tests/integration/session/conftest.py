@@ -1,4 +1,5 @@
 """Shared fixtures for session persistence tests."""
+
 import os
 from collections.abc import AsyncIterator
 

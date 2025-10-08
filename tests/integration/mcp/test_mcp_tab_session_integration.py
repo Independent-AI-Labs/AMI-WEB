@@ -10,6 +10,7 @@ Bug Context:
 """
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -95,8 +96,6 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         # Verify the saved session has 2 tabs
         session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
         assert session_file.exists(), f"Session file not found: {session_file}"
-
-        import json
 
         with session_file.open() as f:
             saved_data = json.load(f)

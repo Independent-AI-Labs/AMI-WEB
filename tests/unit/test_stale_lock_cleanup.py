@@ -1,4 +1,5 @@
 """Test stale lock file cleanup."""
+
 from pathlib import Path
 
 from browser.backend.core.browser.options import BrowserOptionsBuilder
