@@ -18,6 +18,8 @@ from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
 from browser.backend.mcp.chrome.tools.facade.session import browser_session_tool
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str, Path]) -> None:

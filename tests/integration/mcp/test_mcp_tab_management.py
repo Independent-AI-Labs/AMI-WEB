@@ -8,6 +8,8 @@ import pytest
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_mcp_tab_lifecycle_full_e2e(worker_data_dirs: dict[str, Path]) -> None:

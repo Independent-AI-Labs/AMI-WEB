@@ -8,6 +8,8 @@ import pytest
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.utils.exceptions import InstanceError
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
