@@ -9,17 +9,11 @@ from browser.backend.core.management.manager import ChromeManager
 
 
 @pytest.mark.asyncio
-async def test_window_open_blank_is_blocked() -> None:
+async def test_window_open_blank_is_blocked(worker_data_dirs: dict[str, Path]) -> None:
     """Test that window.open with _blank is blocked by validation."""
-
-    test_profiles_dir = Path("data/test_profiles_validation")
-    test_sessions_dir = Path("data/test_sessions_validation")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -56,17 +50,11 @@ async def test_window_open_blank_is_blocked() -> None:
 
 
 @pytest.mark.asyncio
-async def test_safe_script_is_allowed() -> None:
+async def test_safe_script_is_allowed(worker_data_dirs: dict[str, Path]) -> None:
     """Test that safe scripts are allowed through validation."""
-
-    test_profiles_dir = Path("data/test_profiles_validation_safe")
-    test_sessions_dir = Path("data/test_sessions_validation_safe")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -98,17 +86,11 @@ async def test_safe_script_is_allowed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_window_close_is_blocked() -> None:
+async def test_window_close_is_blocked(worker_data_dirs: dict[str, Path]) -> None:
     """Test that window.close() is blocked by validation."""
-
-    test_profiles_dir = Path("data/test_profiles_validation_close")
-    test_sessions_dir = Path("data/test_sessions_validation_close")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)

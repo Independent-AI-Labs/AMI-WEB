@@ -16,17 +16,11 @@ pytestmark = pytest.mark.xdist_group(name="profile")
 
 
 @pytest.mark.asyncio
-async def test_save_session_captures_actual_loaded_url() -> None:
+async def test_save_session_captures_actual_loaded_url(worker_data_dirs: dict[str, Path]) -> None:
     """Test that when we navigate to a real URL and save, it captures that URL - not New Tab."""
-    # Create test directories
-    test_profiles_dir = Path("data/test_profiles_real_url")
-    test_sessions_dir = Path("data/test_sessions_real_url")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -34,7 +28,7 @@ async def test_save_session_captures_actual_loaded_url() -> None:
 
     # Create profile
     profile_name = "real-url-profile"
-    profile_dir = test_profiles_dir / profile_name
+    profile_dir = worker_data_dirs["profiles_dir"] / profile_name
     if profile_dir.exists():
         manager.profile_manager.delete_profile(profile_name)
     manager.profile_manager.create_profile(profile_name)
@@ -89,7 +83,7 @@ async def test_save_session_captures_actual_loaded_url() -> None:
     session_id = await manager.session_manager.save_session(instance, "real-url-test")
 
     # Read the saved session file to check what was captured
-    session_file = test_sessions_dir / session_id / "session.json"
+    session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:
         saved_data = json.load(f)
 
@@ -131,21 +125,16 @@ async def test_save_session_captures_actual_loaded_url() -> None:
 
 
 @pytest.mark.asyncio
-async def test_save_session_when_tab_focus_was_switched_by_browser() -> None:
+async def test_save_session_when_tab_focus_was_switched_by_browser(worker_data_dirs: dict[str, Path]) -> None:
     """Test bug where browser switches focus to different tab before session save.
 
     This reproduces the ACTUAL bug: user is on localhost:3000, but some browser behavior
     (like opening a link in background, or extension, or timing) causes Chrome to switch
     the active tab to chrome://new-tab-page before we call save_session.
     """
-    test_profiles_dir = Path("data/test_profiles_focus_switch")
-    test_sessions_dir = Path("data/test_sessions_focus_switch")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -194,7 +183,7 @@ async def test_save_session_when_tab_focus_was_switched_by_browser() -> None:
     session_id = await manager.session_manager.save_session(instance, "focus-switch-test")
 
     # Check what was saved
-    session_file = test_sessions_dir / session_id / "session.json"
+    session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:
         saved_data = json.load(f)
 
@@ -234,17 +223,11 @@ async def test_save_session_when_tab_focus_was_switched_by_browser() -> None:
 
 
 @pytest.mark.asyncio
-async def test_multiple_real_websites_session_save_and_restore() -> None:
+async def test_multiple_real_websites_session_save_and_restore(worker_data_dirs: dict[str, Path]) -> None:
     """Test that saving a session with MULTIPLE real websites captures ALL tabs correctly."""
-    # Create test directories
-    test_profiles_dir = Path("data/test_profiles_multi_real")
-    test_sessions_dir = Path("data/test_sessions_multi_real")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager1 = ChromeManager(config_overrides=config_overrides)
@@ -252,7 +235,7 @@ async def test_multiple_real_websites_session_save_and_restore() -> None:
 
     # Create fresh profile
     profile_name = "multi-real-website-profile"
-    profile_dir = test_profiles_dir / profile_name
+    profile_dir = worker_data_dirs["profiles_dir"] / profile_name
     if profile_dir.exists():
         manager1.profile_manager.delete_profile(profile_name)
     manager1.profile_manager.create_profile(profile_name)

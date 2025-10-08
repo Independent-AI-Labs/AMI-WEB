@@ -234,6 +234,40 @@ async def antidetect_browser() -> AsyncIterator[BrowserInstance]:
 
 
 @pytest.fixture(scope="session")
+def worker_id(request: pytest.FixtureRequest) -> str:
+    """Get xdist worker ID for this test worker.
+
+    Returns 'master' for single-process mode, or 'gw0', 'gw1', etc. for parallel workers.
+    """
+    if hasattr(request.config, "workerinput"):
+        workerinput = request.config.workerinput
+        return str(workerinput["workerid"])
+    return "master"
+
+
+@pytest.fixture(scope="function")
+def worker_data_dirs(worker_id: str, request: pytest.FixtureRequest) -> dict[str, Path]:
+    """Provide worker-specific data directories to prevent parallel test conflicts.
+
+    Returns dict with 'profiles_dir' and 'sessions_dir' keys.
+    Test name is included to ensure uniqueness.
+    """
+    test_name = request.node.name.replace("[", "_").replace("]", "_").replace("@", "_")
+    base_name = f"test_{test_name}_{worker_id}"
+
+    profiles_dir = Path(f"data/{base_name}_profiles")
+    sessions_dir = Path(f"data/{base_name}_sessions")
+
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "profiles_dir": profiles_dir,
+        "sessions_dir": sessions_dir,
+    }
+
+
+@pytest.fixture(scope="session")
 def test_html_server(worker_id: str) -> Iterator[str]:
     """Start test HTML server in a separate thread for all tests.
 

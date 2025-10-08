@@ -20,19 +20,14 @@ from browser.backend.mcp.chrome.tools.facade.session import browser_session_tool
 
 
 @pytest.mark.asyncio
-async def test_mcp_open_tab_goto_session_save_restore() -> None:
+async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str, Path]) -> None:
     """Test the exact user scenario: open_tab + goto + session save + restore.
 
     This reproduces the bug reported by the user where tabs were lost.
     """
-    test_profiles_dir = Path("data/test_profiles_mcp_session")
-    test_sessions_dir = Path("data/test_sessions_mcp_session")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
         "backend.pool.hibernation_delay": 9999,  # Prevent hibernation during test
         "backend.pool.close_tabs_on_hibernation": False,  # Preserve tabs
     }
@@ -96,7 +91,7 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
         session_id = response.data["session_id"]
 
         # Verify the saved session has 2 tabs
-        session_file = test_sessions_dir / session_id / "session.json"
+        session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
         assert session_file.exists(), f"Session file not found: {session_file}"
 
         import json
@@ -159,16 +154,11 @@ async def test_mcp_open_tab_goto_session_save_restore() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_multiple_tabs_with_navigation_errors() -> None:
+async def test_mcp_multiple_tabs_with_navigation_errors(worker_data_dirs: dict[str, Path]) -> None:
     """Test that navigation errors don't kill the instance and lose all tabs."""
-    test_profiles_dir = Path("data/test_profiles_mcp_errors")
-    test_sessions_dir = Path("data/test_sessions_mcp_errors")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
         "backend.pool.hibernation_delay": 9999,
     }
 
@@ -219,16 +209,11 @@ async def test_mcp_multiple_tabs_with_navigation_errors() -> None:
 
 
 @pytest.mark.asyncio
-async def test_hibernation_preserves_tabs() -> None:
+async def test_hibernation_preserves_tabs(worker_data_dirs: dict[str, Path]) -> None:
     """Test that hibernation preserves tabs when configured correctly."""
-    test_profiles_dir = Path("data/test_profiles_hibernation")
-    test_sessions_dir = Path("data/test_sessions_hibernation")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
         "backend.pool.hibernation_delay": 1,  # Hibernate after 1 second
         "backend.pool.close_tabs_on_hibernation": False,  # DO NOT close tabs
     }

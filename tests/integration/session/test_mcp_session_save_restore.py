@@ -11,17 +11,11 @@ pytestmark = pytest.mark.xdist_group(name="profile")
 
 
 @pytest.mark.asyncio
-async def test_mcp_profile_not_captured_in_session_save() -> None:
+async def test_mcp_profile_not_captured_in_session_save(worker_data_dirs: dict[str, Path]) -> None:
     """Reproduce the bug: MCP launches with profile but saves session with profile: null."""
-    # Create test directories
-    test_profiles_dir = Path("data/test_profiles_mcp_bug")
-    test_sessions_dir = Path("data/test_sessions_mcp_bug")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -29,7 +23,7 @@ async def test_mcp_profile_not_captured_in_session_save() -> None:
 
     # Create profile
     profile_name = "default"
-    profile_dir = test_profiles_dir / profile_name
+    profile_dir = worker_data_dirs["profiles_dir"] / profile_name
     if profile_dir.exists():
         manager.profile_manager.delete_profile(profile_name)
     manager.profile_manager.create_profile(profile_name)
@@ -58,7 +52,7 @@ async def test_mcp_profile_not_captured_in_session_save() -> None:
     # Read the saved session to check profile
     import json
 
-    session_file = test_sessions_dir / session_id / "session.json"
+    session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:
         saved_data = json.load(f)
 
@@ -74,17 +68,11 @@ async def test_mcp_profile_not_captured_in_session_save() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_session_restore_with_profile_null_fails() -> None:
+async def test_mcp_session_restore_with_profile_null_fails(worker_data_dirs: dict[str, Path]) -> None:
     """Test that restoring a session with profile: null but profile_override specified fails/produces wrong result."""
-    # Create test directories
-    test_profiles_dir = Path("data/test_profiles_mcp_restore_bug")
-    test_sessions_dir = Path("data/test_sessions_mcp_restore_bug")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     # STEP 1: Create a session with profile: null (simulating the bug)

@@ -16,18 +16,11 @@ from browser.backend.core.management.manager import ChromeManager
 
 
 @pytest.mark.asyncio
-async def test_window_open_corrupts_original_tab_url() -> None:
+async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str, Path]) -> None:
     """Reproduce bug where window.open() causes first tab to save as about:blank."""
-
-    # Create test directories
-    test_profiles_dir = Path("data/test_profiles_window_open_bug")
-    test_sessions_dir = Path("data/test_sessions_window_open_bug")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     # Create manager and instance
@@ -35,7 +28,7 @@ async def test_window_open_corrupts_original_tab_url() -> None:
     await manager.initialize()
 
     profile_name = "window-open-bug-profile"
-    profile_dir = test_profiles_dir / profile_name
+    profile_dir = worker_data_dirs["profiles_dir"] / profile_name
     if profile_dir.exists():
         manager.profile_manager.delete_profile(profile_name)
     manager.profile_manager.create_profile(profile_name)
@@ -89,7 +82,7 @@ async def test_window_open_corrupts_original_tab_url() -> None:
     print(f"✓ Saved session {session_id}")
 
     # Read the saved session file to inspect what was actually saved
-    session_file = test_sessions_dir / session_id / "session.json"
+    session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
     with session_file.open() as f:
         import json
 

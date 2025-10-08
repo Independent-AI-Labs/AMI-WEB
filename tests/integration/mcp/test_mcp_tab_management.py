@@ -10,16 +10,11 @@ from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_
 
 
 @pytest.mark.asyncio
-async def test_mcp_tab_lifecycle_full_e2e() -> None:
+async def test_mcp_tab_lifecycle_full_e2e(worker_data_dirs: dict[str, Path]) -> None:
     """Test complete tab lifecycle: open, list, switch, navigate, close."""
-    test_profiles_dir = Path("data/test_profiles_tab_mgmt")
-    test_sessions_dir = Path("data/test_sessions_tab_mgmt")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -137,16 +132,11 @@ async def test_mcp_tab_lifecycle_full_e2e() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_tab_switch_validation() -> None:
+async def test_mcp_tab_switch_validation(worker_data_dirs: dict[str, Path]) -> None:
     """Test that switch_tab requires tab_id parameter."""
-    test_profiles_dir = Path("data/test_profiles_tab_switch")
-    test_sessions_dir = Path("data/test_sessions_tab_switch")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -170,16 +160,11 @@ async def test_mcp_tab_switch_validation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_tab_antidetect_injection() -> None:
+async def test_mcp_tab_antidetect_injection(worker_data_dirs: dict[str, Path]) -> None:
     """Test that new tabs get anti-detection properly injected."""
-    test_profiles_dir = Path("data/test_profiles_tab_antidetect")
-    test_sessions_dir = Path("data/test_sessions_tab_antidetect")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
@@ -228,16 +213,11 @@ async def test_mcp_tab_antidetect_injection() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_tab_error_handling() -> None:
+async def test_mcp_tab_error_handling(worker_data_dirs: dict[str, Path]) -> None:
     """Test error handling for invalid tab operations."""
-    test_profiles_dir = Path("data/test_profiles_tab_errors")
-    test_sessions_dir = Path("data/test_sessions_tab_errors")
-    test_profiles_dir.mkdir(parents=True, exist_ok=True)
-    test_sessions_dir.mkdir(parents=True, exist_ok=True)
-
     config_overrides = {
-        "backend.storage.profiles_dir": str(test_profiles_dir),
-        "backend.storage.session_dir": str(test_sessions_dir),
+        "backend.storage.profiles_dir": str(worker_data_dirs["profiles_dir"]),
+        "backend.storage.session_dir": str(worker_data_dirs["sessions_dir"]),
     }
 
     manager = ChromeManager(config_overrides=config_overrides)
