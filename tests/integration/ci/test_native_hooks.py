@@ -104,17 +104,17 @@ class TestMypyTypeChecking:
 class TestNativeGitHooks:
     """Test suite for native git hooks."""
 
-    def test_native_precommit_hook_exists(self, browser_root: Path) -> None:
-        """Verify native pre-commit hook exists in scripts/hooks."""
-        hook_script = browser_root / "scripts" / "hooks" / "pre-commit"
-        assert hook_script.exists(), f"Native pre-commit hook not found at {hook_script}"
-        assert hook_script.stat().st_mode & 0o111, "Hook script is not executable"
+    def test_native_precommit_hook_exists(self, browser_root: Path, repo_root: Path) -> None:
+        """Verify native pre-commit hook source exists in /base/scripts/hooks/."""
+        hook_source = repo_root / "base" / "scripts" / "hooks" / "pre-commit"
+        assert hook_source.exists(), f"Native pre-commit hook source not found at {hook_source}"
+        assert hook_source.stat().st_mode & 0o111, "Hook source script is not executable"
 
-    def test_native_prepush_hook_exists(self, browser_root: Path) -> None:
-        """Verify native pre-push hook exists in scripts/hooks."""
-        hook_script = browser_root / "scripts" / "hooks" / "pre-push"
-        assert hook_script.exists(), f"Native pre-push hook not found at {hook_script}"
-        assert hook_script.stat().st_mode & 0o111, "Hook script is not executable"
+    def test_native_prepush_hook_exists(self, browser_root: Path, repo_root: Path) -> None:
+        """Verify native pre-push hook source exists in /base/scripts/hooks/."""
+        hook_source = repo_root / "base" / "scripts" / "hooks" / "pre-push"
+        assert hook_source.exists(), f"Native pre-push hook source not found at {hook_source}"
+        assert hook_source.stat().st_mode & 0o111, "Hook source script is not executable"
 
     def test_git_hooks_installed(self, browser_root: Path, repo_root: Path) -> None:
         """Verify hooks are installed in git hooks directory."""
@@ -145,12 +145,12 @@ class TestNativeGitHooks:
 class TestHookSerialization:
     """Test that native hooks run serially."""
 
-    def test_native_hooks_run_serially(self, browser_root: Path) -> None:
+    def test_native_hooks_run_serially(self, browser_root: Path, repo_root: Path) -> None:
         """Verify native hooks execute all checks serially."""
         # Native hooks run all checks in a single bash script
         # This is inherently serial - bash executes commands sequentially
-        hook_script = browser_root / "scripts" / "hooks" / "pre-commit"
-        content = hook_script.read_text()
+        hook_source = repo_root / "base" / "scripts" / "hooks" / "pre-commit"
+        content = hook_source.read_text()
 
         # Verify hook uses set -euo pipefail for safety
         assert "set -euo pipefail" in content, "Hook must use 'set -euo pipefail' for safety"
