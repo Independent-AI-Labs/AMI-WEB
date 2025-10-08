@@ -7,6 +7,8 @@ import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 @pytest.mark.asyncio
 async def test_mcp_profile_not_captured_in_session_save() -> None:

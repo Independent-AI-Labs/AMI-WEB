@@ -7,6 +7,8 @@ import pytest
 
 from browser.backend.core.management.profile_manager import ProfileManager
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 @pytest.fixture
 def profile_dir(tmp_path: Path) -> Path:
@@ -36,7 +38,7 @@ def test_ensure_default_profile_creates_if_not_exists(manager: ProfileManager, p
     assert manager.profiles["default"]["description"] == "Default profile for session persistence with HTTPS certificate exceptions"
 
 
-def test_ensure_default_profile_returns_existing(manager: ProfileManager, _profile_dir: Path) -> None:
+def test_ensure_default_profile_returns_existing(manager: ProfileManager) -> None:
     """Test that ensure_default_profile returns existing profile if it exists."""
     # Create default profile first
     first_path = manager.ensure_default_profile()

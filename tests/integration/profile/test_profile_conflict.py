@@ -5,6 +5,8 @@ from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 class TestProfileConflict:
     """Test to reproduce the 'user data directory is already in use' error."""

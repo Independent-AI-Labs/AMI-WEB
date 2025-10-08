@@ -234,9 +234,20 @@ async def antidetect_browser() -> AsyncIterator[BrowserInstance]:
 
 
 @pytest.fixture(scope="session")
-def test_html_server() -> Iterator[str]:
-    """Start test HTML server in a separate thread for all tests."""
-    server = ThreadedHTMLServer(port=8889)
+def test_html_server(worker_id: str) -> Iterator[str]:
+    """Start test HTML server in a separate thread for all tests.
+
+    Uses dynamic port per xdist worker to avoid conflicts in parallel execution.
+    """
+    # Use worker-specific port: worker_id is 'master' or 'gw0', 'gw1', etc.
+    if worker_id == "master":
+        port = 8889  # Single-process mode
+    else:
+        # Extract worker number from 'gw0', 'gw1', etc.
+        worker_num = int(worker_id.replace("gw", "")) if worker_id.startswith("gw") else 0
+        port = 8889 + worker_num + 1  # 8890, 8891, 8892, etc.
+
+    server = ThreadedHTMLServer(port=port)
     base_url = server.start()  # Starts in thread
     yield base_url
     server.stop()  # Stops the thread

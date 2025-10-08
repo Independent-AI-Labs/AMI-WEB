@@ -14,6 +14,8 @@ import pytest
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.utils.exceptions import ProfileError
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 @pytest.fixture
 def profile_dir(tmp_path: Path) -> Path:
@@ -23,7 +25,7 @@ def profile_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def existing_metadata(profile_dir: Path) -> dict[str, Any]:
-    """Create existing metadata file on disk."""
+    """Create existing metadata file on disk - returns the metadata dict."""
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     # Create profile directories
@@ -48,6 +50,12 @@ def existing_metadata(profile_dir: Path) -> dict[str, Any]:
         json.dump(metadata, f)
 
     return metadata
+
+
+@pytest.fixture
+def _existing_metadata(existing_metadata: dict[str, Any]) -> dict[str, Any]:
+    """Side-effect fixture that creates metadata file - use when return value not needed."""
+    return existing_metadata
 
 
 def test_get_profile_dir_loads_existing_metadata(profile_dir: Path, _existing_metadata: dict[str, Any]) -> None:

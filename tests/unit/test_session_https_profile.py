@@ -10,6 +10,8 @@ from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.core.management.session_manager import SessionManager
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 @pytest.fixture
 def session_dir(tmp_path: Path) -> Path:
@@ -64,9 +66,7 @@ def mock_instance() -> Mock:
 @pytest.mark.asyncio
 async def test_save_https_session_with_default_profile(
     session_manager: SessionManager,
-    _profile_manager: ProfileManager,
     mock_instance: Mock,
-    _profile_dir: Path,
 ) -> None:
     """Test that saving HTTPS session with default profile persists correctly."""
     # Simulate browser instance created with default profile (new behavior)

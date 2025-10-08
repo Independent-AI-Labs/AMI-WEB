@@ -1,43 +1,42 @@
 repos:
+  # Quality checks FIRST - must run before any file modifications
+  - repo: local
+    hooks:
+      - id: validate-serial
+        name: validate-serial
+        entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/serial_hooks.py --module browser"
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]
+        require_serial: true
+      - id: no-unstaged-changes
+        name: no-unstaged-changes
+        entry: 'bash -c "if [ -d \".git/modules\" ] && git submodule status | grep -q \"^\+\"; then echo \"BLOCKED: You are in ROOT with dirty submodules. Commit inside submodules first!\"; exit 1; fi; git diff --exit-code || { echo \"BLOCKED: Unstaged changes detected. Run git add -A before commit.\"; exit 1; }"'
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]
+        require_serial: true
+
   # Ruff - replaces black, isort, pylint, and bandit
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.9
     hooks:
-      # Linting (includes security checks)
-      - id: ruff
-        require_serial: true
-        args: [ --config, ../base/ruff.toml, --fix, --exit-non-zero-on-fix, . ]
-        pass_filenames: false
-        stages: [ pre-commit ]
-      # Formatting (replaces black)
+      # Formatting (replaces black) - run BEFORE linting
       - id: ruff-format
         require_serial: true
         args: [ --config, ../base/ruff.toml, . ]
         pass_filenames: false
         stages: [ pre-commit ]
-
-  # Type checking
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser --config-file=base/mypy.ini"'
-        language: system
-        types: [ python ]
+      # Linting (includes security checks) - run AFTER formatting
+      - id: ruff
         require_serial: true
-        stages: [ pre-commit ]
-        pass_filenames: false
-
-  # Quality checks (ALL reference /base/scripts/)
-  - repo: local
-    hooks:
-      - id: no-unstaged-changes
-        name: no-unstaged-changes
-        entry: 'bash -c "git diff --exit-code || { echo \"BLOCKED: Unstaged changes detected. Run git add -A before commit.\"; exit 1; }"'
-        language: system
+        args: [ --config, ../base/ruff.toml, --fix, --exit-non-zero-on-fix, . ]
         pass_filenames: false
         stages: [ pre-commit ]
-        require_serial: true
+
+  # Additional quality checks
+  - repo: local
+    hooks:
       - id: banned-words
         name: banned-words
         entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/banned_words.py browser"
@@ -52,15 +51,20 @@ repos:
         pass_filenames: false
         stages: [ pre-commit ]
         require_serial: true
-      - id: validate-serial
-        name: validate-serial
-        entry: bash -c "cd .. && ./scripts/ami-run.sh base/scripts/quality/serial_hooks.py --module browser"
-        language: system
-        pass_filenames: false
-        stages: [ pre-push ]
-        require_serial: true
 
-  # Run tests on pre-push
+  # Type checking
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: 'bash -c "cd .. && browser/.venv/bin/python -m mypy -p browser --config-file=base/mypy.ini"'
+        language: system
+        types: [ python ]
+        require_serial: true
+        stages: [ pre-commit ]
+        pass_filenames: false
+
+  # Run tests on pre-push only (not commit)
   - repo: local
     hooks:
       - id: pytest

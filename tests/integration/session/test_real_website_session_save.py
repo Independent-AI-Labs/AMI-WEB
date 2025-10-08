@@ -12,6 +12,8 @@ import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 
+pytestmark = pytest.mark.xdist_group(name="profile")
+
 
 @pytest.mark.asyncio
 async def test_save_session_captures_actual_loaded_url() -> None:
