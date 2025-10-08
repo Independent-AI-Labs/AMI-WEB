@@ -16,7 +16,7 @@ from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.models.security import SecurityConfig, SecurityLevel
 from browser.backend.utils.config import Config
 
-pytestmark = pytest.mark.xdist_group(name="profile")
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
 
 @pytest_asyncio.fixture

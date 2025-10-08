@@ -14,7 +14,7 @@ import pytest
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.utils.exceptions import ProfileError
 
-pytestmark = pytest.mark.xdist_group(name="profile")
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 
-pytestmark = pytest.mark.xdist_group(name="profile")
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
 
 @pytest.mark.asyncio
