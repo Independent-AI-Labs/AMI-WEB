@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -48,10 +49,63 @@ def sync_dependencies(module_root: Path) -> bool:
     return True
 
 
+def _find_orchestrator_root(module_root: Path) -> Path:
+    """Find orchestrator root by locating /base directory."""
+    orchestrator_root = module_root
+    while orchestrator_root.parent != orchestrator_root:
+        if (orchestrator_root / "base").exists():
+            return orchestrator_root
+        orchestrator_root = orchestrator_root.parent
+    return module_root
+
+
+def _get_git_hooks_dir(module_root: Path) -> Path | None:
+    """Determine git hooks directory for module."""
+    git_file = module_root / ".git"
+    if git_file.is_file():
+        # Submodule - .git is a file pointing to parent
+        git_content = git_file.read_text().strip()
+        if git_content.startswith("gitdir: "):
+            git_dir = git_content[8:]
+            return module_root / git_dir / "hooks" if git_dir.startswith("../") else Path(git_dir) / "hooks"
+        logger.warning("Invalid .git file format - skipping hook installation")
+        return None
+    if git_file.is_dir():
+        # Regular git repo
+        return git_file / "hooks"
+    logger.warning("No .git directory or file found - skipping hook installation")
+    return None
+
+
 def install_precommit(module_root: Path) -> None:
-    """Native git hooks are installed via propagate.py script."""
-    # Native hooks are managed by base/scripts/meta/propagate.py
-    # They are automatically installed during propagation
+    """Install native git hooks from /base/scripts/hooks/ to module's .git/hooks/.
+
+    This enables standalone module setup without requiring propagate.py.
+    Single source of truth: /base/scripts/hooks/
+    """
+    orchestrator_root = _find_orchestrator_root(module_root)
+    hook_sources = orchestrator_root / "base" / "scripts" / "hooks"
+    if not hook_sources.exists():
+        logger.warning("Hook sources not found at %s - skipping hook installation", hook_sources)
+        return
+
+    git_hooks_dir = _get_git_hooks_dir(module_root)
+    if not git_hooks_dir or not git_hooks_dir.exists():
+        logger.warning("Git hooks directory not found - skipping hook installation")
+        return
+
+    # Install hooks
+    installed = 0
+    for hook_file in ["pre-commit", "pre-push"]:
+        source = hook_sources / hook_file
+        if source.exists():
+            dest = git_hooks_dir / hook_file
+            shutil.copy2(source, dest)
+            dest.chmod(0o755)
+            installed += 1
+
+    if installed > 0:
+        logger.info(f"Installed {installed} native git hooks from /base/scripts/hooks/")
 
 
 def setup(module_root: Path, project_name: str | None) -> int:
