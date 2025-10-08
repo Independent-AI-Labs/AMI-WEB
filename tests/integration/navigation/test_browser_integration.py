@@ -3,6 +3,7 @@
 import asyncio
 import os
 import socket
+from collections.abc import Iterator
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
@@ -27,11 +28,8 @@ HTTP_OK = 200
 EXPECTED_INITIAL_SCROLL_COUNT = 3
 PARALLEL_EXECUTION_MAX_DIFF_MS = 5000
 
-# Global instances
-_server_thread: Thread | None = None
-_server: HTTPServer | None = None
-_server_port: int | None = None
-_server_url: str | None = None
+# Worker-specific server instances (keyed by worker_id)
+_servers: dict[str, tuple[Thread, HTTPServer, int, str]] = {}
 
 
 class HTTPHandler(SimpleHTTPRequestHandler):
@@ -57,36 +55,21 @@ def _get_ephemeral_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def start_test_server() -> None:
-    """Start test server in background thread."""
-    global _server_thread, _server, _server_port, _server_url  # noqa: PLW0603
+def start_test_server(worker_id: str) -> tuple[Thread, HTTPServer, int, str]:
+    """Start test server in background thread for specific worker."""
+    # Create HTTP server on an ephemeral port to avoid conflicts
+    port = _get_ephemeral_port()
+    server = HTTPServer(("localhost", port), HTTPHandler)
 
-    try:
-        # Create HTTP server on an ephemeral port to avoid conflicts
-        port = _get_ephemeral_port()
-        server = HTTPServer(("localhost", port), HTTPHandler)
+    # Run in thread
+    server_thread = Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
 
-        # Run in thread
-        _server_thread = Thread(target=server.serve_forever, daemon=True)
-        _server_thread.start()
+    server_port = server.server_address[1]
+    server_url = f"http://localhost:{server_port}"
 
-        _server = server
-        _server_port = server.server_address[1]
-        _server_url = f"http://localhost:{_server_port}"
-
-        logger.info(f"Test server started at {_server_url}")
-    except OSError as e:
-        if "10048" in str(e):
-            logger.info(f"Server already running at {_server_url}")
-        else:
-            raise
-
-
-def _get_server_url() -> str:
-    """Return the active server URL, ensuring the server is ready."""
-    if _server_url is None:
-        raise RuntimeError("Test server not initialized")
-    return _server_url
+    logger.info(f"Test server started for worker {worker_id} at {server_url}")
+    return server_thread, server, server_port, server_url
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -95,30 +78,22 @@ def set_fixtures_dir(fixtures_dir: Path) -> None:
     HTTPHandler.test_fixtures_dir = fixtures_dir
 
 
-def setup_module() -> None:
-    """Set up test server once for all tests."""
-    global _server_thread  # noqa: PLW0602
+@pytest.fixture(scope="session")
+def test_server_url(worker_id: str) -> Iterator[str]:
+    """Start test server for this worker and return URL."""
+    if worker_id not in _servers:
+        _servers[worker_id] = start_test_server(worker_id)
 
-    # Start test server
-    start_test_server()
+    yield _servers[worker_id][3]
 
-    logger.info("Test server started for module")
-
-
-def teardown_module() -> None:
-    """Clean up test server."""
-    global _server_thread, _server  # noqa: PLW0602
-
-    if _server is not None:
-        _server.shutdown()
-        _server.server_close()
-        _server = None
-
-    if _server_thread is not None:
-        _server_thread.join(timeout=5)
-        _server_thread = None
-
-    logger.info("Module teardown complete")
+    # Cleanup
+    if worker_id in _servers:
+        server_thread, server, _, _ = _servers[worker_id]
+        server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=5)
+        del _servers[worker_id]
+        logger.info(f"Test server cleaned up for worker {worker_id}")
 
 
 # TabContext removed - tests will use browser_instance fixture which handles cleanup
@@ -129,13 +104,13 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_navigate_to_page(self, browser_instance: Any) -> None:
+    async def test_navigate_to_page(self, browser_instance: Any, test_server_url: str) -> None:
         """Test basic page navigation."""
         browser = browser_instance
         nav = Navigator(browser)
 
         # Navigate to login page
-        result = await nav.navigate(f"{_get_server_url()}/login_form.html")
+        result = await nav.navigate(f"{test_server_url}/login_form.html")
 
         assert result.url.endswith("login_form.html")
         assert "Login" in result.title
@@ -144,14 +119,14 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_wait_for_element(self, browser_instance: Any) -> None:
+    async def test_wait_for_element(self, browser_instance: Any, test_server_url: str) -> None:
         """Test waiting for elements to appear."""
         browser = browser_instance
         waiter = Waiter(browser)
         nav = Navigator(browser)
 
         # Navigate to dynamic content page
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Wait for specific element
         found = await waiter.wait_for_element("#content-area", timeout=5)
@@ -163,13 +138,13 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_execute_script(self, browser_instance: Any) -> None:
+    async def test_execute_script(self, browser_instance: Any, test_server_url: str) -> None:
         """Test JavaScript execution."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Execute script to get form data
         result = await extractor.execute_script("return window.testHelpers.getFormData()")
@@ -192,13 +167,13 @@ class TestBrowserNavigation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_get_page_content(self, browser_instance: Any) -> None:
+    async def test_get_page_content(self, browser_instance: Any, test_server_url: str) -> None:
         """Test retrieving page HTML content."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
+        await nav.navigate(f"{test_server_url}/captcha_form.html")
 
         # Get outer HTML
         html = await extractor.get_page_content()
@@ -215,14 +190,14 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_click_element(self, browser_instance: Any) -> None:
+    async def test_click_element(self, browser_instance: Any, test_server_url: str) -> None:
         """Test clicking elements."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Click submit button without filling form
         await mouse.click("#submit-btn")
@@ -242,14 +217,14 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_type_text(self, browser_instance: Any) -> None:
+    async def test_type_text(self, browser_instance: Any, test_server_url: str) -> None:
         """Test typing text into inputs."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Type into username field
         await input_ctrl.type_text("#username", "testuser", clear=True)
@@ -265,14 +240,14 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_checkbox_interaction(self, browser_instance: Any) -> None:
+    async def test_checkbox_interaction(self, browser_instance: Any, test_server_url: str) -> None:
         """Test checkbox interactions."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
+        await nav.navigate(f"{test_server_url}/captcha_form.html")
 
         # Check the robot checkbox
         await mouse.click("#robot-checkbox")
@@ -288,7 +263,7 @@ class TestInputSimulation:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_form_submission(self, browser_instance: Any) -> None:
+    async def test_form_submission(self, browser_instance: Any, test_server_url: str) -> None:
         """Test complete form submission flow."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -296,7 +271,7 @@ class TestInputSimulation:
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Fill and submit form
         test_password = "password123"  # noqa: S105
@@ -324,13 +299,13 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_viewport_screenshot(self, browser_instance: Any) -> None:
+    async def test_viewport_screenshot(self, browser_instance: Any, test_server_url: str) -> None:
         """Test capturing viewport screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Capture viewport
         screenshot_data = await screenshot_ctrl.capture_viewport()
@@ -341,13 +316,13 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_element_screenshot(self, browser_instance: Any) -> None:
+    async def test_element_screenshot(self, browser_instance: Any, test_server_url: str) -> None:
         """Test capturing element screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
+        await nav.navigate(f"{test_server_url}/captcha_form.html")
 
         # Capture specific element
         screenshot_data = await screenshot_ctrl.capture_element(".captcha-container")
@@ -355,13 +330,13 @@ class TestScreenshotCapture:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_full_page_screenshot(self, browser_instance: Any) -> None:
+    async def test_full_page_screenshot(self, browser_instance: Any, test_server_url: str) -> None:
         """Test capturing full page screenshot."""
         browser = browser_instance
         nav = Navigator(browser)
         screenshot_ctrl = ScreenshotController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Capture full page
         screenshot_data = await screenshot_ctrl.capture_full_page()
@@ -373,7 +348,7 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_ajax_content_loading(self, browser_instance: Any) -> None:
+    async def test_ajax_content_loading(self, browser_instance: Any, test_server_url: str) -> None:
         """Test waiting for AJAX content."""
         browser = browser_instance
         waiter = Waiter(browser)
@@ -381,7 +356,7 @@ class TestDynamicContent:
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Click button to load AJAX content
         await mouse.click('[data-testid="load-ajax-btn"]')
@@ -395,14 +370,14 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_modal_interaction(self, browser_instance: Any) -> None:
+    async def test_modal_interaction(self, browser_instance: Any, test_server_url: str) -> None:
         """Test modal dialog interaction."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         mouse = MouseController(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Open modal
         await mouse.click('[data-testid="show-modal-btn"]')
@@ -426,13 +401,13 @@ class TestDynamicContent:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_infinite_scroll(self, browser_instance: Any) -> None:
+    async def test_infinite_scroll(self, browser_instance: Any, test_server_url: str) -> None:
         """Test infinite scroll functionality."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Switch to infinite scroll tab
         await extractor.execute_script("switchTab(2)")
@@ -469,7 +444,7 @@ class TestCaptchaHandling:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_text_captcha(self, browser_instance: Any) -> None:
+    async def test_text_captcha(self, browser_instance: Any, test_server_url: str) -> None:
         """Test solving text CAPTCHA."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
@@ -477,7 +452,7 @@ class TestCaptchaHandling:
         nav = Navigator(browser)
         input_ctrl = KeyboardController(browser)
 
-        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
+        await nav.navigate(f"{test_server_url}/captcha_form.html")
 
         # Get CAPTCHA text
         captcha_text = await extractor.execute_script("return window.captchaState.textCaptcha")
@@ -495,13 +470,13 @@ class TestCaptchaHandling:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_math_captcha(self, browser_instance: Any) -> None:
+    async def test_math_captcha(self, browser_instance: Any, test_server_url: str) -> None:
         """Test solving math CAPTCHA."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/captcha_form.html")
+        await nav.navigate(f"{test_server_url}/captcha_form.html")
 
         # Use helper to solve
         await extractor.execute_script("window.testHelpers.solveCaptcha('math')")
@@ -639,13 +614,13 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_inject_custom_script(self, browser_instance: Any) -> None:
+    async def test_inject_custom_script(self, browser_instance: Any, test_server_url: str) -> None:
         """Test injecting custom JavaScript."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/login_form.html")
+        await nav.navigate(f"{test_server_url}/login_form.html")
 
         # Inject custom script
         await extractor.execute_script(
@@ -668,14 +643,14 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_modify_dom(self, browser_instance: Any) -> None:
+    async def test_modify_dom(self, browser_instance: Any, test_server_url: str) -> None:
         """Test DOM modification via script."""
         browser = browser_instance
         waiter = Waiter(browser)
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Add new element via script
         await extractor.execute_script(
@@ -699,13 +674,13 @@ class TestScriptInjection:
 
     @pytest.mark.slow
     @pytest.mark.asyncio
-    async def test_intercept_network_requests(self, browser_instance: Any) -> None:
+    async def test_intercept_network_requests(self, browser_instance: Any, test_server_url: str) -> None:
         """Test intercepting network requests via script."""
         browser = browser_instance
         extractor = ContentExtractor(browser)
         nav = Navigator(browser)
 
-        await nav.navigate(f"{_get_server_url()}/dynamic_content.html")
+        await nav.navigate(f"{test_server_url}/dynamic_content.html")
 
         # Inject request interceptor
         await extractor.execute_script(

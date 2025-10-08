@@ -34,9 +34,10 @@ if TYPE_CHECKING:
 class BrowserOptionsBuilder:
     """Builds Chrome options for different configurations."""
 
-    # Port range constants
+    # Port range constants - base range per worker
     MIN_DEBUG_PORT = 29000
     MAX_DEBUG_PORT = 65000
+    PORTS_PER_WORKER = 1000  # Each worker gets 1000 ports
 
     # Class variable to track used ports
     _used_ports: set[int] = set()
@@ -54,16 +55,46 @@ class BrowserOptionsBuilder:
         self._debug_port: int | None = None  # Track debug port for cleanup
 
     @classmethod
+    def _get_worker_port_range(cls) -> tuple[int, int]:
+        """Get port range for the current xdist worker.
+
+        Returns:
+            (min_port, max_port) tuple for this worker's port range
+        """
+        # Check if running under pytest-xdist
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER_ID", "master")
+
+        # Calculate worker-specific port offset
+        if worker_id == "master":
+            worker_num = 0
+        elif worker_id.startswith("gw"):
+            try:
+                worker_num = int(worker_id[2:]) + 1  # gw0 -> 1, gw1 -> 2, etc.
+            except (ValueError, IndexError):
+                worker_num = 0
+        else:
+            worker_num = 0
+
+        # Calculate port range for this worker
+        base_port = cls.MIN_DEBUG_PORT + (worker_num * cls.PORTS_PER_WORKER)
+        max_port = min(base_port + cls.PORTS_PER_WORKER - 1, cls.MAX_DEBUG_PORT)
+
+        return base_port, max_port
+
+    @classmethod
     def _get_free_port(cls) -> int:
         """Get a free port for remote debugging.
 
-        Uses sequential port allocation within our range to ensure cross-process coordination.
+        Uses sequential port allocation within worker-specific range to avoid conflicts.
         Tests bind() on each candidate port and uses SO_LINGER to avoid TIME_WAIT conflicts.
         """
         with cls._port_lock:
-            # Try sequential ports in our range
+            # Get worker-specific port range
+            min_port, max_port = cls._get_worker_port_range()
+
+            # Try sequential ports in this worker's range
             # Sequential allocation reduces collisions better than random OS assignment
-            for port in range(cls.MIN_DEBUG_PORT, cls.MAX_DEBUG_PORT + 1):
+            for port in range(min_port, max_port + 1):
                 # Skip ports already allocated in this process
                 if port in cls._used_ports:
                     continue
@@ -84,8 +115,9 @@ class BrowserOptionsBuilder:
                     # Always close socket, whether bind succeeded or failed
                     s.close()
 
+            worker_id = os.environ.get("PYTEST_XDIST_WORKER_ID", "master")
             raise RuntimeError(
-                f"Unable to allocate a remote debugging port in range {cls.MIN_DEBUG_PORT}-{cls.MAX_DEBUG_PORT}. "
+                f"Unable to allocate a remote debugging port in range {min_port}-{max_port} for worker {worker_id}. "
                 "All ports appear to be in use. Configure an explicit port via browser configuration to proceed."
             )
 

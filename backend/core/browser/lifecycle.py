@@ -110,6 +110,27 @@ class BrowserLifecycle:
             chrome_options.binary_location = str(chrome_binary_path)
 
         # Patch ChromeDriver for anti-detection
+        patched_driver_path = self._patch_chromedriver(chromedriver_path)
+
+        # Create service and driver (explicit path required; do not rely on PATH)
+        if not patched_driver_path:
+            raise InstanceError("ChromeDriver path is not set after patching")
+        self._service = Service(executable_path=patched_driver_path)
+
+        # Launch Chrome with retry logic
+        driver = await self._launch_chrome_with_retry(loop, chrome_options)
+
+        # Set timeouts
+        driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
+        driver.implicitly_wait(DEFAULT_IMPLICIT_WAIT)
+
+        # Inject anti-detection script
+        execute_anti_detection_scripts(driver)
+
+        return driver
+
+    def _patch_chromedriver(self, chromedriver_path: str) -> str:
+        """Patch ChromeDriver for anti-detection."""
         patched_driver_path = chromedriver_path
         logger.info(f"ChromeDriver path: {chromedriver_path}")
 
@@ -125,28 +146,55 @@ class BrowserLifecycle:
             else:
                 patched_driver_path = str(patcher.get_patched_path())
                 logger.info(f"Using already patched ChromeDriver: {patched_driver_path}")
-        # Create service and driver (explicit path required; do not rely on PATH)
-        if not patched_driver_path:
-            raise InstanceError("ChromeDriver path is not set after patching")
-        self._service = Service(executable_path=patched_driver_path)
-        try:
-            driver = await loop.run_in_executor(
-                None,
-                lambda: webdriver.Chrome(service=self._service, options=chrome_options),
-            )
-        except WebDriverException as e:
-            logger.error(f"Chrome launch failed: {e}")
-            raise
 
-        # Set timeouts
-        driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)
-        driver.implicitly_wait(DEFAULT_IMPLICIT_WAIT)
+        return patched_driver_path
 
-        # Inject anti-detection script
+    async def _launch_chrome_with_retry(self, loop: Any, chrome_options: Options) -> WebDriver:
+        """Launch Chrome with retry logic for transient failures."""
+        max_retries = 3
+        retry_delay = 1.0  # seconds
+        last_error = None
 
-        execute_anti_detection_scripts(driver)
+        for attempt in range(1, max_retries + 1):
+            try:
+                driver: WebDriver = await loop.run_in_executor(
+                    None,
+                    lambda: webdriver.Chrome(service=self._service, options=chrome_options),
+                )
+                if attempt > 1:
+                    logger.info(f"Chrome launched successfully on attempt {attempt}")
+                return driver
+            except WebDriverException as e:
+                last_error = e
+                error_msg = str(e).lower()
+                # Check if it's a transient error worth retrying
+                is_retryable = any(
+                    msg in error_msg
+                    for msg in [
+                        "unable to connect to renderer",
+                        "chrome not reachable",
+                        "session not created",
+                        "chrome failed to start",
+                        "timeout",
+                    ]
+                )
 
-        return driver
+                if is_retryable and attempt < max_retries:
+                    logger.warning(f"Chrome launch failed (attempt {attempt}/{max_retries}): {e}. Retrying in {retry_delay}s...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error(f"Chrome launch failed on attempt {attempt}/{max_retries}: {e}")
+                    if attempt == max_retries:
+                        raise
+                    if not is_retryable:
+                        raise
+
+        # Should not reach here, but if we do, raise the last error
+        logger.error(f"Chrome launch failed after {max_retries} attempts")
+        if last_error:
+            raise last_error
+        raise InstanceError("Chrome launch failed after retries")
 
     async def _launch_standard(self, chrome_options: Options) -> WebDriver:
         """Launch Chrome in standard mode."""
@@ -163,14 +211,9 @@ class BrowserLifecycle:
         if not chromedriver_path:
             raise InstanceError("ChromeDriver path is not set")
         self._service = Service(executable_path=chromedriver_path)
-        try:
-            driver = await loop.run_in_executor(
-                None,
-                lambda: webdriver.Chrome(service=self._service, options=chrome_options),
-            )
-        except WebDriverException as e:
-            logger.error(f"Chrome launch failed: {e}")
-            raise
+
+        # Launch Chrome with retry logic
+        driver = await self._launch_chrome_with_retry(loop, chrome_options)
 
         # Set timeouts
         driver.set_page_load_timeout(DEFAULT_PAGE_LOAD_TIMEOUT)

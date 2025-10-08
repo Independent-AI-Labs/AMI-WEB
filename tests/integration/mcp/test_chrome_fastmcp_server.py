@@ -9,6 +9,8 @@ from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 class TestChromeFastMCPServer:
     """Test Chrome FastMCP server using official MCP client."""

@@ -47,6 +47,14 @@ class SessionManager:
 
     def _save_metadata(self) -> None:
         """Save session metadata."""
+        # Skip if directory was deleted (happens during test cleanup)
+        if not self.session_dir.exists():
+            logger.debug(f"Session directory {self.session_dir} doesn't exist, skipping metadata save")
+            return
+
+        # Ensure directory exists (defensive)
+        self.session_dir.mkdir(parents=True, exist_ok=True)
+
         with self.metadata_file.open("w") as f:
             json.dump(self.sessions, f, indent=2, default=str)
 

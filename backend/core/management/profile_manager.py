@@ -31,6 +31,11 @@ class ProfileManager:
 
     def _save_metadata(self) -> None:
         """Save profile metadata."""
+        # Skip if directory was deleted (happens during test cleanup)
+        if not self.base_dir.exists():
+            logger.debug(f"Profile directory {self.base_dir} doesn't exist, skipping metadata save")
+            return
+
         self.base_dir.mkdir(parents=True, exist_ok=True)
         with self.metadata_file.open("w") as f:
             json.dump(self.profiles, f, indent=2)

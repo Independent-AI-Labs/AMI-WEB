@@ -231,16 +231,22 @@ async def antidetect_browser() -> AsyncIterator[BrowserInstance]:
     logger.info(f"Terminated anti-detect instance {instance.id}")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def worker_id(request: pytest.FixtureRequest) -> str:
     """Get xdist worker ID for this test worker.
 
     Returns 'master' for single-process mode, or 'gw0', 'gw1', etc. for parallel workers.
+    Sets PYTEST_XDIST_WORKER_ID environment variable for Chrome port allocation.
     """
     if hasattr(request.config, "workerinput"):
         workerinput = request.config.workerinput
-        return str(workerinput["workerid"])
-    return "master"
+        worker = str(workerinput["workerid"])
+    else:
+        worker = "master"
+
+    # Set environment variable for Chrome port allocation
+    os.environ["PYTEST_XDIST_WORKER_ID"] = worker
+    return worker
 
 
 @pytest.fixture(scope="function")
