@@ -58,10 +58,23 @@ class ChromeFastMCPServer:
         # Register tools
         self._register_tools()
 
-    def _register_tools(self) -> None:  # noqa: C901
+    def _register_tools(self) -> None:
         """Register V02 simplified facade tools with FastMCP."""
+        self._register_session_tool()
+        self._register_navigate_tool()
+        self._register_interact_tool()
+        self._register_inspect_tool()
+        self._register_extract_tool()
+        self._register_capture_tool()
+        self._register_execute_tool()
+        self._register_web_search_tool()
+        self._register_storage_tool()
+        self._register_react_tool()
+        self._register_profile_tool()
 
-        # V02 Facade Tool 1: browser_session - Instance lifecycle and session persistence
+    def _register_session_tool(self) -> None:
+        """Register browser_session tool."""
+
         @self.mcp.tool(
             description=(
                 "Manage browser instance lifecycle (launch, terminate, list, get_active) "
@@ -106,7 +119,9 @@ class ChromeFastMCPServer:
                 kill_orphaned,
             )
 
-        # V02 Facade Tool 2: browser_navigate - Page navigation, history, and tab management
+    def _register_navigate_tool(self) -> None:
+        """Register browser_navigate tool."""
+
         @self.mcp.tool(
             description=(
                 "Navigate pages and manage browser history and tabs (goto, back, forward, refresh, get_url, open_tab, close_tab, switch_tab, list_tabs)"
@@ -132,7 +147,9 @@ class ChromeFastMCPServer:
             """Navigate pages and manage tabs."""
             return await browser_navigate_tool(self.manager, action, url, wait_for, timeout, tab_id)
 
-        # V02 Facade Tool 3: browser_interact - Element interaction and waiting
+    def _register_interact_tool(self) -> None:
+        """Register browser_interact tool."""
+
         @self.mcp.tool(description="Interact with page elements (click, type, select, hover, scroll, press, wait)")
         async def browser_interact(
             action: Literal["click", "type", "select", "hover", "scroll", "press", "wait"],
@@ -173,7 +190,9 @@ class ChromeFastMCPServer:
                 timeout,
             )
 
-        # V02 Facade Tool 4: browser_inspect - DOM structure inspection
+    def _register_inspect_tool(self) -> None:
+        """Register browser_inspect tool."""
+
         @self.mcp.tool(description="Inspect DOM structure and element properties (get_html, exists, get_attribute)")
         async def browser_inspect(
             action: Literal["get_html", "exists", "get_attribute"],
@@ -194,7 +213,9 @@ class ChromeFastMCPServer:
                 attribute,
             )
 
-        # V02 Facade Tool 5: browser_extract - Content extraction
+    def _register_extract_tool(self) -> None:
+        """Register browser_extract tool."""
+
         @self.mcp.tool(
             description=(
                 "Extract text content with tags and cookies (get_text, get_cookies). "
@@ -229,7 +250,9 @@ class ChromeFastMCPServer:
                 max_depth,
             )
 
-        # V02 Facade Tool 6: browser_capture - Visual capture
+    def _register_capture_tool(self) -> None:
+        """Register browser_capture tool."""
+
         @self.mcp.tool(description="Capture screenshots (screenshot, element_screenshot)")
         async def browser_capture(
             action: Literal["screenshot", "element_screenshot"],
@@ -240,7 +263,9 @@ class ChromeFastMCPServer:
             """Capture screenshots."""
             return await browser_capture_tool(self.manager, action, selector, full_page, save_to_disk)
 
-        # V02 Facade Tool 7: browser_execute - JavaScript execution with validation
+    def _register_execute_tool(self) -> None:
+        """Register browser_execute tool."""
+
         @self.mcp.tool(
             description=(
                 "Execute JavaScript code or evaluate expressions (execute, evaluate). "
@@ -271,7 +296,9 @@ class ChromeFastMCPServer:
                 snapshot_checksum,
             )
 
-        # V02 Tool 8: web_search - Web search (unchanged from V01)
+    def _register_web_search_tool(self) -> None:
+        """Register web_search tool."""
+
         @self.mcp.tool(description="Run a web search using the configured engine")
         async def web_search(
             query: str,
@@ -288,7 +315,9 @@ class ChromeFastMCPServer:
                 timeout=timeout,
             )
 
-        # V02 Tool 9: browser_storage - Download and screenshot storage management
+    def _register_storage_tool(self) -> None:
+        """Register browser_storage tool."""
+
         @self.mcp.tool(description="Manage downloads and screenshots (list, clear, wait, set behavior)")
         async def browser_storage(
             action: Literal[
@@ -316,7 +345,9 @@ class ChromeFastMCPServer:
                 download_path,
             )
 
-        # V02 Tool 10: browser_react - React-specific interactions
+    def _register_react_tool(self) -> None:
+        """Register browser_react tool."""
+
         @self.mcp.tool(description="React-specific helpers for triggering handlers and inspecting components")
         async def browser_react(
             action: Literal[
@@ -343,7 +374,9 @@ class ChromeFastMCPServer:
                 max_depth,
             )
 
-        # V02 Tool 11: browser_profile - Profile management
+    def _register_profile_tool(self) -> None:
+        """Register browser_profile tool."""
+
         @self.mcp.tool(description="Manage browser profiles (create, delete, list, copy)")
         async def browser_profile(
             action: Literal["create", "delete", "list", "copy"],
