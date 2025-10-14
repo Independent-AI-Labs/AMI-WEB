@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from loguru import logger
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.utils.exceptions import SessionError
@@ -161,22 +162,62 @@ class SessionManager:
         return count
 
     def _restore_all_tabs(self, driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
-        """Restore all tabs from session data. Returns mapping of old handles to new handles."""
+        """Restore all tabs from session data with timeout protection.
+
+        Returns mapping of old handles to new handles.
+        Logs warnings for failed tabs but continues restoration to prevent total failure.
+        """
         handle_mapping = {}
+        failed_tabs = []
 
-        # First tab: use existing tab and navigate
-        first_tab = tabs[0]
-        driver.get(first_tab["url"])
-        first_handle = driver.current_window_handle
-        handle_mapping[tabs[0]["handle"]] = first_handle
+        # Store original timeout and set shorter timeout for restoration
+        original_timeout = 30  # Default page load timeout
+        restore_timeout = 15  # Shorter timeout to prevent long hangs
 
-        # Restore remaining tabs (if any)
-        for tab in tabs[1:]:
-            driver.execute_script("window.open('');")
-            new_handle = driver.window_handles[-1]
-            handle_mapping[tab["handle"]] = new_handle
-            driver.switch_to.window(new_handle)
-            driver.get(tab["url"])
+        try:
+            driver.set_page_load_timeout(restore_timeout)
+
+            # First tab: use existing tab and navigate
+            first_tab = tabs[0]
+            try:
+                logger.info(f"Restoring first tab: {first_tab['url']}")
+                driver.get(first_tab["url"])
+                first_handle = driver.current_window_handle
+                handle_mapping[tabs[0]["handle"]] = first_handle
+            except (TimeoutException, WebDriverException) as e:
+                logger.warning(f"Failed to restore first tab {first_tab['url']}: {e}")
+                # Keep first tab even if navigation failed - just leave it on error page
+                first_handle = driver.current_window_handle
+                handle_mapping[tabs[0]["handle"]] = first_handle
+                failed_tabs.append((0, first_tab["url"], str(e)))
+
+            # Restore remaining tabs (if any)
+            for idx, tab in enumerate(tabs[1:], start=1):
+                try:
+                    logger.info(f"Restoring tab {idx}: {tab['url']}")
+                    driver.execute_script("window.open('');")
+                    new_handle = driver.window_handles[-1]
+                    handle_mapping[tab["handle"]] = new_handle
+                    driver.switch_to.window(new_handle)
+
+                    try:
+                        driver.get(tab["url"])
+                    except (TimeoutException, WebDriverException) as e:
+                        logger.warning(f"Failed to navigate tab {idx} to {tab['url']}: {e}")
+                        # Tab was created but navigation failed - keep the tab
+                        failed_tabs.append((idx, tab["url"], str(e)))
+
+                except Exception as e:
+                    logger.error(f"Failed to create tab {idx}: {e}")
+                    failed_tabs.append((idx, tab["url"], str(e)))
+                    # Don't add to handle_mapping if tab creation failed
+
+            if failed_tabs:
+                logger.warning(f"Session restore completed with {len(failed_tabs)} failed tabs: {failed_tabs}")
+
+        finally:
+            # Restore original timeout
+            driver.set_page_load_timeout(original_timeout)
 
         return handle_mapping
 
