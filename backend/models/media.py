@@ -37,3 +37,6 @@ class RecordingSession(BaseModel):
     status: Literal["recording", "paused", "stopped"]
     duration: float = 0.0
     frame_count: int = 0
+    fps: int | None = None
+    codec: str | None = None
+    start_time: Any | None = None  # datetime

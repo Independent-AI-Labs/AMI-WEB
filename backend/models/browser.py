@@ -94,6 +94,8 @@ class NetworkEntry(BaseModel):
     method: str
     url: str
     status_code: int | None = None
+    status: int | None = None  # Alias for status_code
+    type: str | None = None  # MIME type
     response_time: float | None = None
     size: int | None = None
     headers: dict[str, str] = Field(default_factory=dict)
@@ -116,3 +118,5 @@ class PerformanceMetrics(BaseModel):
     largest_contentful_paint: float | None = None
     cumulative_layout_shift: float | None = None
     total_blocking_time: float | None = None
+    js_heap_used: int | None = None
+    js_heap_total: int | None = None

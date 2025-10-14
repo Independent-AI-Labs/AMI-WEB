@@ -96,7 +96,7 @@ def install_precommit(module_root: Path) -> None:
 
     # Install hooks
     installed = 0
-    for hook_file in ["pre-commit", "pre-push"]:
+    for hook_file in ["pre-commit", "pre-push", "commit-msg"]:
         source = hook_sources / hook_file
         if source.exists():
             dest = git_hooks_dir / hook_file
@@ -106,6 +106,40 @@ def install_precommit(module_root: Path) -> None:
 
     if installed > 0:
         logger.info(f"Installed {installed} native git hooks from /base/scripts/hooks/")
+
+
+def setup_child_submodules(module_root: Path) -> None:
+    """Recursively setup direct child submodules with module_setup.py.
+
+    Only processes immediate children, not deeper descendants.
+    Each child's setup will handle its own children recursively.
+    """
+    children_with_setup = []
+    for child in module_root.iterdir():
+        if not child.is_dir():
+            continue
+        if child.name.startswith("."):
+            continue
+        child_setup = child / "module_setup.py"
+        if child_setup.exists():
+            children_with_setup.append(child)
+
+    if not children_with_setup:
+        return
+
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info(f"Setting up {len(children_with_setup)} child submodule(s)")
+    logger.info("=" * 60)
+
+    for child in children_with_setup:
+        child_setup = child / "module_setup.py"
+        logger.info(f"\nRunning setup for {child.name}...")
+        result = subprocess.run([sys.executable, str(child_setup)], cwd=child, check=False)
+        if result.returncode != 0:
+            logger.warning(f"Setup for {child.name} failed with code {result.returncode}")
+        else:
+            logger.info(f"✓ {child.name} setup complete")
 
 
 def setup(module_root: Path, project_name: str | None) -> int:
@@ -136,6 +170,10 @@ def setup(module_root: Path, project_name: str | None) -> int:
 
     install_precommit(module_root)
 
+    # Setup direct child submodules recursively
+    setup_child_submodules(module_root)
+
+    logger.info("")
     logger.info("=" * 60)
     logger.info(f"{name} Development Environment Setup Complete!")
     logger.info("Activate the venv:")

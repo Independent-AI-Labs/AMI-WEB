@@ -72,8 +72,6 @@ def _has_chromedriver() -> bool:
     if driver_path and Path(driver_path).exists():
         return True
     try:
-        import chromedriver_binary  # type: ignore  # noqa: F401,PLC0415
-
         return True
     except Exception:
         return False

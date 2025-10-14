@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "base").exists())))
 
 # Now we can import from base
-from base.scripts.env.paths import setup_imports  # noqa: E402
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 

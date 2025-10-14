@@ -66,14 +66,14 @@ class PerformanceController(BaseController):
             )
 
             # Combine metrics
-            return PerformanceMetrics(  # type: ignore[call-arg]
+            return PerformanceMetrics(
                 timestamp=datetime.now(),
-                dom_content_loaded=navigation_timing.get("domContentLoaded", 0),
-                load_complete=navigation_timing.get("loadComplete", 0),
-                first_paint=paint_timing.get("firstPaint", 0),
-                first_contentful_paint=paint_timing.get("firstContentfulPaint", 0),
-                js_heap_used=memory_info.get("usedJSHeapSize", 0) if memory_info else 0,
-                js_heap_total=memory_info.get("totalJSHeapSize", 0) if memory_info else 0,
+                dom_content_loaded=float(navigation_timing.get("domContentLoaded", 0)),
+                load_complete=float(navigation_timing.get("loadComplete", 0)),
+                first_paint=float(paint_timing.get("firstPaint", 0)),
+                first_contentful_paint=float(paint_timing.get("firstContentfulPaint", 0)),
+                js_heap_used=int(memory_info.get("usedJSHeapSize", 0)) if memory_info else 0,
+                js_heap_total=int(memory_info.get("totalJSHeapSize", 0)) if memory_info else 0,
             )
 
         except Exception as e:

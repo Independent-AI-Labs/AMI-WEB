@@ -3,6 +3,7 @@
 import asyncio
 import json
 from collections.abc import Callable
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
@@ -76,13 +77,14 @@ class NetworkController(BaseController):
                     if method == "Network.responseReceived":
                         response = message["message"]["params"]["response"]
                         entries.append(
-                            NetworkEntry(  # type: ignore[call-arg]
-                                url=response.get("url"),
-                                method=response.get("requestMethod", "GET"),
-                                status=response.get("status"),
-                                type=response.get("mimeType"),
-                                size=response.get("encodedDataLength"),
-                                headers=response.get("headers", {}),
+                            NetworkEntry(
+                                timestamp=datetime.now(),
+                                url=str(response.get("url", "")),
+                                method=str(response.get("requestMethod", "GET")),
+                                status=int(response.get("status", 0)),
+                                type=str(response.get("mimeType", "")),
+                                size=int(response.get("encodedDataLength", 0)),
+                                headers=dict(response.get("headers", {})),
                             ),
                         )
                 except (json.JSONDecodeError, KeyError) as e:

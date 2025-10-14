@@ -44,7 +44,8 @@ class StorageController(BaseController):
                 raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
             if raw_result is not None:
-                return raw_result  # type: ignore[no-any-return]
+                result: dict[str, str] | str | None = raw_result
+                return result
             return {} if key is None else None
 
         except Exception as e:
@@ -155,7 +156,8 @@ class StorageController(BaseController):
                 raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
 
             if raw_result is not None:
-                return raw_result  # type: ignore[no-any-return]
+                result: dict[str, str] | str | None = raw_result
+                return result
             return {} if key is None else None
 
         except Exception as e:

@@ -117,11 +117,12 @@ class Scroller(BaseController):
 
         try:
             if self._is_in_thread_context():
-                result = self.driver.execute_script(script)
+                raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
-            return result  # type: ignore[no-any-return]
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+            result: dict[str, int] = raw_result
+            return result
         except Exception as e:
             raise NavigationError(f"Failed to get scroll position: {e}") from e
 
@@ -138,11 +139,12 @@ class Scroller(BaseController):
 
         try:
             if self._is_in_thread_context():
-                result = self.driver.execute_script(script)
+                raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
-            return result  # type: ignore[no-any-return]
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+            result: dict[str, int] = raw_result
+            return result
         except Exception as e:
             raise NavigationError(f"Failed to get viewport size: {e}") from e
 
@@ -164,10 +166,11 @@ class Scroller(BaseController):
 
         try:
             if self._is_in_thread_context():
-                result = self.driver.execute_script(script)
+                raw_result = self.driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, self.driver.execute_script, script)
-            return result  # type: ignore[no-any-return]
+                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+            result: dict[str, int] = raw_result
+            return result
         except Exception as e:
             raise NavigationError(f"Failed to get page dimensions: {e}") from e

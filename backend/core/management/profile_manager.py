@@ -26,7 +26,8 @@ class ProfileManager:
         """Load profile metadata."""
         if self.metadata_file.exists():
             with self.metadata_file.open() as f:
-                return json.load(f)  # type: ignore[no-any-return]
+                result: dict[str, dict[str, Any]] = json.load(f)
+                return result
         return {}
 
     def _save_metadata(self) -> None:

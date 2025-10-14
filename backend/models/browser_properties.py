@@ -279,7 +279,8 @@ def _load_user_agents_config() -> dict[str, Any]:
     config_path = MODULE_ROOT / "config" / "user_agents.json"
     if config_path.exists():
         with config_path.open() as f:
-            return json.load(f)  # type: ignore[no-any-return]
+            result: dict[str, Any] = json.load(f)
+            return result
     return {"presets": {}, "device_emulation": {}}
 
 

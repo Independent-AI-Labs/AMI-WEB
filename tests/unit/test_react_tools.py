@@ -1,11 +1,12 @@
 """Unit tests for React-specific browser tools."""
 
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.react_tools import (
     browser_react_find_component_tool,
     browser_react_get_fiber_tree_tool,
@@ -241,27 +242,30 @@ async def test_no_browser_instance_available() -> None:
     manager.list_instances = AsyncMock(return_value=[])
     manager.get_instance_or_current = AsyncMock(return_value=None)
 
+    # Cast to ChromeManager for type checking - this is a duck-typed test mock
+    mock_manager = cast(ChromeManager, manager)
+
     # Test trigger_handler
-    response = await browser_react_trigger_handler_tool(manager, ".test", "onClick")  # type: ignore[arg-type]
+    response = await browser_react_trigger_handler_tool(mock_manager, ".test", "onClick")
     assert response.success is False
     assert "Browser instance not available" in (response.error or "")
 
     # Test get_props
-    response = await browser_react_get_props_tool(manager, ".test")  # type: ignore[arg-type]
+    response = await browser_react_get_props_tool(mock_manager, ".test")
     assert response.success is False
     assert "Browser instance not available" in (response.error or "")
 
     # Test get_state
-    response = await browser_react_get_state_tool(manager, ".test")  # type: ignore[arg-type]
+    response = await browser_react_get_state_tool(mock_manager, ".test")
     assert response.success is False
     assert "Browser instance not available" in (response.error or "")
 
     # Test find_component
-    response = await browser_react_find_component_tool(manager, "TestComponent")  # type: ignore[arg-type]
+    response = await browser_react_find_component_tool(mock_manager, "TestComponent")
     assert response.success is False
     assert "Browser instance not available" in (response.error or "")
 
     # Test get_fiber_tree
-    response = await browser_react_get_fiber_tree_tool(manager, ".test")  # type: ignore[arg-type]
+    response = await browser_react_get_fiber_tree_tool(mock_manager, ".test")
     assert response.success is False
     assert "Browser instance not available" in (response.error or "")

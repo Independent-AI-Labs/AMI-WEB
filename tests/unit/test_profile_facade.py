@@ -267,7 +267,7 @@ class TestProfileFacade:
 
         response = await browser_profile_tool(
             manager=manager,
-            action="invalid",  # type: ignore
+            action="invalid",  # type: ignore[arg-type]
         )
 
         assert response.success is False

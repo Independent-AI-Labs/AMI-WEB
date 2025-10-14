@@ -236,14 +236,14 @@ class ScreenshotController(BaseController):
         # Paste screenshots
         y_offset = 0
         for _i, screenshot_bytes in enumerate(screenshots):
-            img = Image.open(io.BytesIO(screenshot_bytes))
+            img: Image.Image = Image.open(io.BytesIO(screenshot_bytes))
 
             # Calculate paste height (last screenshot might be partial)
             paste_height = min(viewport_height, height - y_offset)
 
             # Crop if needed
             if img.height > paste_height:
-                img = img.crop((0, 0, img.width, paste_height))  # type: ignore[assignment]
+                img = img.crop((0, 0, img.width, paste_height))
 
             stitched.paste(img, (0, y_offset))
             y_offset += paste_height
@@ -261,7 +261,7 @@ class ScreenshotController(BaseController):
         Returns:
             Converted image bytes
         """
-        img = Image.open(io.BytesIO(image_bytes))
+        img: Image.Image = Image.open(io.BytesIO(image_bytes))
         output = io.BytesIO()
 
         if format_type == ImageFormat.JPEG:
@@ -269,7 +269,7 @@ class ScreenshotController(BaseController):
             if img.mode == "RGBA":
                 rgb_img = Image.new("RGB", img.size, (255, 255, 255))
                 rgb_img.paste(img, mask=img.split()[3])
-                img = rgb_img  # type: ignore[assignment]
+                img = rgb_img
             img.save(output, format="JPEG", quality=quality)
         elif format_type == ImageFormat.WEBP:
             img.save(output, format="WEBP", quality=quality)
