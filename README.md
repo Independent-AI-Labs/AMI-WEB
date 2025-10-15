@@ -4,7 +4,7 @@
 [![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checking: Mypy](https://img.shields.io/badge/type%20checking-mypy-blue.svg)](http://mypy-lang.org/)
 [![Tests: Pytest](https://img.shields.io/badge/tests-pytest-orange.svg)](https://docs.pytest.org/)
-[![Coverage](https://img.shields.io/badge/coverage-check%20CI-brightgreen.svg)](#testing)
+[![codecov](https://codecov.io/gh/Independent-AI-Labs/AMI-ORCHESTRATOR/branch/main/graph/badge.svg?flag=browser)](https://codecov.io/gh/Independent-AI-Labs/AMI-ORCHESTRATOR)
 
 Production-grade Chromium automation with security-first JavaScript execution, session persistence, and comprehensive MCP tooling for AI agents.
 
