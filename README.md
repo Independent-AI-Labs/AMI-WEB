@@ -1,5 +1,11 @@
 # AMI Browser Module
 
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Type checking: Mypy](https://img.shields.io/badge/type%20checking-mypy-blue.svg)](http://mypy-lang.org/)
+[![Tests: Pytest](https://img.shields.io/badge/tests-pytest-orange.svg)](https://docs.pytest.org/)
+[![Coverage](https://img.shields.io/badge/coverage-check%20CI-brightgreen.svg)](#testing)
+
 Production-grade Chromium automation with security-first JavaScript execution, session persistence, and comprehensive MCP tooling for AI agents.
 
 ## Overview

@@ -13,10 +13,12 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-# Import consolidated environment utilities
-sys.path.insert(0, str(Path(__file__).parent))
-from scripts.env.paths import setup_imports  # type: ignore[import-not-found]  # noqa: E402
-from scripts.env.venv import ensure_venv  # type: ignore[import-not-found]  # noqa: E402
+# Bootstrap sys.path - MUST come before base imports
+sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "base").exists())))
+
+# Import consolidated environment utilities from base
+from base.scripts.env.paths import setup_imports  # noqa: E402
+from base.scripts.env.venv import ensure_venv  # noqa: E402
 
 
 def check_uv() -> bool:
