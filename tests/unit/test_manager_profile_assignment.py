@@ -88,7 +88,7 @@ async def test_profile_disables_pooling(manager: ChromeManager) -> None:
         mock_instance.launch = AsyncMock()
 
         # Create instance with profile AND use_pool=True
-        # Should ignore use_pool and create standalone
+        # Should skip use_pool and create standalone
         instance = await manager.get_or_create_instance(
             headless=True,
             profile="test-profile",

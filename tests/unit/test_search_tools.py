@@ -47,7 +47,7 @@ async def test_browser_web_search_tool_primary_success() -> None:
                         "url": "https://example.com",
                         "content": "Snippet <i>content</i>",
                     },
-                    {"title": "Ignore Without URL"},
+                    {"title": "Skip Without URL"},
                 ],
             },
         )

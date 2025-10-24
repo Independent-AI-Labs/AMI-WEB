@@ -528,7 +528,7 @@ class ChromeManager:
 
         Args:
             session_id: Session ID to restore
-            instance_id: Optional instance ID to restore into (ignored, unused)
+            instance_id: Optional instance ID to restore into (unused parameter)
 
         Returns:
             Browser instance with restored session

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 
@@ -44,7 +45,7 @@ async def test_mcp_profile_not_captured_in_session_save(worker_data_dirs: dict[s
     await asyncio.sleep(1)
 
     # Check what the instance's profile name is
-    print(f"DEBUG: instance._profile_name = {instance._profile_name}")
+    logger.info(f"DEBUG: instance._profile_name = {instance._profile_name}")
 
     # REPLICATE MCP BEHAVIOR: Save session WITHOUT profile_override
     # MCP calls: manager.session_manager.save_session(instance, session_name)
@@ -57,7 +58,7 @@ async def test_mcp_profile_not_captured_in_session_save(worker_data_dirs: dict[s
         saved_data = json.load(f)
 
     saved_profile = saved_data.get("profile")
-    print(f"DEBUG: saved profile = {saved_profile}")
+    logger.info(f"DEBUG: saved profile = {saved_profile}")
 
     # Cleanup
     await manager.terminate_instance(instance.id)
@@ -118,7 +119,7 @@ async def test_mcp_session_restore_with_profile_null_fails(worker_data_dirs: dic
     # Check what URL we're on
     assert instance2.driver is not None
     restored_url = instance2.driver.current_url
-    print(f"DEBUG: restored URL = {restored_url}")
+    logger.info(f"DEBUG: restored URL = {restored_url}")
 
     await manager2.terminate_instance(instance2.id)
     await manager2.shutdown()

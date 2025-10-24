@@ -4,6 +4,7 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
@@ -127,7 +128,7 @@ async def test_mcp_tab_lifecycle_full_e2e(worker_data_dirs: dict[str, Path]) -> 
         # Verify only one tab remains (tab IDs may change)
         assert len(response.data["tabs"]) == 1
 
-        print("✓ All tab management operations succeeded")
+        logger.info("✓ All tab management operations succeeded")
 
     finally:
         await manager.shutdown()
@@ -155,7 +156,7 @@ async def test_mcp_tab_switch_validation(worker_data_dirs: dict[str, Path]) -> N
         assert response.error is not None
         assert "tab_id required" in str(response.error)
 
-        print("✓ Validation test passed")
+        logger.info("✓ Validation test passed")
 
     finally:
         await manager.shutdown()
@@ -208,7 +209,7 @@ async def test_mcp_tab_antidetect_injection(worker_data_dirs: dict[str, Path]) -
         response = await browser_navigate_tool(manager, action="switch_tab", tab_id=tab2_id)
         assert response.success
 
-        print("✓ Anti-detection tab injection test passed")
+        logger.info("✓ Anti-detection tab injection test passed")
 
     finally:
         await manager.shutdown()
@@ -237,7 +238,7 @@ async def test_mcp_tab_error_handling(worker_data_dirs: dict[str, Path]) -> None
         response = await browser_navigate_tool(manager, action="close_tab", tab_id="invalid-tab-id-67890")
         assert not response.success, "Should fail closing invalid tab"
 
-        print("✓ Error handling test passed")
+        logger.info("✓ Error handling test passed")
 
     finally:
         await manager.shutdown()

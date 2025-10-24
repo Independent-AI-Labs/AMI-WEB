@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 import pytest
+from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 
@@ -50,12 +51,12 @@ async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str,
 
     # Verify we're on the first URL
     current_url_after_nav = instance.driver.current_url
-    print(f"✓ Navigated to: {current_url_after_nav}")
+    logger.info(f"✓ Navigated to: {current_url_after_nav}")
     assert first_url in current_url_after_nav, f"Should be on {first_url}, got {current_url_after_nav}"
 
     # Record the handle of the first tab
     first_tab_handle = instance.driver.current_window_handle
-    print(f"✓ First tab handle: {first_tab_handle}")
+    logger.info(f"✓ First tab handle: {first_tab_handle}")
 
     # Use window.open() to create a new tab (this mimics the user's action)
     instance.driver.execute_script("window.open('https://reddit.com', '_blank')")
@@ -63,26 +64,26 @@ async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str,
 
     # Check if we have 2 tabs now
     num_tabs = len(instance.driver.window_handles)
-    print(f"✓ Number of tabs after window.open(): {num_tabs}")
+    logger.info(f"✓ Number of tabs after window.open(): {num_tabs}")
     assert num_tabs == 2, f"Should have 2 tabs, got {num_tabs}"
 
     # Switch to the new tab to verify it worked
     instance.driver.switch_to.window(instance.driver.window_handles[1])
     second_tab_url = instance.driver.current_url
-    print(f"✓ Second tab URL: {second_tab_url}")
+    logger.info(f"✓ Second tab URL: {second_tab_url}")
 
     # Switch back to the first tab to check its URL
     instance.driver.switch_to.window(first_tab_handle)
     first_tab_url_after_open = instance.driver.current_url
-    print(f"✓ First tab URL after window.open(): {first_tab_url_after_open}")
+    logger.info(f"✓ First tab URL after window.open(): {first_tab_url_after_open}")
 
     # THE BUG: First tab URL might be "about:blank" now
     # For now, just log it - we'll verify it in the saved session
-    print(f"DEBUG: First tab URL is now: {first_tab_url_after_open}")
+    logger.info(f"DEBUG: First tab URL is now: {first_tab_url_after_open}")
 
     # Save the session
     session_id = await manager.session_manager.save_session(instance, "window-open-bug-test")
-    print(f"✓ Saved session {session_id}")
+    logger.info(f"✓ Saved session {session_id}")
 
     # Read the saved session file to inspect what was actually saved
     session_file = worker_data_dirs["sessions_dir"] / session_id / "session.json"
@@ -90,19 +91,19 @@ async def test_window_open_corrupts_original_tab_url(worker_data_dirs: dict[str,
         saved_data = json.load(f)
 
     saved_tabs = saved_data.get("tabs", [])
-    print("\n=== SAVED SESSION DATA ===")
-    print(f"Number of saved tabs: {len(saved_tabs)}")
+    logger.info("\n=== SAVED SESSION DATA ===")
+    logger.info(f"Number of saved tabs: {len(saved_tabs)}")
     for i, tab in enumerate(saved_tabs):
-        print(f"Tab {i}: handle={tab['handle']}, url={tab['url']}, title={tab['title']}")
+        logger.info(f"Tab {i}: handle={tab['handle']}, url={tab['url']}, title={tab['title']}")
 
     # ASSERTION: The bug is that the first tab's URL is saved as "about:blank"
     # instead of the original URL
     first_saved_tab = saved_tabs[0]
     first_saved_url = first_saved_tab["url"]
 
-    print("\n=== BUG CHECK ===")
-    print(f"Expected first tab URL: {first_url}")
-    print(f"Actual saved first tab URL: {first_saved_url}")
+    logger.info("\n=== BUG CHECK ===")
+    logger.info(f"Expected first tab URL: {first_url}")
+    logger.info(f"Actual saved first tab URL: {first_saved_url}")
 
     # This assertion will FAIL if the bug exists
     assert first_url in first_saved_url, f"BUG REPRODUCED: First tab URL was saved as '{first_saved_url}' instead of '{first_url}' after using window.open()!"

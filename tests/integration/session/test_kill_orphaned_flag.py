@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import pytest
+from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.utils.exceptions import InstanceError
@@ -96,9 +97,9 @@ async def test_restore_fails_without_kill_orphaned_flag(data_dir: Path) -> None:
     # Cleanup: Kill the orphaned process manually
     try:
         os.kill(chrome_pid, 9)
-        print(f"✓ Cleaned up orphaned Chrome process {chrome_pid}")
+        logger.info(f"✓ Cleaned up orphaned Chrome process {chrome_pid}")
     except ProcessLookupError:
-        print(f"Process {chrome_pid} already terminated")
+        logger.info(f"Process {chrome_pid} already terminated")
 
     # Clean up locks
     for lock_file in [
@@ -163,7 +164,7 @@ async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
     # Verify the Chrome process is running
     try:
         os.kill(orphaned_pid, 0)
-        print(f"✓ Chrome process {orphaned_pid} is running")
+        logger.info(f"✓ Chrome process {orphaned_pid} is running")
     except ProcessLookupError:
         pytest.fail(f"Chrome process {orphaned_pid} should be running")
 
@@ -174,7 +175,7 @@ async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
     # Verify Chrome process is still running (orphaned)
     try:
         os.kill(orphaned_pid, 0)
-        print(f"✓ Chrome process {orphaned_pid} is orphaned and still running")
+        logger.info(f"✓ Chrome process {orphaned_pid} is orphaned and still running")
     except ProcessLookupError:
         pytest.fail(f"Orphaned Chrome process {orphaned_pid} should still be running")
 
@@ -196,7 +197,7 @@ async def test_restore_succeeds_with_kill_orphaned_flag(data_dir: Path) -> None:
 
     # SUCCESS: The orphaned process was killed and new instance was created
     # We don't verify the old PID is dead because Chrome may have respawned processes
-    print("✓ New instance created successfully after killing orphaned process")
+    logger.info("✓ New instance created successfully after killing orphaned process")
 
     # Cleanup
     await manager2.terminate_instance(instance2.id)
@@ -232,7 +233,7 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
 
     # Save the session
     session_id = await manager1.save_session(instance1.id, "test-kill-orphaned-session")
-    print(f"✓ Created session {session_id}")
+    logger.info(f"✓ Created session {session_id}")
 
     # Get the PID before orphaning
     profile_dir = profiles_dir / "test-profile"
@@ -253,7 +254,7 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
     # Verify process is orphaned
     try:
         os.kill(orphaned_pid, 0)
-        print(f"✓ Process {orphaned_pid} is orphaned")
+        logger.info(f"✓ Process {orphaned_pid} is orphaned")
     except ProcessLookupError:
         pytest.fail("Process should still be running")
 
@@ -273,7 +274,7 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
     # Verify process is STILL running after failed restore
     try:
         os.kill(orphaned_pid, 0)
-        print(f"✓ Process {orphaned_pid} still running after failed restore")
+        logger.info(f"✓ Process {orphaned_pid} still running after failed restore")
     except ProcessLookupError:
         pytest.fail("Process should still be running after failed restore")
 
@@ -293,7 +294,7 @@ async def test_session_restore_with_kill_orphaned(data_dir: Path) -> None:
 
     # SUCCESS: The orphaned process was killed and session was restored
     # We don't verify the old PID is dead because Chrome may have respawned processes
-    print("✓ Session restored successfully after killing orphaned process")
+    logger.info("✓ Session restored successfully after killing orphaned process")
 
     # Cleanup
     manager3.session_manager.delete_session(session_id)
@@ -305,5 +306,5 @@ if __name__ == "__main__":
     # Note: These tests require data_dir fixture from pytest, cannot run standalone
     import sys
 
-    print("These tests require pytest fixtures. Run with: pytest test_kill_orphaned_flag.py")
+    logger.info("These tests require pytest fixtures. Run with: pytest test_kill_orphaned_flag.py")
     sys.exit(1)

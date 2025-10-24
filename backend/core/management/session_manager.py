@@ -320,7 +320,7 @@ class SessionManager:
                     instance.driver.switch_to.window(actual_active_tab)
 
             except Exception as e:
-                logger.warning(f"Failed to capture all tabs: {e}. Falling back to single tab capture.")
+                logger.warning(f"Failed to capture all tabs: {e}. Using single tab capture instead.")
                 # If something goes wrong, use current handle
                 actual_active_tab = str(current_handle) if current_handle else None
 

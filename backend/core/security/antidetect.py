@@ -298,7 +298,7 @@ def get_anti_detection_arguments(user_agent: str | None = None, window_size: tup
             # Use hardware acceleration when available
             "--enable-accelerated-2d-canvas",
             "--enable-accelerated-video-decode",
-            # Ignore GPU blocklist to ensure WebGL works
+            # Bypass GPU blocklist to ensure WebGL works
             "--ignore-gpu-blocklist",
             # Don't use software renderer - we want real WebGL (overridden on CPU)
             "--disable-software-rasterizer",

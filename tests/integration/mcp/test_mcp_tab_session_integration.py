@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 import pytest
+from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
@@ -65,7 +66,7 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         response = await browser_navigate_tool(manager, action="list_tabs")
         assert response.success, f"List tabs failed: {response.error}"
         assert response.data is not None
-        print(f"DEBUG: Before save - tab count: {response.data['count']}, tabs: {response.data['tabs']}")
+        logger.info(f"DEBUG: Before save - tab count: {response.data['count']}, tabs: {response.data['tabs']}")
 
         # Get the actual instance to inspect it
         if instance_id:
@@ -74,11 +75,11 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
             instance = None
         if instance and instance.driver:
             actual_handles = instance.driver.window_handles
-            print(f"DEBUG: Direct driver check - window_handles: {actual_handles}")
+            logger.info(f"DEBUG: Direct driver check - window_handles: {actual_handles}")
             for i, handle in enumerate(actual_handles):
                 instance.driver.switch_to.window(handle)
                 url = instance.driver.current_url
-                print(f"DEBUG: Tab {i}: handle={handle}, url={url}")
+                logger.info(f"DEBUG: Tab {i}: handle={handle}, url={url}")
 
         assert response.data["count"] == 2, f"Expected 2 tabs before save, got {response.data['count']}"
 
@@ -100,7 +101,7 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         with session_file.open() as f:
             saved_data = json.load(f)
 
-        print(f"DEBUG: Saved session data: {json.dumps(saved_data, indent=2)}")
+        logger.info(f"DEBUG: Saved session data: {json.dumps(saved_data, indent=2)}")
 
         assert "tabs" in saved_data, "Session data missing 'tabs' field"
         assert len(saved_data["tabs"]) == 2, f"Expected 2 tabs in saved session, got {len(saved_data['tabs'])}"
@@ -143,12 +144,12 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
             assert url_response.success, f"Get URL failed: {url_response.error}"
             all_urls.append(url_response.url)
 
-        print(f"DEBUG: Restored URLs: {all_urls}")
+        logger.info(f"DEBUG: Restored URLs: {all_urls}")
 
         assert any("example.com/x" in str(url) for url in all_urls), f"x.com URL not restored: {all_urls}"
         assert any("example.com/reddit" in str(url) for url in all_urls), f"reddit URL not restored: {all_urls}"
 
-        print("✓ MCP tab + session save/restore integration test PASSED")
+        logger.info("✓ MCP tab + session save/restore integration test PASSED")
 
     finally:
         await manager.shutdown()
@@ -203,7 +204,7 @@ async def test_mcp_multiple_tabs_with_navigation_errors(worker_data_dirs: dict[s
         assert response.data is not None
         assert response.data["count"] == 3, f"Tabs should be preserved after error, got {response.data['count']}"
 
-        print("✓ Navigation errors preserve instance and tabs")
+        logger.info("✓ Navigation errors preserve instance and tabs")
 
     finally:
         await manager.shutdown()
@@ -255,7 +256,7 @@ async def test_hibernation_preserves_tabs(worker_data_dirs: dict[str, Path]) -> 
         # Note: Hibernation navigates first tab to about:blank but preserves count
         assert response.data["count"] >= 1, "At least one tab should remain after hibernation"
 
-        print("✓ Hibernation with tab preservation works correctly")
+        logger.info("✓ Hibernation with tab preservation works correctly")
 
     finally:
         await manager.shutdown()

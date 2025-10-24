@@ -3,13 +3,13 @@
 import os
 import shutil
 import socket
-import subprocess
 import tempfile
 import threading
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import psutil
 from base.scripts.env.paths import setup_imports
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
@@ -170,17 +170,8 @@ class BrowserOptionsBuilder:
     def _check_process_using_profile(self, pid: int, profile_dir: Path, lock_files: list[Path], kill_orphaned: bool) -> bool:
         """Check if process is using the profile and handle accordingly. Returns True if locks should be removed."""
         try:
-            result = subprocess.run(
-                ["ps", "-p", str(pid), "-ww", "-o", "cmd="],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                logger.debug(f"Process {pid} no longer exists, can remove locks")
-                return True
-
-            cmd = result.stdout.strip()
+            process = psutil.Process(pid)
+            cmd = " ".join(process.cmdline())
 
             is_chrome = "chrome" in cmd.lower()
 
@@ -208,7 +199,10 @@ class BrowserOptionsBuilder:
                 )
             logger.debug(f"Process {pid} exists but doesn't use profile, can remove locks")
             return True
-        except subprocess.SubprocessError:
+        except psutil.NoSuchProcess:
+            logger.debug(f"Process {pid} no longer exists, can remove locks")
+            return True
+        except (psutil.AccessDenied, psutil.ZombieProcess):
             logger.debug(f"Cannot get info for process {pid}, keeping locks to be safe")
             return False
 
@@ -387,7 +381,7 @@ class BrowserOptionsBuilder:
             # Non-headless mode requires DISPLAY for X11/Wayland
             logger.warning(
                 "DISPLAY environment variable not set. Non-headless Chrome requires X11 display. "
-                "Falling back to headless mode. Set DISPLAY or use xvfb-run to enable headed mode."
+                "Defaulting to headless mode. Set DISPLAY or use xvfb-run to enable headed mode."
             )
             chrome_options.add_argument("--headless=new")
 

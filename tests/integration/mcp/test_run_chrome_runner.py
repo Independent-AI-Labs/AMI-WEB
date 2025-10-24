@@ -64,7 +64,7 @@ async def test_run_chrome_stdio_client_initialization(browser_root: Path, script
         assert tool_names == expected_tools
 
         # Call a representative tool twice to ensure the server keeps responding.
-        for attempt in range(2):
+        for _attempt in range(2):
             res = await session.call_tool("browser_navigate", arguments={"action": "get_url"})
             assert res is not None and len(res.content) > 0
             if res.content[0].type == "text":

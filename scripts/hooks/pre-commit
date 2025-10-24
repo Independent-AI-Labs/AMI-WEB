@@ -55,7 +55,7 @@ fi
 echo ""
 echo "Running ruff format..."
 RUFF_BIN="${MODULE_ROOT}/.venv/bin/ruff"
-RUFF_CONFIG="${ORCHESTRATOR_ROOT}/base/scripts/ruff.toml"
+RUFF_CONFIG="${ORCHESTRATOR_ROOT}/base/ruff.toml"
 RUFF_TARGET="."
 
 if ! "$RUFF_BIN" format --config "$RUFF_CONFIG" "$RUFF_TARGET"; then

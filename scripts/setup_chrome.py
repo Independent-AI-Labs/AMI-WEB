@@ -255,7 +255,7 @@ def _version_from_binary(chrome_exe: Path) -> str | None:
         )
     except (OSError, subprocess.CalledProcessError) as exc:
         print_colored(
-            f"Warning: Failed to query Chrome binary for version ({exc}); falling back to revision heuristic",
+            f"Warning: Failed to query Chrome binary for version ({exc}); using revision heuristic instead",
             YELLOW,
         )
         return None
