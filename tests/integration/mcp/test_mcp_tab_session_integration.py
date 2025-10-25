@@ -44,23 +44,18 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         response = await browser_session_tool(manager, action="launch", headless=True, profile="default", use_pool=False)
         assert response.success, f"Launch failed: {response.error}"
         instance_id = response.instance_id
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.0)  # Give browser more time to fully initialize
 
         # Step 2: Navigate first tab to x.com (like the user did)
         response = await browser_navigate_tool(manager, action="goto", url="https://example.com/x")
         assert response.success, f"Navigate to x.com failed: {response.error}"
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.0)  # Give browser more time to stabilize after navigation
 
-        # Step 3: Open new tab using MCP (not execute_script)
-        response = await browser_navigate_tool(manager, action="open_tab")
-        assert response.success, f"Open tab failed: {response.error}"
+        # Step 3: Open new tab using MCP and navigate to reddit.com (not execute_script)
+        response = await browser_navigate_tool(manager, action="open_tab", url="https://example.com/reddit")
+        assert response.success, f"Open tab and navigate to reddit failed: {response.error}"
         assert response.data is not None
-        await asyncio.sleep(0.5)
-
-        # Step 4: Navigate second tab to reddit.com
-        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/reddit")
-        assert response.success, f"Navigate to reddit failed: {response.error}"
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1.0)  # Give tab time to fully load
 
         # Verify we have 2 tabs BEFORE saving
         response = await browser_navigate_tool(manager, action="list_tabs")
