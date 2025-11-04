@@ -1,11 +1,11 @@
 """JavaScript script validation to prevent dangerous operations."""
 
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from base.scripts.env.paths import setup_imports
+from pydantic import BaseModel
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -13,8 +13,7 @@ import yaml  # noqa: E402
 from loguru import logger  # noqa: E402
 
 
-@dataclass
-class ForbiddenPattern:
+class ForbiddenPattern(BaseModel):
     """A forbidden JavaScript pattern."""
 
     pattern: str
@@ -24,8 +23,7 @@ class ForbiddenPattern:
     compiled: re.Pattern[str] | None = None
 
 
-@dataclass
-class ValidationResult:
+class ValidationResult(BaseModel):
     """Result of script validation."""
 
     allowed: bool

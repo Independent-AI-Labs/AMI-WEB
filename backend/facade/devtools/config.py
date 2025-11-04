@@ -1,16 +1,15 @@
 """Configuration for DevTools functionality."""
 
 import json
-from dataclasses import dataclass
 from typing import Any
 
 from base.scripts.env.paths import setup_imports
+from pydantic import BaseModel
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 
-@dataclass
-class DeviceEmulation:
+class DeviceEmulation(BaseModel):
     """Device emulation configuration."""
 
     width: int

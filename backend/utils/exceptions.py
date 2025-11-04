@@ -1,10 +1,8 @@
 """Enhanced exception hierarchy for Chrome Manager."""
 
-from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass
 class ChromeManagerError(Exception):
     """
     Base exception for Chrome Manager with rich context.
@@ -17,11 +15,20 @@ class ChromeManagerError(Exception):
         user_message: User-friendly message (if different from message)
     """
 
-    message: str
-    error_code: str = "CHROME_ERROR"
-    context: dict[str, Any] = field(default_factory=dict)
-    retryable: bool = False
-    user_message: str = ""
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "CHROME_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.error_code = error_code
+        self.context = context or {}
+        self.retryable = retryable
+        self.user_message = user_message
 
     def __str__(self) -> str:
         """Return the error message."""
@@ -32,172 +39,234 @@ class ChromeManagerError(Exception):
         return f"{self.__class__.__name__}(message={self.message!r}, error_code={self.error_code!r}, retryable={self.retryable})"
 
 
-@dataclass
 class InstanceError(ChromeManagerError):
     """Browser instance related errors."""
 
-    error_code: str = "INSTANCE_ERROR"
-    instance_id: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "INSTANCE_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        instance_id: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.instance_id = instance_id
+        if instance_id:
+            self.context["instance_id"] = instance_id
 
-    def __post_init__(self) -> None:
-        """Add instance_id to context if provided."""
-        if self.instance_id:
-            self.context["instance_id"] = self.instance_id
 
-
-@dataclass
 class NavigationError(ChromeManagerError):
     """Navigation related errors."""
 
-    error_code: str = "NAVIGATION_ERROR"
-    url: str | None = None
-    status_code: int | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "NAVIGATION_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        url: str | None = None,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.url = url
+        self.status_code = status_code
+        if url:
+            self.context["url"] = url
+        if status_code:
+            self.context["status_code"] = status_code
 
-    def __post_init__(self) -> None:
-        """Add navigation details to context."""
-        if self.url:
-            self.context["url"] = self.url
-        if self.status_code:
-            self.context["status_code"] = self.status_code
 
-
-@dataclass
 class InputError(ChromeManagerError):
     """Input event related errors."""
 
-    error_code: str = "INPUT_ERROR"
-    element: str | None = None
-    action: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "INPUT_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        element: str | None = None,
+        action: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.element = element
+        self.action = action
+        if element:
+            self.context["element"] = element
+        if action:
+            self.context["action"] = action
 
-    def __post_init__(self) -> None:
-        """Add input details to context."""
-        if self.element:
-            self.context["element"] = self.element
-        if self.action:
-            self.context["action"] = self.action
 
-
-@dataclass
 class MediaError(ChromeManagerError):
     """Media capture related errors."""
 
-    error_code: str = "MEDIA_ERROR"
-    media_type: str | None = None  # "screenshot", "video", etc.
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "MEDIA_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        media_type: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.media_type = media_type
+        if media_type:
+            self.context["media_type"] = media_type
 
-    def __post_init__(self) -> None:
-        """Add media details to context."""
-        if self.media_type:
-            self.context["media_type"] = self.media_type
 
-
-@dataclass
 class ExtensionError(ChromeManagerError):
     """Extension related errors."""
 
-    error_code: str = "EXTENSION_ERROR"
-    extension_path: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "EXTENSION_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        extension_path: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.extension_path = extension_path
+        if extension_path:
+            self.context["extension_path"] = extension_path
 
-    def __post_init__(self) -> None:
-        """Add extension details to context."""
-        if self.extension_path:
-            self.context["extension_path"] = self.extension_path
 
-
-@dataclass
 class ConfigError(ChromeManagerError):
     """Configuration related errors."""
 
-    error_code: str = "CONFIG_ERROR"
-    config_key: str | None = None
-    config_file: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "CONFIG_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        config_key: str | None = None,
+        config_file: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.config_key = config_key
+        self.config_file = config_file
+        if config_key:
+            self.context["config_key"] = config_key
+        if config_file:
+            self.context["config_file"] = config_file
 
-    def __post_init__(self) -> None:
-        """Add config details to context."""
-        if self.config_key:
-            self.context["config_key"] = self.config_key
-        if self.config_file:
-            self.context["config_file"] = self.config_file
 
-
-@dataclass
 class MCPError(ChromeManagerError):
     """MCP protocol related errors."""
 
-    error_code: str = "MCP_ERROR"
-    tool_name: str | None = None
-    request_id: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "MCP_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        tool_name: str | None = None,
+        request_id: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.tool_name = tool_name
+        self.request_id = request_id
+        if tool_name:
+            self.context["tool_name"] = tool_name
+        if request_id:
+            self.context["request_id"] = request_id
 
-    def __post_init__(self) -> None:
-        """Add MCP details to context."""
-        if self.tool_name:
-            self.context["tool_name"] = self.tool_name
-        if self.request_id:
-            self.context["request_id"] = self.request_id
 
-
-@dataclass
 class ChromeTimeoutError(ChromeManagerError):
     """Operation timeout errors."""
 
-    error_code: str = "TIMEOUT_ERROR"
-    retryable: bool = True  # Timeouts are usually retryable
-    timeout_seconds: float | None = None
-    operation: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "TIMEOUT_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = True,  # Timeouts are usually retryable
+        user_message: str = "",
+        timeout_seconds: float | None = None,
+        operation: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.timeout_seconds = timeout_seconds
+        self.operation = operation
+        if timeout_seconds:
+            self.context["timeout_seconds"] = timeout_seconds
+        if operation:
+            self.context["operation"] = operation
 
-    def __post_init__(self) -> None:
-        """Add timeout details to context."""
-        if self.timeout_seconds:
-            self.context["timeout_seconds"] = self.timeout_seconds
-        if self.operation:
-            self.context["operation"] = self.operation
 
-
-@dataclass
 class PoolError(ChromeManagerError):
     """Browser pool related errors."""
 
-    error_code: str = "POOL_ERROR"
-    pool_size: int | None = None
-    available_instances: int | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "POOL_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        pool_size: int | None = None,
+        available_instances: int | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.pool_size = pool_size
+        self.available_instances = available_instances
+        if pool_size is not None:
+            self.context["pool_size"] = pool_size
+        if available_instances is not None:
+            self.context["available_instances"] = available_instances
 
-    def __post_init__(self) -> None:
-        """Add pool details to context."""
-        if self.pool_size is not None:
-            self.context["pool_size"] = self.pool_size
-        if self.available_instances is not None:
-            self.context["available_instances"] = self.available_instances
 
-
-@dataclass
 class ProfileError(ChromeManagerError):
     """Profile management related errors."""
 
-    error_code: str = "PROFILE_ERROR"
-    profile_name: str | None = None
-    profile_path: str | None = None
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "PROFILE_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        profile_name: str | None = None,
+        profile_path: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.profile_name = profile_name
+        self.profile_path = profile_path
+        if profile_name:
+            self.context["profile_name"] = profile_name
+        if profile_path:
+            self.context["profile_path"] = profile_path
 
-    def __post_init__(self) -> None:
-        """Add profile details to context."""
-        if self.profile_name:
-            self.context["profile_name"] = self.profile_name
-        if self.profile_path:
-            self.context["profile_path"] = self.profile_path
 
-
-@dataclass
 class SessionError(ChromeManagerError):
     """Session management related errors."""
 
-    error_code: str = "SESSION_ERROR"
-    session_id: str | None = None
-    session_file: str | None = None
-
-    def __post_init__(self) -> None:
-        """Add session details to context."""
-        if self.session_id:
-            self.context["session_id"] = self.session_id
-        if self.session_file:
-            self.context["session_file"] = self.session_file
+    def __init__(
+        self,
+        message: str,
+        error_code: str = "SESSION_ERROR",
+        context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        user_message: str = "",
+        session_id: str | None = None,
+        session_file: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, context, retryable, user_message)
+        self.session_id = session_id
+        self.session_file = session_file
+        if session_id:
+            self.context["session_id"] = session_id
+        if session_file:
+            self.context["session_file"] = session_file
 
 
 # Specific error codes for common scenarios

@@ -1,4 +1,4 @@
-# Browser Module — Setup Contract
+# Browser Module - Setup Contract
 
 Delegation
 - `module_setup.py` must delegate to Base’s `AMIModuleSetup` to create `.venv`, install Base + Browser requirements, and install hooks.

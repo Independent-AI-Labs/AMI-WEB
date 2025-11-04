@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 from urllib.parse import quote_plus
 
@@ -12,6 +11,7 @@ from aiohttp import ClientError, ClientSession, ClientTimeout
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 from loguru import logger
+from pydantic import BaseModel
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.response import BrowserResponse
@@ -26,8 +26,7 @@ class _NoResultsError(RuntimeError):
     """Raised when a search provider returns no usable results."""
 
 
-@dataclass(slots=True)
-class _SearchProvider:
+class _SearchProvider(BaseModel):
     """Runtime configuration for a single search provider."""
 
     name: str
@@ -239,7 +238,7 @@ def _summarise_results(results: list[SearchResult]) -> str:
         url = result.get("url") or ""
         snippet = result.get("snippet")
         prefix = f"{rank}. " if rank is not None else ""
-        lines.append(f"{prefix}{title} — {url}")
+        lines.append(f"{prefix}{title} - {url}")
         if snippet:
             lines.append(f"    {snippet}")
     return "\n".join(lines)

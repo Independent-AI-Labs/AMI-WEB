@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from browser.backend.utils.config import Config
 
@@ -14,9 +15,10 @@ DEFAULT_CHUNK_SIZE_BYTES = 16_000
 DEFAULT_MAX_CHUNK_BYTES = 128_000
 
 
-@dataclass(frozen=True)
-class LimitedText:
+class LimitedText(BaseModel):
     """Container describing capped text payloads."""
+
+    model_config = ConfigDict(frozen=True)
 
     text: str
     truncated: bool
@@ -24,9 +26,10 @@ class LimitedText:
     total_bytes: int
 
 
-@dataclass(frozen=True)
-class ChunkResult:
+class ChunkResult(BaseModel):
     """Container describing a computed chunk."""
+
+    model_config = ConfigDict(frozen=True)
 
     text: str
     chunk_start: int

@@ -1,11 +1,11 @@
 """Configuration for facade controllers with customizable timing values."""
 
-from dataclasses import dataclass
 from typing import Any
 
+from pydantic import BaseModel
 
-@dataclass
-class FacadeConfig:
+
+class FacadeConfig(BaseModel):
     """Configuration for facade controller timing and behavior."""
 
     # Navigation timings
