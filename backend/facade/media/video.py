@@ -5,7 +5,6 @@ import base64
 import contextlib
 import io
 import time
-import uuid
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import cv2
 import numpy as np
+from base.backend.utils.uuid_utils import uuid7
 from loguru import logger
 from PIL import Image
 
@@ -42,7 +42,7 @@ class VideoRecorder(BaseController):
         Returns:
             RecordingSession with session details
         """
-        session_id = str(uuid.uuid4())
+        session_id = uuid7()
 
         # Ensure output directory exists
         output_file = Path(output_path)

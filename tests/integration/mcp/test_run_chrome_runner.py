@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
+'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_run_chrome_runner.py" "$@" #'
+
 """Integration tests for the browser run_chrome runner using MCP client.
 
 Validates that the runner can launch the Chrome MCP server over stdio and

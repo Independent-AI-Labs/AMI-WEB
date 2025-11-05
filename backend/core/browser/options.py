@@ -5,7 +5,6 @@ import shutil
 import socket
 import tempfile
 import threading
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +14,8 @@ from loguru import logger
 from selenium.webdriver.chrome.options import Options
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
+
+from base.backend.utils.uuid_utils import uuid7
 
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
 from browser.backend.core.security.antidetect import (  # noqa: E402
@@ -283,7 +284,7 @@ class BrowserOptionsBuilder:
                 self._original_profile_dir = None
         else:
             # No profile: create a unique temp directory to avoid conflicts
-            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid.uuid4().hex[:8]}"
+            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid7().replace('-', '')[:8]}"
             temp_dir.mkdir(parents=True, exist_ok=True)
             self._temp_profile_dir = temp_dir
             self._original_profile_dir = None

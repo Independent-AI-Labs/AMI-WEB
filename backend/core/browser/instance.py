@@ -1,13 +1,13 @@
 """Refactored BrowserInstance using composition pattern."""
 
 import asyncio
-import uuid
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
+from base.backend.utils.uuid_utils import uuid7
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -45,7 +45,7 @@ class BrowserInstance:
         profile_manager: "ProfileManager | None" = None,
     ):
         # Core properties
-        self.id = instance_id or str(uuid.uuid4())
+        self.id = instance_id or uuid7()
         self.created_at = datetime.now()
         self._config = config or Config()
         self._properties_manager = properties_manager

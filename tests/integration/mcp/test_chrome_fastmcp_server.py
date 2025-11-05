@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
+'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_chrome_fastmcp_server.py" "$@" #'
+
 """Integration tests for Chrome FastMCP server using official MCP client."""
 
 import json

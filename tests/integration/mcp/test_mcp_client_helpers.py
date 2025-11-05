@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
+'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_mcp_client_helpers.py" "$@" #'
+
 """MCP client helper tests for browser module.
 
 Mirrors base coverage: verify error handling and timeout behavior when

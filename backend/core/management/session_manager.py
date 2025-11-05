@@ -2,12 +2,12 @@
 
 import json
 import shutil
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from base.backend.utils.uuid_utils import uuid7
 from loguru import logger
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
@@ -266,7 +266,7 @@ class SessionManager:
         Returns:
             The session ID
         """
-        session_id = str(uuid.uuid4())
+        session_id = uuid7()
         session_dir = self.session_dir / session_id
         session_dir.mkdir(exist_ok=True)
 

@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
+'exec "$(dirname "$0")/../scripts/ami-run.sh" "$(dirname "$0")/setup_chrome.py" "$@" #'
+
 """Cross-platform script to download and setup Chrome and ChromeDriver."""
 
 import contextlib
