@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_mcp_client_helpers.py" "$@" #'
 
+from __future__ import annotations
+
 """MCP client helper tests for browser module.
 
 Mirrors base coverage: verify error handling and timeout behavior when
 connecting to a failing or hanging server process using stdio transport.
 """
-
-from __future__ import annotations
 
 import asyncio
 from pathlib import Path

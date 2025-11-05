@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_run_mcp_runner.py" "$@" #'
 
+from __future__ import annotations
+
 """Integration tests for the unified MCP runner (run_mcp) targeting Chrome.
 
 Validates that the unified runner can launch the Chrome MCP server and that
 the official MCP client can initialize and discover core tools over stdio.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path

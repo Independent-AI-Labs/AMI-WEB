@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 'exec "$(dirname "$0")/../scripts/ami-run.sh" "$(dirname "$0")/run_chrome.py" "$@" #'
 
-"""Run Chrome MCP server via console script entrypoint."""
-
 from __future__ import annotations
+
+"""Run Chrome MCP server via console script entrypoint."""
 
 # Standard library imports FIRST
 import argparse
