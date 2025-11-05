@@ -284,8 +284,9 @@ class BrowserOptionsBuilder:
                 self._original_profile_dir = None
         else:
             # No profile: create a unique temp directory to avoid conflicts
-            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid7().replace('-', '')[:8]}"
-            temp_dir.mkdir(parents=True, exist_ok=True)
+            # Use full UUID to ensure uniqueness in parallel test execution
+            temp_dir = Path(tempfile.gettempdir()) / f"chrome_temp_{uuid7().replace('-', '')}"
+            temp_dir.mkdir(parents=True, exist_ok=False)
             self._temp_profile_dir = temp_dir
             self._original_profile_dir = None
             logger.info(f"Using temporary directory: {temp_dir} with debug port: {self._debug_port}")
