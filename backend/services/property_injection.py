@@ -2,7 +2,7 @@
 
 import json
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from base.scripts.env.paths import setup_imports
 
@@ -39,8 +39,8 @@ class PropertyInjectionService:
         """
         template = self.env.get_template("browser_properties.js")
 
-        # Render template with context
-        return template.render(**self._prepare_context(properties))
+        # Render template with context - cast needed because jinja2 lacks complete type annotations
+        return cast(str, template.render(**self._prepare_context(properties)))
 
     def _prepare_context(self, properties: "BrowserProperties") -> dict[str, Any]:
         """

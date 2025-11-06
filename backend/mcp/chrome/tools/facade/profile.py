@@ -1,5 +1,6 @@
 """Browser profile management facade tool."""
 
+from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from loguru import logger
@@ -125,7 +126,7 @@ async def browser_profile_tool(
     """
     logger.debug(f"browser_profile: action={action}, profile_name={profile_name}")
 
-    action_handlers = {
+    action_handlers: dict[str, Callable[[], Awaitable[BrowserResponse]]] = {
         "create": lambda: _create_profile(manager, profile_name, description),
         "delete": lambda: _delete_profile(manager, profile_name),
         "list": lambda: _list_profiles(manager),

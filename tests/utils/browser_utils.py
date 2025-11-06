@@ -3,9 +3,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from browser.backend.core.browser.instance import BrowserInstance
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from browser.backend.core.browser.instance import BrowserInstance
 
 
 class TabManager:

@@ -1,5 +1,6 @@
 """Browser session management facade tool."""
 
+from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from loguru import logger
@@ -236,7 +237,7 @@ async def browser_session_tool(
         return await _save_session(manager, instance_id, session_name, profile)
 
     # Session-based actions (require session_id)
-    action_handlers = {
+    action_handlers: dict[str, Callable[[], Awaitable[BrowserResponse]]] = {
         "list_sessions": lambda: _list_sessions(manager),
         "restore": lambda: _restore_session(manager, session_id, profile, headless, kill_orphaned),
         "delete_session": lambda: _delete_session(manager, session_id),
