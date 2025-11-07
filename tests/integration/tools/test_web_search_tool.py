@@ -10,6 +10,8 @@ from aiohttp import web
 
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 async def _start_test_server(
     handler: Callable[[web.Request], Awaitable[web.StreamResponse]],

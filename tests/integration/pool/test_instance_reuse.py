@@ -5,6 +5,8 @@ from loguru import logger
 
 from browser.backend.core.management.manager import ChromeManager
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_instance_reuse_with_profile() -> None:

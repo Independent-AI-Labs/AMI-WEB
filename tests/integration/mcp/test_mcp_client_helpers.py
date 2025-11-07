@@ -18,6 +18,8 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.exceptions import McpError
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_client_error_handling(browser_root: Path) -> None:

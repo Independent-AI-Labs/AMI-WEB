@@ -17,6 +17,8 @@ from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 @pytest.mark.asyncio
 async def test_run_chrome_stdio_client_initialization(browser_root: Path, scripts_dir: Path) -> None:

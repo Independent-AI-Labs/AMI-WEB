@@ -28,6 +28,8 @@ HTTP_OK = 200
 EXPECTED_INITIAL_SCROLL_COUNT = 3
 PARALLEL_EXECUTION_MAX_DIFF_MS = 5000
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 # Worker-specific server instances (keyed by worker_id)
 _servers: dict[str, tuple[Thread, HTTPServer, int, str]] = {}
 

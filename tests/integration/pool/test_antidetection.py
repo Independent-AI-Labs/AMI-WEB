@@ -9,6 +9,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 
 class TestAntiDetection:
     """Test anti-detection features on bot.sannysoft.com."""

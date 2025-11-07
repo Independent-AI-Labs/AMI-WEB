@@ -14,6 +14,8 @@ from browser.backend.facade.navigation.navigator import Navigator
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"
 
+pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
+
 # Using test_html_server fixture from conftest.py instead of creating duplicate
 
 
