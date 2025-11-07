@@ -433,15 +433,7 @@ def cleanup_processes() -> None:
     NOTE: Does NOT kill browser processes - manager.shutdown() handles that.
     If tests leave orphaned processes, fix the tests, don't kill everything.
     """
-    # Try to log cleanup, but suppress any errors if logger is closed
-    try:
-        if sys.stderr and not sys.stderr.closed:
-            logger.info("Cleaning up test data directories")
-    except (ValueError, AttributeError, RuntimeError):
-        # Logger or stderr might be closed during cleanup
-        pass
-
-    # Clean up test data directories only
+    # Clean up test data directories only (no logging at atexit - stderr may be closed)
     cleanup_test_data()
 
     # DO NOT kill processes - violates project rules (CLAUDE.md):
