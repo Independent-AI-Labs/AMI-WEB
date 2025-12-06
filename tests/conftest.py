@@ -105,37 +105,22 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
                     await mgr.return_to_pool(inst.id)
                     await mgr.shutdown()
                     return bool(ok)
-                except Exception:
+                except Exception as e:
+                    logger.error(f"Preflight launch test failed: {e}")
                     with contextlib.suppress(Exception):
                         await mgr.shutdown()
                     return False
 
             return asyncio.get_event_loop().run_until_complete(_run())
-        except Exception:
+        except Exception as e:
+            logger.error(f"Critical error during preflight check: {e}")
             return False
 
-    can_launch = _preflight_can_launch()
-    if not can_launch:
-        import pytest as _pytest  # noqa: PLC0415
-
-        reason = "Chrome present but cannot launch in this environment; skipping launch-dependent tests"
-        launch_fixtures = {
-            "session_manager",
-            "browser_instance",
-            "antidetect_browser",
-            "backend",
-            "browser",
-        }
-        launch_markers = {"integration", "mcp", "browser", "pool"}
-        for item in items:
-            # Skip if test uses launch-related fixtures or has relevant markers or file is under integration
-            if (
-                (set(getattr(item, "fixturenames", [])) & launch_fixtures)
-                or any(item.get_closest_marker(m) for m in launch_markers)
-                or ("/integration/" in str(item.fspath))
-                or ("Integration" in item.nodeid)
-            ):
-                item.add_marker(_pytest.mark.skip(reason=reason))
+    # Preflight check is disabled to prevent blanket skipping of all integration tests
+    # Individual tests will fail appropriately if Chrome cannot be launched
+    # This prevents the issue where entire test suites get skipped due to preflight failures
+    # that happen in resource-constrained parallel execution environments
+    pass  # Do nothing - let individual tests handle launch failure cases
 
 
 # Import heavy browser modules only after environment check

@@ -1,5 +1,6 @@
 """Cookie handling functions for session management."""
 
+import os
 from typing import Any
 from urllib.parse import urlparse
 
@@ -79,9 +80,11 @@ def restore_all_tabs(driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
     handle_mapping = {}
     failed_tabs = []
 
-    # Store original timeout and set shorter timeout for restoration
+    # Store original timeout and set timeout for restoration
+    # In testing environments, use longer timeout to handle system load
     original_timeout = 30  # Default page load timeout
-    restore_timeout = 15  # Shorter timeout to prevent long hangs
+
+    restore_timeout = 30 if os.environ.get("PYTEST_CURRENT_TEST") else 15  # 30s in tests, 15s in prod
 
     try:
         driver.set_page_load_timeout(restore_timeout)

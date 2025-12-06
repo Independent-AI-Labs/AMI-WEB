@@ -438,7 +438,14 @@ class BrowserOptionsBuilder:
             "--disable-breakpad",
             "--disable-features=TranslateUI",
             "--disable-ipc-flooding-protection",
-            # Disable Google services that cause GCM registration errors
+            # Resource management for parallel test environments
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-background-timer-throttling",
+            "--disable-ipc-flooding-protection",
+            # Additional stability options for test environments
+            "--no-sandbox",  # Already added, but ensuring it's here too
+            "--disable-dev-shm-usage",  # Use /tmp instead of /dev/shm
             "--disable-background-networking",
             "--disable-sync",
             "--disable-cloud-import",
@@ -448,7 +455,6 @@ class BrowserOptionsBuilder:
             "--disable-features=OptimizationHints",
             "--disable-features=MediaRouter",
             "--no-service-autorun",
-            "--disable-background-timer-throttling",
             "--metrics-recording-only",  # Disable metrics reporting to Google
             "--disable-field-trial-config",  # Disable field trials that might trigger GCM
             # More aggressive disabling of phone home features
@@ -469,6 +475,13 @@ class BrowserOptionsBuilder:
             "--disable-signin-scoped-device-id",
             "--no-pings",
             "--no-report-upload",
+            # Additional options for parallel test stability
+            "--disable-extensions-http-throttling",
+            "--disable-features=InterestCohort",
+            "--disable-features=BrowsingTopics",
+            "--disable-features=Floc",
+            "--disable-features=PrivacySandboxAdsAPIs",
+            "--test-type",  # Tells Chrome this is running in test mode
         ]
 
         for arg in common_args:

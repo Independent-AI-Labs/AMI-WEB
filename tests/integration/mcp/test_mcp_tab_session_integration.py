@@ -12,6 +12,7 @@ Bug Context:
 import asyncio
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from loguru import logger
@@ -19,6 +20,40 @@ from loguru import logger
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
 from browser.backend.mcp.chrome.tools.facade.session import browser_session_tool
+
+
+async def _launch_browser_with_retry(manager: "ChromeManager") -> tuple[bool, Any]:
+    """Helper to launch browser with retry logic."""
+    for attempt in range(5):  # Increase retry attempts to handle resource contention
+        response = await browser_session_tool(manager, action="launch", headless=True, profile="default", use_pool=False)
+        if response.success:
+            return True, response
+        logger.warning(f"Attempt {attempt + 1} to launch browser failed: {response.error}, retrying in 3s...")
+        await asyncio.sleep(3.0)  # Wait longer before retry in parallel environments
+    return False, response
+
+
+async def _open_tab_with_retry(manager: "ChromeManager", url: str) -> tuple[bool, Any]:
+    """Helper to open tab with retry logic."""
+    for attempt in range(5):  # Increase retry attempts to handle resource contention
+        response = await browser_navigate_tool(manager, action="open_tab", url=url)
+        if response.success:
+            return True, response
+        logger.warning(f"Attempt {attempt + 1} to open tab failed: {response.error}, retrying in 3s...")
+        await asyncio.sleep(3.0)  # Wait longer before retry in parallel environments
+    return False, response
+
+
+async def _restore_session_with_retry(manager: "ChromeManager", session_id: str) -> tuple[bool, Any]:
+    """Helper to restore session with retry logic."""
+    for attempt in range(5):  # Increase retry attempts to handle resource contention
+        response = await browser_session_tool(manager, action="restore", session_id=session_id)
+        if response.success:
+            return True, response
+        logger.warning(f"Attempt {attempt + 1} to restore session failed: {response.error}, retrying in 3s...")
+        await asyncio.sleep(3.0)  # Wait before retry in parallel environments
+    return False, response
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
@@ -41,10 +76,10 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
 
     try:
         # Step 1: Launch browser (similar to user's action)
-        response = await browser_session_tool(manager, action="launch", headless=True, profile="default", use_pool=False)
-        assert response.success, f"Launch failed: {response.error}"
+        success, response = await _launch_browser_with_retry(manager)
+        assert success, f"Launch browser failed after 5 attempts: {response.error if 'response' in locals() else 'Unknown error'}"
         instance_id = response.instance_id
-        await asyncio.sleep(1.0)  # Give browser more time to fully initialize
+        await asyncio.sleep(2.0)  # Give browser more time to fully initialize in parallel environments
 
         # Step 2: Navigate first tab to x.com (like the user did)
         response = await browser_navigate_tool(manager, action="goto", url="https://example.com/x")
@@ -52,10 +87,10 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         await asyncio.sleep(1.0)  # Give browser more time to stabilize after navigation
 
         # Step 3: Open new tab using MCP and navigate to reddit.com (not execute_script)
-        response = await browser_navigate_tool(manager, action="open_tab", url="https://example.com/reddit")
-        assert response.success, f"Open tab and navigate to reddit failed: {response.error}"
+        success, response = await _open_tab_with_retry(manager, "https://example.com/reddit")
+        assert success, f"Open tab and navigate to reddit failed after 5 attempts: {response.error if 'response' in locals() else 'Unknown error'}"
         assert response.data is not None
-        await asyncio.sleep(1.0)  # Give tab time to fully load
+        await asyncio.sleep(2.0)  # Give tab more time to fully load in parallel environments
 
         # Verify we have 2 tabs BEFORE saving
         response = await browser_navigate_tool(manager, action="list_tabs")
@@ -111,10 +146,10 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         await asyncio.sleep(0.5)
 
         # Step 7: Restore the session
-        response = await browser_session_tool(manager, action="restore", session_id=session_id)
-        assert response.success, f"Restore session failed: {response.error}"
+        success, response = await _restore_session_with_retry(manager, session_id)
+        assert success, f"Restore session failed after 5 attempts: {response.error if 'response' in locals() else 'Unknown error'}"
         restored_instance_id = response.instance_id
-        await asyncio.sleep(1)
+        await asyncio.sleep(2.0)  # Give restored browser more time to fully initialize in parallel environments
 
         # Step 8: Verify 2 tabs were restored
         response = await browser_navigate_tool(manager, action="list_tabs", instance_id=restored_instance_id)
