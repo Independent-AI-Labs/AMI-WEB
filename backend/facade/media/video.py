@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 import cv2
 import numpy as np
-from base.backend.utils.uuid_utils import uuid7
 from loguru import logger
 from PIL import Image
 
+from base.backend.utils.uuid_utils import uuid7
 from browser.backend.facade.base import BaseController
 from browser.backend.models.media import RecordingSession
 from browser.backend.utils.exceptions import MediaError
@@ -138,7 +138,7 @@ class VideoRecorder(BaseController):
         fourcc = fourcc_func(*"mp4v")
         return cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    async def _maybe_capture_frame(self, recording: dict[str, Any], writer: Any, start_time: float) -> None:
+    async def _conditionally_capture_frame(self, recording: dict[str, Any], writer: Any, start_time: float) -> None:
         """Capture a frame if the recording session is active."""
 
         if recording["session"].status != "recording":
@@ -176,7 +176,7 @@ class VideoRecorder(BaseController):
             start_time = time.time()
 
             while recording["session"].status != "stopped":
-                await self._maybe_capture_frame(recording, writer, start_time)
+                await self._conditionally_capture_frame(recording, writer, start_time)
                 await asyncio.sleep(frame_interval)
 
         except asyncio.CancelledError:

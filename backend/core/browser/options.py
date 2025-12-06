@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
-from base.scripts.env.paths import setup_imports
 from loguru import logger
 from selenium.webdriver.chrome.options import Options
+
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.utils.uuid_utils import uuid7
-
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
 from browser.backend.core.security.antidetect import (  # noqa: E402
     get_anti_detection_arguments,

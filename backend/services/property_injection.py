@@ -11,7 +11,7 @@ ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: E402
 
 if TYPE_CHECKING:
-    from ..models.browser_properties import BrowserProperties
+    from browser.backend.models.browser_properties import BrowserProperties
 
 
 class PropertyInjectionService:

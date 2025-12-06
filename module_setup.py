@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 """:'
-exec "$(dirname "$0")/../scripts/ami-run.sh" "$0" "$@"
+exec "$(dirname "$0")/../scripts/ami-run" "$0" "$@"
 """
 
 from __future__ import annotations
@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -83,35 +82,9 @@ def _get_git_hooks_dir(module_root: Path) -> Path | None:
     return None
 
 
-def install_precommit(module_root: Path) -> None:
-    """Install native git hooks from /base/scripts/hooks/ to module's .git/hooks/.
-
-    This enables standalone module setup without requiring propagate.py.
-    Single source of truth: /base/scripts/hooks/
-    """
-    orchestrator_root = _find_orchestrator_root(module_root)
-    hook_sources = orchestrator_root / "base" / "scripts" / "hooks"
-    if not hook_sources.exists():
-        logger.warning("Hook sources not found at %s - skipping hook installation", hook_sources)
-        return
-
-    git_hooks_dir = _get_git_hooks_dir(module_root)
-    if not git_hooks_dir or not git_hooks_dir.exists():
-        logger.warning("Git hooks directory not found - skipping hook installation")
-        return
-
-    # Install hooks
-    installed = 0
-    for hook_file in ["pre-commit", "pre-push", "commit-msg"]:
-        source = hook_sources / hook_file
-        if source.exists():
-            dest = git_hooks_dir / hook_file
-            shutil.copy2(source, dest)
-            dest.chmod(0o755)
-            installed += 1
-
-    if installed > 0:
-        logger.info(f"Installed {installed} native git hooks from /base/scripts/hooks/")
+def install_precommit(module_root: Path) -> None:  # noqa: ARG001
+    """Skip native git hook installation - use scripts/git_commit.sh and scripts/git_push.sh instead."""
+    logger.info("Skipping native git hook installation - use scripts/git_commit.sh and scripts/git_push.sh instead")
 
 
 def setup_child_submodules(module_root: Path) -> None:

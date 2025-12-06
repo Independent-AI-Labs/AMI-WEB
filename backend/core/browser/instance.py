@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psutil
-from base.backend.utils.uuid_utils import uuid7
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from base.backend.utils.uuid_utils import uuid7
 from browser.backend.core.browser.lifecycle import BrowserLifecycle
 from browser.backend.core.browser.options import BrowserOptionsBuilder
 from browser.backend.core.browser.properties_manager import PropertiesManager

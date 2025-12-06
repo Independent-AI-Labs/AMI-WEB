@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
+
 from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
@@ -437,7 +438,7 @@ def cleanup_processes() -> None:
     cleanup_test_data()
 
     # DO NOT kill processes - violates project rules (CLAUDE.md):
-    # "Manage processes only through scripts/ami-run.sh nodes/scripts/setup_service.py"
+    # "Manage processes only through scripts/ami-run nodes/scripts/setup_service.py"
     # "NEVER touch pkill/kill*"
     # Each test's manager.shutdown() handles process cleanup properly
 

@@ -4,8 +4,9 @@ import re
 from pathlib import Path
 from typing import Literal
 
-from base.scripts.env.paths import setup_imports
 from pydantic import BaseModel
+
+from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 

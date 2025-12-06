@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-'exec "$(dirname "$0")/../scripts/ami-run.sh" "$(dirname "$0")/setup_chrome.py" "$@" #'
+'exec "$(dirname "$0")/../scripts/ami-run" "$(dirname "$0")/setup_chrome.py" "$@" #'
 
 """Cross-platform script to download and setup Chrome and ChromeDriver."""
 
-import contextlib
 import json
 import os
 import platform
-import re
 import shutil
 import subprocess
 import sys
@@ -18,19 +16,14 @@ from urllib.request import urlopen, urlretrieve
 
 from loguru import logger
 
+# Import modules needed for setup
+from browser.scripts.setup.utils import _ensure_chromium_permissions, _invalidate_patched_driver, remove_quarantine_chromedriver, remove_quarantine_macos
+from browser.scripts.setup.version_utils import get_chrome_version
+
 # Script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 BUILD_DIR = PROJECT_ROOT / "build"
-
-# Revision thresholds used when the binary cannot reveal its version.
-REVISION_VERSION_HEURISTICS: list[tuple[int, str]] = [
-    (1518000, "142.0.0.0"),
-    (1506000, "141.0.7379.0"),
-    (1490000, "132.0.6834.0"),
-    (1470000, "131.0.6778.0"),
-    (0, "130.0.6723.0"),
-]
 
 # Colors for output (cross-platform)
 if platform.system() == "Windows":
@@ -61,19 +54,6 @@ def _validate_google_url(url: str) -> None:
     if parsed.hostname not in allowed_hosts:
         msg = f"Untrusted download URL: {url}"
         raise ValueError(msg)
-
-
-def _invalidate_patched_driver(driver_path: Path) -> None:
-    """Remove any stale patched driver so the next launch re-patches a fresh binary."""
-    patched_name = f"{driver_path.stem}_patched{driver_path.suffix}"
-    patched_path = driver_path.with_name(patched_name)
-
-    if patched_path.exists():
-        try:
-            patched_path.unlink()
-            print_colored(f"Removed stale patched ChromeDriver at {patched_path}", YELLOW)
-        except OSError as exc:
-            print_colored(f"Warning: failed to remove {patched_path}: {exc}", YELLOW)
 
 
 def get_platform_info() -> tuple[str, str]:
@@ -120,40 +100,9 @@ def get_latest_chromium_revision() -> str:
     return revision
 
 
-def _ensure_chromium_permissions(chrome_dir: Path, system: str) -> None:
-    """Ensure Chromium runtime binaries have the right permissions."""
-
-    if system == "Windows":
-        return
-
-    try:
-        if system == "Darwin":
-            app_contents = chrome_dir / "Chromium.app" / "Contents"
-            helpers_dir = app_contents / "Frameworks" / "Chromium Framework.framework" / "Versions" / "Current" / "Helpers"
-
-            chrome_exe = app_contents / "MacOS" / "Chromium"
-            crashpad = helpers_dir / "Chrome Crashpad Handler.app" / "Contents" / "MacOS" / "Chrome Crashpad Handler"
-            sandbox = helpers_dir / "chrome_crashpad_handler"
-        else:  # Linux and other Unix
-            chrome_exe = chrome_dir / "chrome"
-            crashpad = chrome_dir / "chrome_crashpad_handler"
-            sandbox = chrome_dir / "chrome_sandbox"
-
-        for binary in (chrome_exe, crashpad, sandbox):
-            if binary and binary.exists():
-                try:
-                    binary.chmod(0o755)
-                except OSError as exc:
-                    print_colored(
-                        f"Warning: failed to set executable bit on {binary.name}: {exc}",
-                        YELLOW,
-                    )
-    except OSError as e:
-        print_colored(f"Warning: failed to adjust Chromium binary permissions: {e}", YELLOW)
-
-
 def download_chromium(revision: str) -> Path:  # noqa: C901
     """Download Chromium for the current platform."""
+
     plat, _ = get_platform_info()
     system = platform.system()
 
@@ -172,9 +121,12 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
         chrome_dir = BUILD_DIR / "chromium-linux"
 
     # Check if already downloaded
-    chrome_exe = chrome_dir / ("chrome.exe" if system == "Windows" else "chrome")
-    if system == "Darwin":
+    if system == "Windows":
+        chrome_exe = chrome_dir / "chrome.exe"
+    elif system == "Darwin":
         chrome_exe = chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    else:
+        chrome_exe = chrome_dir / "chrome"
 
     if chrome_exe.exists():
         _ensure_chromium_permissions(chrome_dir, system)
@@ -231,88 +183,15 @@ def download_chromium(revision: str) -> Path:  # noqa: C901
     _ensure_chromium_permissions(chrome_dir, system)
 
     # Remove quarantine on macOS
-    if system == "Darwin":
-        with contextlib.suppress(Exception):
-            subprocess.run(["xattr", "-cr", str(chrome_dir)], capture_output=True, check=False)
+    remove_quarantine_macos(chrome_dir)
 
     print_colored(f"Chromium downloaded to {chrome_dir}", GREEN)
     return chrome_dir
 
 
-def _find_chrome_executable(chrome_dir: Path, system: str) -> Path:
-    if system == "Windows":
-        return chrome_dir / "chrome.exe"
-    if system == "Darwin":
-        return chrome_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-    return chrome_dir / "chrome"
-
-
-def _version_from_binary(chrome_exe: Path) -> str | None:
-    try:
-        result = subprocess.run(
-            [str(chrome_exe), "--version"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        print_colored(
-            f"Warning: Failed to query Chrome binary for version ({exc}); using revision heuristic instead",
-            YELLOW,
-        )
-        return None
-
-    output = (result.stdout or result.stderr or "").strip()
-    match = re.search(r"(\d+\.\d+\.\d+\.\d+)", output)
-    if match:
-        return match.group(1)
-
-    print_colored(
-        f"Warning: Unexpected --version output '{output}', will fall back to revision heuristic",
-        YELLOW,
-    )
-    return None
-
-
-def _version_from_revision(revision: str | None) -> str | None:
-    if not revision:
-        return None
-
-    try:
-        revision_num = int(revision)
-    except ValueError:
-        return None
-
-    for threshold, version in REVISION_VERSION_HEURISTICS:
-        if revision_num >= threshold:
-            return version
-    return None
-
-
-def get_chrome_version(chrome_dir: Path, revision: str | None = None) -> str:
-    """Resolve the installed Chromium build version."""
-
-    system = platform.system()
-    chrome_exe = _find_chrome_executable(chrome_dir, system)
-
-    if not chrome_exe.exists():
-        raise FileNotFoundError(f"Chrome binary not found at {chrome_exe}")
-
-    version = _version_from_binary(chrome_exe)
-    if version:
-        print_colored(f"Chrome version (from binary): {version}", GREEN)
-        return version
-
-    version = _version_from_revision(revision)
-    if version:
-        print_colored(f"Chrome version (from revision heuristic {revision}): {version}", GREEN)
-        return version
-
-    raise RuntimeError("Unable to determine Chrome version from binary or revision")
-
-
 def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C901
     """Download ChromeDriver from Chrome for Testing matching the major version."""
+
     system = platform.system()
     _, arch = get_platform_info()
 
@@ -396,8 +275,7 @@ def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C90
 
     # Remove quarantine on macOS
     if system == "Darwin":
-        with contextlib.suppress(Exception):
-            subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
+        remove_quarantine_chromedriver(driver_path)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
     _invalidate_patched_driver(driver_path)
@@ -406,6 +284,7 @@ def download_chromedriver_from_testing(major_version: str) -> Path:  # noqa: C90
 
 def download_chromedriver(version: str) -> Path:  # noqa: C901
     """Download ChromeDriver matching the Chrome version."""
+
     system = platform.system()
     _, arch = get_platform_info()
 
@@ -483,8 +362,7 @@ def download_chromedriver(version: str) -> Path:  # noqa: C901
 
     # Remove quarantine on macOS
     if system == "Darwin":
-        with contextlib.suppress(Exception):
-            subprocess.run(["xattr", "-cr", str(driver_path)], capture_output=True, check=False)
+        remove_quarantine_chromedriver(driver_path)
 
     print_colored(f"ChromeDriver downloaded to {driver_path}", GREEN)
     _invalidate_patched_driver(driver_path)
@@ -575,6 +453,7 @@ def verify_installation(chrome_dir: Path, driver_path: Path) -> None:
 
 def main() -> None:
     """Main function."""
+
     print_colored("Chrome and ChromeDriver Setup", GREEN)
     print_colored(f"Platform: {platform.system()} {platform.machine()}", YELLOW)
     print_colored(f"Project root: {PROJECT_ROOT}", YELLOW)

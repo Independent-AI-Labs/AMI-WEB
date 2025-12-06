@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-'exec "$(dirname "$0")/../../../scripts/ami-run.sh" "$(dirname "$0")/test_chrome_fastmcp_server.py" "$@" #'
+'exec "$(dirname "$0")/../../../scripts/ami-run" "$(dirname "$0")/test_chrome_fastmcp_server.py" "$@" #'
 
 """Integration tests for Chrome FastMCP server using official MCP client."""
 
@@ -7,9 +7,10 @@ import json
 from pathlib import Path
 
 import pytest
-from base.scripts.env.venv import get_venv_python
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+from base.scripts.env.venv import get_venv_python
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

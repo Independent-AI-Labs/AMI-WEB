@@ -299,7 +299,7 @@ await browser_profile(action="copy", source_profile="default", dest_profile="wor
 ### Setup Chromium
 
 ```bash
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/setup_chrome.py
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/setup_chrome.py
 ```
 
 Respects `AMI_COMPUTE_PROFILE` for driver selection (`cpu`, `nvidia`, `intel`, `amd`).
@@ -308,23 +308,23 @@ Respects `AMI_COMPUTE_PROFILE` for driver selection (`cpu`, `nvidia`, `intel`, `
 
 ```bash
 # stdio transport
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_chrome.py
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/run_chrome.py
 
 # websocket transport
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_chrome.py --transport websocket --port 9000
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/run_chrome.py --transport websocket --port 9000
 ```
 
 ## Testing
 
 ```bash
 # Run all tests
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/run_tests.py
 
 # Run specific test
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py tests/unit/test_script_validator.py -v
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/run_tests.py tests/unit/test_script_validator.py -v
 
 # Run integration tests
-/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run.sh scripts/run_tests.py tests/integration/ -v
+/home/ami/Projects/AMI-ORCHESTRATOR/scripts/ami-run scripts/run_tests.py tests/integration/ -v
 ```
 
 **Test Coverage:**

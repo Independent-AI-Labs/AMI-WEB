@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-'exec "$(dirname "$0")/../scripts/ami-run.sh" "$(dirname "$0")/run_chrome.py" "$@" #'
+'exec "$(dirname "$0")/../scripts/ami-run" "$(dirname "$0")/run_chrome.py" "$@" #'
 
 from __future__ import annotations
 
@@ -18,9 +18,9 @@ from base.scripts.env.paths import setup_imports
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from loguru import logger  # noqa: E402
 
+from base.backend.utils.runner_bootstrap import ensure_module_venv  # noqa: E402
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer  # noqa: E402
 
 

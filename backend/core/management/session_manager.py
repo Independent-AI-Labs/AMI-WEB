@@ -5,17 +5,21 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
+
+from loguru import logger
 
 from base.backend.utils.uuid_utils import uuid7
-from loguru import logger
-from selenium.common.exceptions import TimeoutException, WebDriverException
-
 from browser.backend.core.browser.instance import BrowserInstance
+from browser.backend.core.management.session.cookies_handler import restore_all_cookies, restore_all_tabs
+from browser.backend.core.management.session.tab_utils import (
+    collect_tab_cookies,
+    determine_active_tab,
+    get_active_tab_data,
+)
 from browser.backend.utils.exceptions import SessionError
 
 if TYPE_CHECKING:
-    from .manager import ChromeManager
+    from browser.backend.core.management.manager import ChromeManager
 
 
 class SessionManager:
@@ -74,182 +78,6 @@ class SessionManager:
         self._save_metadata()
         logger.info("Session manager shutdown complete")
 
-    def _is_real_page(self, url: str) -> bool:
-        """Check if URL is a real page (not chrome:// or about:blank)."""
-        return not ("chrome://" in url or "about:blank" in url or url == "data:,")
-
-    def _collect_tab_cookies(self, driver: Any, tab_url: str, all_cookies: list[dict[str, Any]]) -> None:
-        """Collect cookies from a tab if it's a real page."""
-        if not tab_url.startswith(("http://", "https://")):
-            return
-
-        try:
-            tab_cookies = driver.get_cookies()
-            for cookie in tab_cookies:
-                cookie_key = (cookie.get("name"), cookie.get("domain"))
-                if not any((c.get("name"), c.get("domain")) == cookie_key for c in all_cookies):
-                    all_cookies.append(cookie)
-        except Exception as e:
-            logger.warning(f"Failed to get cookies from tab {tab_url}: {e}")
-
-    def _determine_active_tab(self, tabs: list[dict[str, str]], current_handle: str | None) -> str | None:
-        """Determine which tab is actually active - fails if state is ambiguous."""
-        if not tabs:
-            return None
-
-        if not current_handle:
-            raise SessionError("No current window handle available - cannot determine active tab")
-
-        current_tab_data = next((t for t in tabs if t["handle"] == str(current_handle)), None)
-
-        if not current_tab_data:
-            raise SessionError(f"Current window handle {current_handle} not found in tab list - browser state corrupted")
-
-        # Return the actual current handle - explicit failure on any ambiguity
-        return str(current_handle)
-
-    def _get_active_tab_data(self, tabs: list[dict[str, str]], actual_active_tab: str | None) -> dict[str, str] | None:
-        """Get tab data for the active tab - fails if active tab not found."""
-        if not tabs:
-            return None
-
-        if actual_active_tab:
-            tab_data = next((t for t in tabs if t["handle"] == actual_active_tab), None)
-            if not tab_data:
-                raise SessionError(f"Active tab {actual_active_tab} not found in tab list - cannot save corrupted session state")
-            return tab_data
-
-        # No active tab specified - fail explicitly
-        raise SessionError("No active tab specified - cannot determine session state")
-
-    def _is_error_page(self, current_url: str, page_source: str) -> bool:
-        """Check if we're on an error page."""
-        return (
-            "data:text/html,chromewebdata" in current_url
-            or "chrome-error:" in current_url
-            or "net::err_cert" in page_source
-            or "your connection is not private" in page_source
-        )
-
-    def _restore_cookies_to_tab(self, driver: Any, tab_url: str, parsed_url: Any, cookies: list[dict[str, Any]]) -> int:
-        """Restore cookies to a single tab. Returns count of cookies restored."""
-        # Navigate to domain root for cookie setting
-        domain_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
-        driver.get(domain_url)
-
-        # Check if we're on an error page
-        current_url = driver.current_url
-        page_source = driver.page_source.lower() if driver.page_source else ""
-
-        if self._is_error_page(current_url, page_source):
-            return 0
-
-        # Try to restore cookies that match this domain
-        count = 0
-        for cookie in cookies:
-            cookie_domain = cookie.get("domain", "")
-            if cookie_domain and (
-                parsed_url.netloc == cookie_domain.lstrip(".") or parsed_url.netloc.endswith(cookie_domain) or cookie_domain.lstrip(".") in parsed_url.netloc
-            ):
-                try:
-                    driver.add_cookie(cookie)
-                    count += 1
-                except Exception as e:
-                    logger.warning(f"Failed to restore cookie {cookie.get('name', 'unknown')}: {e}")
-
-        # Navigate back to the actual tab URL
-        driver.get(tab_url)
-        return count
-
-    def _restore_all_tabs(self, driver: Any, tabs: list[dict[str, str]]) -> dict[str, str]:
-        """Restore all tabs from session data with timeout protection.
-
-        Returns mapping of old handles to new handles.
-        Logs warnings for failed tabs but continues restoration to prevent total failure.
-        """
-        handle_mapping = {}
-        failed_tabs = []
-
-        # Store original timeout and set shorter timeout for restoration
-        original_timeout = 30  # Default page load timeout
-        restore_timeout = 15  # Shorter timeout to prevent long hangs
-
-        try:
-            driver.set_page_load_timeout(restore_timeout)
-
-            # First tab: use existing tab and navigate
-            first_tab = tabs[0]
-            try:
-                logger.info(f"Restoring first tab: {first_tab['url']}")
-                driver.get(first_tab["url"])
-                first_handle = driver.current_window_handle
-                handle_mapping[tabs[0]["handle"]] = first_handle
-            except (TimeoutException, WebDriverException) as e:
-                logger.warning(f"Failed to restore first tab {first_tab['url']}: {e}")
-                # Keep first tab even if navigation failed - just leave it on error page
-                first_handle = driver.current_window_handle
-                handle_mapping[tabs[0]["handle"]] = first_handle
-                failed_tabs.append((0, first_tab["url"], str(e)))
-
-            # Restore remaining tabs (if any)
-            for idx, tab in enumerate(tabs[1:], start=1):
-                try:
-                    logger.info(f"Restoring tab {idx}: {tab['url']}")
-                    driver.execute_script("window.open('');")
-                    new_handle = driver.window_handles[-1]
-                    handle_mapping[tab["handle"]] = new_handle
-                    driver.switch_to.window(new_handle)
-
-                    try:
-                        driver.get(tab["url"])
-                    except (TimeoutException, WebDriverException) as e:
-                        logger.warning(f"Failed to navigate tab {idx} to {tab['url']}: {e}")
-                        # Tab was created but navigation failed - keep the tab
-                        failed_tabs.append((idx, tab["url"], str(e)))
-
-                except Exception as e:
-                    logger.error(f"Failed to create tab {idx}: {e}")
-                    failed_tabs.append((idx, tab["url"], str(e)))
-                    # Don't add to handle_mapping if tab creation failed
-
-            if failed_tabs:
-                logger.warning(f"Session restore completed with {len(failed_tabs)} failed tabs: {failed_tabs}")
-
-        finally:
-            # Restore original timeout
-            driver.set_page_load_timeout(original_timeout)
-
-        return handle_mapping
-
-    def _restore_all_cookies(
-        self,
-        driver: Any,
-        tabs: list[dict[str, str]],
-        handle_mapping: dict[str, str],
-        cookies: list[dict[str, Any]],
-    ) -> int:
-        """Restore cookies to all tabs. Returns total count of cookies restored."""
-        total = 0
-        for tab in tabs:
-            tab_url = tab["url"]
-
-            if not tab_url.startswith(("http://", "https://")):
-                continue
-
-            parsed = urlparse(tab_url)
-            if not (parsed.scheme and parsed.netloc):
-                continue
-
-            tab_handle = handle_mapping.get(tab["handle"])
-            if not tab_handle:
-                continue
-
-            driver.switch_to.window(tab_handle)
-            count = self._restore_cookies_to_tab(driver, tab_url, parsed, cookies)
-            total += count
-
-        return total
-
     async def save_session(
         self,
         instance: "BrowserInstance",
@@ -300,7 +128,7 @@ class SessionManager:
                         handle_states[handle] = (tab_url, tab_title)
 
                         # Collect cookies from this tab
-                        self._collect_tab_cookies(instance.driver, tab_url, all_cookies)
+                        collect_tab_cookies(instance.driver, tab_url, all_cookies)
 
                     except Exception as e:
                         raise SessionError(f"Failed to capture tab {handle}: {e} - cannot save incomplete session") from e
@@ -311,7 +139,7 @@ class SessionManager:
                     tabs.append({"handle": str(handle), "url": url, "title": title})
 
                 # Determine which tab is actually active
-                actual_active_tab = self._determine_active_tab(tabs, original_handle)
+                actual_active_tab = determine_active_tab(tabs, original_handle)
 
                 # Switch back to the original active tab
                 if original_handle and original_handle in all_handles:
@@ -325,7 +153,7 @@ class SessionManager:
                 actual_active_tab = str(current_handle) if current_handle else None
 
         # Get active tab data
-        active_tab_data = self._get_active_tab_data(tabs, actual_active_tab)
+        active_tab_data = get_active_tab_data(tabs, actual_active_tab)
         if active_tab_data:
             actual_active_tab = active_tab_data["handle"]
 
@@ -380,6 +208,7 @@ class SessionManager:
         session_data: dict[str, Any],
     ) -> None:
         """Restore session using new multi-tab format."""
+
         tabs = session_data.get("tabs", [])
         active_tab_handle = session_data.get("active_tab_handle")
 
@@ -387,11 +216,11 @@ class SessionManager:
             return
 
         # Restore all tabs first
-        handle_mapping = self._restore_all_tabs(driver, tabs)
+        handle_mapping = restore_all_tabs(driver, tabs)
 
         # Restore cookies to ALL tabs that can accept them
         if session_data.get("cookies"):
-            cookies_restored = self._restore_all_cookies(driver, tabs, handle_mapping, session_data["cookies"])
+            cookies_restored = restore_all_cookies(driver, tabs, handle_mapping, session_data["cookies"])
             logger.info(f"Restored {cookies_restored}/{len(session_data['cookies'])} cookies")
 
         # Switch to the originally active tab
