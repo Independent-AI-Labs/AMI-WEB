@@ -203,7 +203,36 @@ async def browser_open_tab_tool(manager: ChromeManager, url: str | None = None, 
         return BrowserResponse(success=False, error="Tab manager not initialized")
 
     try:
+        # Store the current number of tabs to detect if a new tab was created
+        set(instance.driver.window_handles) if instance.driver else set()
+
         tab_handle = instance._lifecycle.tab_manager.open_new_tab(url)
+
+        # If a URL was provided and the navigation might have failed, check the tab status
+        if url:
+            # Check if the tab still exists and has the expected URL
+            tab_exists = tab_handle in instance.driver.window_handles
+            if tab_exists:
+                # Check current URL to see if navigation was successful
+                original_handle = instance.driver.current_window_handle
+                instance.driver.switch_to.window(tab_handle)
+
+                current_url = instance.driver.current_url
+                # If navigation failed, the URL might be about:blank or different from expected
+                if current_url == "about:blank" or (url not in current_url and not current_url.endswith(url)):
+                    # Navigation likely failed, close the tab and return error
+                    instance.driver.close()
+                    # Switch back to the originally active window to maintain state
+                    remaining_handles = instance.driver.window_handles
+                    if original_handle in remaining_handles:
+                        instance.driver.switch_to.window(original_handle)
+                    elif remaining_handles:
+                        instance.driver.switch_to.window(remaining_handles[0])
+                    return BrowserResponse(success=False, error=f"Failed to navigate to URL: {url}")
+
+                # Switch back to the original tab after checking
+                instance.driver.switch_to.window(original_handle)
+
         return BrowserResponse(success=True, data={"tab_id": tab_handle, "url": url})
     except Exception as exc:
         if from_pool and _is_fatal_error(exc):

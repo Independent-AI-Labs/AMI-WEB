@@ -81,14 +81,14 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         instance_id = response.instance_id
         await asyncio.sleep(2.0)  # Give browser more time to fully initialize in parallel environments
 
-        # Step 2: Navigate first tab to x.com (like the user did)
-        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/x")
-        assert response.success, f"Navigate to x.com failed: {response.error}"
+        # Step 2: Navigate first tab to example.com (like the user did)
+        response = await browser_navigate_tool(manager, action="goto", url="https://example.com/")
+        assert response.success, f"Navigate to example.com failed: {response.error}"
         await asyncio.sleep(1.0)  # Give browser more time to stabilize after navigation
 
-        # Step 3: Open new tab using MCP and navigate to reddit.com (not execute_script)
-        success, response = await _open_tab_with_retry(manager, "https://example.com/reddit")
-        assert success, f"Open tab and navigate to reddit failed after 5 attempts: {response.error if 'response' in locals() else 'Unknown error'}"
+        # Step 3: Open new tab using MCP and navigate to example.org (not execute_script)
+        success, response = await _open_tab_with_retry(manager, "https://example.org/")
+        assert success, f"Open tab and navigate to example.org failed after 5 attempts: {response.error if 'response' in locals() else 'Unknown error'}"
         assert response.data is not None
         await asyncio.sleep(2.0)  # Give tab more time to fully load in parallel environments
 
@@ -118,7 +118,7 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
             manager,
             action="save",
             instance_id=instance_id,
-            session_name="x-reddit-test",
+            session_name="example-test",
         )
         assert response.success, f"Save session failed: {response.error}"
         assert response.data is not None
@@ -137,8 +137,8 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
         assert len(saved_data["tabs"]) == 2, f"Expected 2 tabs in saved session, got {len(saved_data['tabs'])}"
 
         saved_urls = [tab["url"] for tab in saved_data["tabs"]]
-        assert any("example.com/x" in str(url) for url in saved_urls), f"x.com URL not in saved tabs: {saved_urls}"
-        assert any("example.com/reddit" in str(url) for url in saved_urls), f"reddit URL not in saved tabs: {saved_urls}"
+        assert any("example.com/" in str(url) for url in saved_urls), f"example.com URL not in saved tabs: {saved_urls}"
+        assert any("example.org/" in str(url) for url in saved_urls), f"example.org URL not in saved tabs: {saved_urls}"
 
         # Step 6: Terminate the instance
         assert instance_id is not None
@@ -176,8 +176,8 @@ async def test_mcp_open_tab_goto_session_save_restore(worker_data_dirs: dict[str
 
         logger.info(f"DEBUG: Restored URLs: {all_urls}")
 
-        assert any("example.com/x" in str(url) for url in all_urls), f"x.com URL not restored: {all_urls}"
-        assert any("example.com/reddit" in str(url) for url in all_urls), f"reddit URL not restored: {all_urls}"
+        assert any("example.com/" in str(url) for url in all_urls), f"example.com URL not restored: {all_urls}"
+        assert any("example.org/" in str(url) for url in all_urls), f"example.org URL not restored: {all_urls}"
 
         logger.info("✓ MCP tab + session save/restore integration test PASSED")
 
