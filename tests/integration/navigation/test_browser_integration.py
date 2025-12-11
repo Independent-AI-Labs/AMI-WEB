@@ -1,24 +1,25 @@
 """Integration tests for browser functionality."""
 
 import asyncio
-import os
-import socket
 from collections.abc import Iterator
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import os
 from pathlib import Path
+import socket
 from threading import Thread
 from typing import Any
 
-import pytest
 from loguru import logger
+import pytest
 
 # BrowserInstance and ChromeManager imports removed - using fixtures from conftest
-from browser.backend.facade.input.keyboard import KeyboardController
-from browser.backend.facade.input.mouse import MouseController
-from browser.backend.facade.media.screenshot import ScreenshotController
-from browser.backend.facade.navigation.extractor import ContentExtractor
-from browser.backend.facade.navigation.navigator import Navigator
-from browser.backend.facade.navigation.waiter import Waiter
+from browser.backend.controllers.input.keyboard import KeyboardController
+from browser.backend.controllers.input.mouse import MouseController
+from browser.backend.controllers.media.screenshot import ScreenshotController
+from browser.backend.controllers.navigation.extractor import ContentExtractor
+from browser.backend.controllers.navigation.navigator import Navigator
+from browser.backend.controllers.navigation.waiter import Waiter
+
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

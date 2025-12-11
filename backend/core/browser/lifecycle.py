@@ -22,6 +22,7 @@ from browser.backend.models.security import SecurityConfig, SecurityLevel
 from browser.backend.utils.config import Config
 from browser.backend.utils.exceptions import InstanceError
 
+
 if TYPE_CHECKING:
     pass
 

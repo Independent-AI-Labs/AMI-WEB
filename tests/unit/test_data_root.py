@@ -1,7 +1,7 @@
 """Tests for data_root enforcement in browser MCP server."""
 
-import sys
 from pathlib import Path
+import sys
 from unittest.mock import MagicMock, patch
 
 from browser.backend.core.management.manager import ChromeManager

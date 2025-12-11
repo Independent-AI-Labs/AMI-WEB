@@ -3,6 +3,7 @@
 # Use standard import setup
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from pathlib import Path  # noqa: E402

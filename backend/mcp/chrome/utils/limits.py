@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 
 from browser.backend.utils.config import Config
 
+
 DEFAULT_GLOBAL_MAX_BYTES = 256_000
 DEFAULT_TOOL_LIMIT_BYTES = 64_000
 DEFAULT_CHUNK_SIZE_BYTES = 16_000

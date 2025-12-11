@@ -3,18 +3,21 @@
 
 from __future__ import annotations
 
+
 """Run Chrome MCP server via console script entrypoint."""
 
 # Standard library imports FIRST
 import argparse
-import sys
 from pathlib import Path
+import sys
+
 
 # Bootstrap sys.path - MUST come before base imports
 sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "base").exists())))
 
 # Now we can import from base
 from base.scripts.env.paths import setup_imports
+
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 

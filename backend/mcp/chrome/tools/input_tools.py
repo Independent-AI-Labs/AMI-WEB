@@ -2,11 +2,11 @@
 
 from loguru import logger
 
+from browser.backend.controllers.input.forms import FormsController
+from browser.backend.controllers.input.keyboard import KeyboardController
+from browser.backend.controllers.input.mouse import MouseController
+from browser.backend.controllers.navigation.scroller import Scroller
 from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.input.forms import FormsController
-from browser.backend.facade.input.keyboard import KeyboardController
-from browser.backend.facade.input.mouse import MouseController
-from browser.backend.facade.navigation.scroller import Scroller
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 

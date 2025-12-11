@@ -1,13 +1,13 @@
 """Chrome-specific setup functionality."""
 
 import json
+from pathlib import Path
 import re
 import stat
 import subprocess
-import zipfile
-from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlopen, urlretrieve
+import zipfile
 
 from browser.scripts.setup.utils import GREEN, YELLOW, _validate_google_url, get_platform_info, print_colored
 

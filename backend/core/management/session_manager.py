@@ -1,9 +1,9 @@
 """Browser session management for saving and restoring browser state."""
 
-import json
-import shutil
 from datetime import datetime
+import json
 from pathlib import Path
+import shutil
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -17,6 +17,7 @@ from browser.backend.core.management.session.tab_utils import (
     get_active_tab_data,
 )
 from browser.backend.utils.exceptions import SessionError
+
 
 if TYPE_CHECKING:
     from browser.backend.core.management.manager import ChromeManager

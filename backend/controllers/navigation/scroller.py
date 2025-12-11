@@ -1,11 +1,10 @@
 """Scrolling and viewport control functionality."""
 
 import asyncio
-import time
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.config import FACADE_CONFIG
-from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.controller_config import CONTROLLER_CONFIG
+from browser.backend.controllers.utils import parameterized_js_execution
 from browser.backend.utils.exceptions import NavigationError
 
 
@@ -30,6 +29,9 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         try:
             if element:
                 script = parameterized_js_execution(
@@ -49,13 +51,8 @@ class Scroller(BaseController):
                 behavior = "smooth" if smooth else "auto"
                 script = f"window.scrollTo({{left: {x or 0}, top: {y or 0}, behavior: '{behavior}'}})"
 
-            if self._is_in_thread_context():
-                self.driver.execute_script(script)
-                time.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
-            else:
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, self.driver.execute_script, script)
-                await asyncio.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+            await self._execute_in_context(lambda: driver.execute_script(script), lambda: driver.execute_script(script))
+            await self._sleep_in_context(CONTROLLER_CONFIG.scroll_wait_smooth if smooth else CONTROLLER_CONFIG.scroll_wait_instant)
 
         except Exception as e:
             raise NavigationError(f"Failed to scroll: {e}") from e
@@ -69,14 +66,17 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         script = "return document.documentElement.scrollHeight"
 
         if self._is_in_thread_context():
-            height = self.driver.execute_script(script)
+            height = driver.execute_script(script)
             await self.scroll_to(0, height, smooth=smooth)
         else:
             loop = asyncio.get_event_loop()
-            height = await loop.run_in_executor(None, self.driver.execute_script, script)
+            height = await loop.run_in_executor(None, driver.execute_script, script)
             await self.scroll_to(0, height, smooth=smooth)
 
     async def scroll_by(self, x: int = 0, y: int = 0, smooth: bool = True) -> None:
@@ -90,17 +90,15 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         behavior = "smooth" if smooth else "auto"
         script = f"window.scrollBy({{left: {x}, top: {y}, behavior: '{behavior}'}})"
 
         try:
-            if self._is_in_thread_context():
-                self.driver.execute_script(script)
-                time.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
-            else:
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, self.driver.execute_script, script)
-                await asyncio.sleep(FACADE_CONFIG.scroll_wait_smooth if smooth else FACADE_CONFIG.scroll_wait_instant)
+            await self._execute_in_context(lambda: driver.execute_script(script), lambda: driver.execute_script(script))
+            await self._sleep_in_context(CONTROLLER_CONFIG.scroll_wait_smooth if smooth else CONTROLLER_CONFIG.scroll_wait_instant)
         except Exception as e:
             raise NavigationError(f"Failed to scroll by offset: {e}") from e
 
@@ -113,14 +111,13 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         script = "return {x: window.pageXOffset, y: window.pageYOffset}"
 
         try:
-            if self._is_in_thread_context():
-                raw_result = self.driver.execute_script(script)
-            else:
-                loop = asyncio.get_event_loop()
-                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+            raw_result = await self._execute_in_context(lambda: driver.execute_script(script), lambda: driver.execute_script(script))
             result: dict[str, int] = raw_result
             return result
         except Exception as e:
@@ -135,14 +132,13 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         script = "return {width: window.innerWidth, height: window.innerHeight}"
 
         try:
-            if self._is_in_thread_context():
-                raw_result = self.driver.execute_script(script)
-            else:
-                loop = asyncio.get_event_loop()
-                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+            raw_result = await self._execute_in_context(lambda: driver.execute_script(script), lambda: driver.execute_script(script))
             result: dict[str, int] = raw_result
             return result
         except Exception as e:
@@ -157,6 +153,9 @@ class Scroller(BaseController):
         if not self.driver:
             raise NavigationError("Browser not initialized")
 
+        # Create local reference to help mypy understand that driver is not None
+        driver = self.driver
+
         script = """
         return {
             width: document.documentElement.scrollWidth,
@@ -166,10 +165,10 @@ class Scroller(BaseController):
 
         try:
             if self._is_in_thread_context():
-                raw_result = self.driver.execute_script(script)
+                raw_result = driver.execute_script(script)
             else:
                 loop = asyncio.get_event_loop()
-                raw_result = await loop.run_in_executor(None, self.driver.execute_script, script)
+                raw_result = await loop.run_in_executor(None, driver.execute_script, script)
             result: dict[str, int] = raw_result
             return result
         except Exception as e:

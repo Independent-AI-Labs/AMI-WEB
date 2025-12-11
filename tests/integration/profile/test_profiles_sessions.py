@@ -1,20 +1,21 @@
 """Tests for browser profiles, sessions, downloads, and security features."""
 
-import tempfile
 from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import pytest
 import pytest_asyncio
-import yaml
 from selenium.webdriver.common.by import By
+import yaml
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.models.security import SecurityConfig, SecurityLevel
 from browser.backend.utils.config import Config
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

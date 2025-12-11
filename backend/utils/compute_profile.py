@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+
 _COMPUTE_ENV_VARS = ("AMI_COMPUTE_PROFILE", "AMI_COMPUTE_TARGET", "COMPUTE_PROFILE")
 _ALIASES: dict[str, str] = {
     "cpu": "cpu",

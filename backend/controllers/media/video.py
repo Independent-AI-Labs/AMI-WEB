@@ -2,23 +2,24 @@
 
 import asyncio
 import base64
-import contextlib
-import io
-import time
 from collections.abc import Callable
+import contextlib
 from datetime import datetime
+import io
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any, cast
 
 import cv2
-import numpy as np
 from loguru import logger
+import numpy as np
 from PIL import Image
 
 from base.backend.utils.uuid_utils import uuid7
-from browser.backend.facade.base import BaseController
+from browser.backend.controllers.base import BaseController
 from browser.backend.models.media import RecordingSession
 from browser.backend.utils.exceptions import MediaError
+
 
 if TYPE_CHECKING:
     from browser.backend.core.browser.instance import BrowserInstance

@@ -5,8 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
 from selenium.webdriver.support.ui import WebDriverWait
 
+from browser.backend.controllers.navigation.extractor import ContentExtractor
 from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.navigation.extractor import ContentExtractor
 from browser.backend.mcp.chrome.response import BrowserResponse
 from browser.backend.mcp.chrome.utils.limits import (
     ChunkComputationError,

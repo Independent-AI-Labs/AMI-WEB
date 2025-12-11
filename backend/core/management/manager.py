@@ -1,8 +1,8 @@
 """Chrome Manager using the base worker pool system."""
 
-import json
 from contextlib import suppress
 from datetime import datetime
+import json
 from typing import Any
 
 from loguru import logger
@@ -10,16 +10,17 @@ from selenium.common.exceptions import InvalidSessionIdException, WebDriverExcep
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from base.backend.workers.types import PoolConfig, PoolType  # noqa: E402
+from browser.backend.controllers.media.screenshot import ScreenshotController  # noqa: E402
+from browser.backend.controllers.navigation.navigator import Navigator  # noqa: E402
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.core.management.browser_worker_pool import BrowserWorkerPool  # noqa: E402
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
 from browser.backend.core.management.session_manager import SessionManager  # noqa: E402
-from browser.backend.facade.media.screenshot import ScreenshotController  # noqa: E402
-from browser.backend.facade.navigation.navigator import Navigator  # noqa: E402
 from browser.backend.models.browser import BrowserStatus, ChromeOptions, InstanceInfo  # noqa: E402
 from browser.backend.models.browser_properties import (  # noqa: E402
     BrowserProperties,

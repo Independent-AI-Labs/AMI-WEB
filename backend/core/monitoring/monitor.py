@@ -1,7 +1,7 @@
 """Browser monitoring - console, network, performance."""
 
-import json
 from datetime import datetime
+import json
 from typing import Any, cast
 
 from loguru import logger

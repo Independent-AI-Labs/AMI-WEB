@@ -5,8 +5,8 @@ import time
 
 from loguru import logger
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.navigation.waiter import Waiter
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.navigation.waiter import Waiter
 from browser.backend.models.browser import PageResult, WaitCondition
 from browser.backend.utils.exceptions import NavigationError
 

@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
-import pytest
 from aiohttp import web
+import pytest
 
 from browser.backend.mcp.chrome.chrome_server import ChromeFastMCPServer
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

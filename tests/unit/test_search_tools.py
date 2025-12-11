@@ -6,8 +6,8 @@ from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
 from typing import cast
 
-import pytest
 from aiohttp import web
+import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.search_tools import browser_web_search_tool

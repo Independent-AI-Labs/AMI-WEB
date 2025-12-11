@@ -1,11 +1,11 @@
 """Timing constants and utilities."""
 
-import platform
-import signal
-import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+import platform
+import signal
+import time
 from typing import Any
 
 

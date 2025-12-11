@@ -1,9 +1,10 @@
 """Integration test to verify instance reuse logic with profiles."""
 
-import pytest
 from loguru import logger
+import pytest
 
 from browser.backend.core.management.manager import ChromeManager
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

@@ -1,18 +1,18 @@
 """Chrome DevTools Protocol operations and network monitoring."""
 
 import asyncio
-import json
 from datetime import datetime
+import json
 from typing import Any, cast
 
 from loguru import logger
 
-from browser.backend.core.browser.instance import BrowserInstance
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.devtools.config import (
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.devtools.config import (
     get_device_config,
     list_available_devices,
 )
+from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.models.browser import ConsoleEntry, NetworkEntry
 from browser.backend.utils.exceptions import ChromeManagerError
 
@@ -167,12 +167,12 @@ class DevToolsController(BaseController):
         device_params = {
             "width": device_config.width,
             "height": device_config.height,
-            "deviceScaleFactor": device_config.deviceScaleFactor,
+            "deviceScaleFactor": device_config.device_scale_factor,
             "mobile": device_config.mobile,
         }
 
         await self.execute_cdp_command("Emulation.setDeviceMetricsOverride", device_params)
-        await self.execute_cdp_command("Emulation.setUserAgentOverride", {"userAgent": device_config.userAgent})
+        await self.execute_cdp_command("Emulation.setUserAgentOverride", {"userAgent": device_config.user_agent})
 
         logger.info(f"Emulating device: {device_name}")
 

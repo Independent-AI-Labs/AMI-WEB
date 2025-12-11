@@ -7,9 +7,9 @@ from selenium.common.exceptions import (
     WebDriverException,
 )
 
+from browser.backend.controllers.navigation.navigator import Navigator
 from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.navigation.navigator import Navigator
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 

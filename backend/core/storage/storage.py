@@ -1,14 +1,15 @@
 """Browser storage management - cookies, localStorage, downloads."""
 
 import json
-import time
 from pathlib import Path
+import time
 from typing import Any
 
 from loguru import logger
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from browser.backend.utils.exceptions import InstanceError
+
 
 DOWNLOAD_CHECK_INTERVAL = 0.5  # seconds
 

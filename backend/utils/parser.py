@@ -1,13 +1,14 @@
 """HTML parsing and text extraction utilities."""
 
-import re
 from collections.abc import Iterable
+import re
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Comment, Tag
 from bs4.element import AttributeValueList, NavigableString, PageElement
 from loguru import logger
+
 
 if TYPE_CHECKING:
     from selenium.webdriver.remote.webdriver import WebDriver

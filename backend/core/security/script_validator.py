@@ -1,17 +1,18 @@
 """JavaScript script validation to prevent dangerous operations."""
 
-import re
 from pathlib import Path
+import re
 from typing import Literal
 
 from pydantic import BaseModel
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-import yaml  # noqa: E402
 from loguru import logger  # noqa: E402
+import yaml  # noqa: E402
 
 
 class ForbiddenPattern(BaseModel):

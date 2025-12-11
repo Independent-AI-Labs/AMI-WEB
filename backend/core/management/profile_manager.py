@@ -1,9 +1,9 @@
 """Browser profile management using Chrome's native profile system."""
 
-import json
-import shutil
 from datetime import datetime
+import json
 from pathlib import Path
+import shutil
 from typing import Any
 
 from loguru import logger

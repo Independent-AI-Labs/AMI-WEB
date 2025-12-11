@@ -5,7 +5,7 @@ from typing import Any
 
 from loguru import logger
 
-from browser.backend.facade.base import BaseController
+from browser.backend.controllers.base import BaseController
 from browser.backend.utils.exceptions import NavigationError
 
 

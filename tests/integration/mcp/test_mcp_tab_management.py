@@ -3,11 +3,12 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from loguru import logger
+import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

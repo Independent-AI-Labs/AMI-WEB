@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+
 """Integration tests for the browser run_chrome runner using MCP client.
 
 Validates that the runner can launch the Chrome MCP server over stdio and
@@ -12,11 +13,12 @@ respond to initialize and basic tool discovery requests.
 import json
 from pathlib import Path
 
-import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+import pytest
 
 from base.scripts.env.venv import get_venv_python
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

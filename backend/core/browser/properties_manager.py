@@ -8,6 +8,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from browser.backend.models.browser_properties import (  # noqa: E402

@@ -14,8 +14,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
 from loguru import logger
+import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.facade.navigation import browser_navigate_tool

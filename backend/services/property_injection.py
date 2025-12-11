@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape  # noqa: E402
+
 
 if TYPE_CHECKING:
     from browser.backend.models.browser_properties import BrowserProperties

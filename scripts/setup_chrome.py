@@ -5,20 +5,21 @@
 
 import json
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
-import zipfile
-from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlopen, urlretrieve
+import zipfile
 
 from loguru import logger
 
 # Import modules needed for setup
 from browser.scripts.setup.utils import _ensure_chromium_permissions, _invalidate_patched_driver, remove_quarantine_chromedriver, remove_quarantine_macos
 from browser.scripts.setup.version_utils import get_chrome_version
+
 
 # Script directory
 SCRIPT_DIR = Path(__file__).resolve().parent

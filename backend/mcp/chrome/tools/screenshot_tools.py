@@ -7,8 +7,8 @@ from pathlib import Path
 from loguru import logger
 from selenium.webdriver.common.by import By
 
+from browser.backend.controllers.media.screenshot import ScreenshotController
 from browser.backend.core.management.manager import ChromeManager
-from browser.backend.facade.media.screenshot import ScreenshotController
 from browser.backend.mcp.chrome.response import BrowserResponse
 
 

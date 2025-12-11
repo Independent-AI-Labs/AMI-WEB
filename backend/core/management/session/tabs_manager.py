@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+
 if TYPE_CHECKING:
     from selenium.webdriver.remote.webdriver import WebDriver
 

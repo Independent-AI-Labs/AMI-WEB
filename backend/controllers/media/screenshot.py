@@ -3,14 +3,14 @@
 import asyncio
 import base64
 import io
-import time
 from pathlib import Path
+import time
 
 from loguru import logger
 from PIL import Image
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.config import FACADE_CONFIG
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.controller_config import CONTROLLER_CONFIG
 from browser.backend.models.media import ImageFormat
 from browser.backend.utils.exceptions import MediaError
 
@@ -130,7 +130,7 @@ class ScreenshotController(BaseController):
 
         # Scroll to top
         self.driver.execute_script("window.scrollTo(0, 0)")
-        time.sleep(FACADE_CONFIG.screenshot_stitch_delay)
+        time.sleep(CONTROLLER_CONFIG.screenshot_stitch_delay)
 
         # Take screenshots while scrolling
         screenshots = []
@@ -138,7 +138,7 @@ class ScreenshotController(BaseController):
 
         while current_position < total_height:
             self.driver.execute_script("window.scrollTo(0, arguments[0])", current_position)
-            time.sleep(FACADE_CONFIG.screenshot_stitch_delay)
+            time.sleep(CONTROLLER_CONFIG.screenshot_stitch_delay)
             screenshot_base64 = self.driver.get_screenshot_as_base64()
             screenshots.append(base64.b64decode(screenshot_base64))
             current_position += viewport_height
@@ -182,7 +182,7 @@ class ScreenshotController(BaseController):
 
         # Scroll to top
         await loop.run_in_executor(None, self.driver.execute_script, "window.scrollTo(0, 0)")
-        await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
+        await asyncio.sleep(CONTROLLER_CONFIG.screenshot_stitch_delay)
 
         # Take screenshots while scrolling
         screenshots = []
@@ -195,7 +195,7 @@ class ScreenshotController(BaseController):
                 "window.scrollTo(0, arguments[0])",
                 current_position,
             )
-            await asyncio.sleep(FACADE_CONFIG.screenshot_stitch_delay)
+            await asyncio.sleep(CONTROLLER_CONFIG.screenshot_stitch_delay)
             screenshot_base64 = await loop.run_in_executor(None, self.driver.get_screenshot_as_base64)
             screenshots.append(base64.b64decode(screenshot_base64))
             current_position += viewport_height

@@ -8,6 +8,7 @@ import pytest
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.mcp.chrome.tools.javascript_tools import browser_execute_tool
 
+
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
 

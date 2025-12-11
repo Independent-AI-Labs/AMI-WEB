@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from loguru import logger  # noqa: E402
@@ -13,6 +14,7 @@ from selenium.webdriver.remote.webdriver import WebDriver  # noqa: E402
 
 from browser.backend.core.browser.properties_manager import PropertiesManager  # noqa: E402
 from browser.backend.models.browser_properties import BrowserProperties  # noqa: E402
+
 
 if TYPE_CHECKING:
     pass

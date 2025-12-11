@@ -6,11 +6,11 @@ import time
 from loguru import logger
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.utils import parameterized_js_execution
 from browser.backend.models.browser import ClickOptions
 from browser.backend.utils.exceptions import InputError
 
@@ -450,9 +450,9 @@ class MouseController(BaseController):
             if wait:
                 wait_obj = WebDriverWait(self.driver, timeout)
                 if self._is_in_thread_context():
-                    return wait_obj.until(EC.presence_of_element_located((by, value)))
+                    return wait_obj.until(expected_conditions.presence_of_element_located((by, value)))
                 loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(None, wait_obj.until, EC.presence_of_element_located((by, value)))
+                return await loop.run_in_executor(None, wait_obj.until, expected_conditions.presence_of_element_located((by, value)))
             return self.driver.find_element(by, value)
 
         except Exception as e:

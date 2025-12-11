@@ -6,6 +6,7 @@ from loguru import logger
 
 from browser.backend.utils.exceptions import SessionError
 
+
 if TYPE_CHECKING:
     pass
 

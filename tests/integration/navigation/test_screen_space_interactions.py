@@ -7,9 +7,10 @@ from typing import Any
 import pytest
 
 # BrowserInstance import removed - using fixtures from conftest
-from browser.backend.facade.input.mouse import MouseController
-from browser.backend.facade.navigation.extractor import ContentExtractor
-from browser.backend.facade.navigation.navigator import Navigator
+from browser.backend.controllers.input.mouse import MouseController
+from browser.backend.controllers.navigation.extractor import ContentExtractor
+from browser.backend.controllers.navigation.navigator import Navigator
+
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

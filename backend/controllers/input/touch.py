@@ -5,8 +5,8 @@ import time
 
 from loguru import logger
 
-from browser.backend.facade.base import BaseController
-from browser.backend.facade.utils import parameterized_js_execution
+from browser.backend.controllers.base import BaseController
+from browser.backend.controllers.utils import parameterized_js_execution
 from browser.backend.utils.exceptions import InputError
 
 

@@ -15,6 +15,7 @@ from browser.tests.unit.fixtures import (
     sample_network_logs,
 )
 
+
 __all__ = [
     "mock_browser_instance",
     "mock_chrome_manager",

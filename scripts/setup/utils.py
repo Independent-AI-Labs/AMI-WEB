@@ -1,12 +1,13 @@
 """Utility functions for Chrome setup."""
 
 import contextlib
+from pathlib import Path
 import platform
 import subprocess
-from pathlib import Path
 from urllib.parse import urlparse
 
 from loguru import logger
+
 
 # Colors for output (cross-platform)
 if platform.system() == "Windows":

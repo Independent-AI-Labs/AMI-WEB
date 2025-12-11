@@ -1,12 +1,12 @@
-"""Configuration for facade controllers with customizable timing values."""
+"""Configuration for controller modules with customizable timing values."""
 
 from typing import Any
 
 from pydantic import BaseModel
 
 
-class FacadeConfig(BaseModel):
-    """Configuration for facade controller timing and behavior."""
+class ControllerConfig(BaseModel):
+    """Configuration for controller timing and behavior."""
 
     # Navigation timings
     scroll_wait_smooth: float = 0.5  # Wait after smooth scroll (seconds)
@@ -27,10 +27,10 @@ class FacadeConfig(BaseModel):
     poll_frequency: float = 0.5  # Default poll frequency for wait conditions (seconds)
 
     @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> "FacadeConfig":
+    def from_dict(cls, config_dict: dict[str, Any]) -> "ControllerConfig":
         """Create config from dictionary."""
         return cls(**{k: v for k, v in config_dict.items() if hasattr(cls, k)})
 
 
 # Global config instance - can be overridden by user
-FACADE_CONFIG = FacadeConfig()
+CONTROLLER_CONFIG = ControllerConfig()

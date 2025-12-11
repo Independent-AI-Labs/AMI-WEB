@@ -2,6 +2,7 @@
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from loguru import logger  # noqa: E402

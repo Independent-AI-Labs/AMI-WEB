@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+
 """MCP client helper tests for browser module.
 
 Mirrors base coverage: verify error handling and timeout behavior when
@@ -12,12 +13,13 @@ connecting to a failing or hanging server process using stdio transport.
 import asyncio
 from pathlib import Path
 
-import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.exceptions import McpError
+import pytest
 
 from base.scripts.env.venv import get_venv_python
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

@@ -1,11 +1,12 @@
 """Version handling functions for Chrome setup."""
 
+from pathlib import Path
 import platform
 import re
-from pathlib import Path
 
 from base.backend.workers.file_subprocess import FileSubprocessSync
 from browser.scripts.setup.utils import _find_chrome_executable, print_colored
+
 
 # Revision thresholds used when the binary cannot reveal its version.
 REVISION_VERSION_HEURISTICS: list[tuple[int, str]] = [

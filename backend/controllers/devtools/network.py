@@ -1,16 +1,17 @@
 """Network monitoring and control via Chrome DevTools Protocol."""
 
 import asyncio
-import json
 from collections.abc import Callable
 from datetime import datetime
+import json
 from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
-from browser.backend.facade.base import BaseController
+from browser.backend.controllers.base import BaseController
 from browser.backend.models.browser import NetworkEntry
 from browser.backend.utils.exceptions import ChromeManagerError
+
 
 if TYPE_CHECKING:
     from browser.backend.core.browser.instance import BrowserInstance

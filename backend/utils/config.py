@@ -1,15 +1,16 @@
 import json
 import os
-import platform
 from pathlib import Path
+import platform
 from typing import Any
 
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
-import yaml  # noqa: E402
 from loguru import logger  # noqa: E402
+import yaml  # noqa: E402
 
 
 class Config:

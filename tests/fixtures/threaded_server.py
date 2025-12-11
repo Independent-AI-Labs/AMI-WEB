@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 import threading
 import time
-from pathlib import Path
 
 from aiohttp import web
+
 
 logger = logging.getLogger(__name__)
 

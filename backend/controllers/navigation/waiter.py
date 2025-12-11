@@ -3,10 +3,10 @@
 import asyncio
 
 from loguru import logger
-from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
-from browser.backend.facade.base import BaseController
+from browser.backend.controllers.base import BaseController
 from browser.backend.models.browser import WaitCondition
 from browser.backend.utils.exceptions import NavigationError
 
@@ -35,7 +35,9 @@ class Waiter(BaseController):
         try:
             wait = WebDriverWait(self.driver, timeout)
             by, value = self._parse_selector(selector)
-            condition = EC.visibility_of_element_located((by, value)) if visible else EC.presence_of_element_located((by, value))
+            condition = (
+                expected_conditions.visibility_of_element_located((by, value)) if visible else expected_conditions.presence_of_element_located((by, value))
+            )
 
             if self._is_in_thread_context():
                 element = wait.until(condition)
@@ -80,7 +82,7 @@ class Waiter(BaseController):
 
         elif condition.type == "element" and condition.target:
             by, value = self._parse_selector(condition.target)
-            wait.until(EC.presence_of_element_located((by, value)))
+            wait.until(expected_conditions.presence_of_element_located((by, value)))
 
         elif condition.type == "function" and condition.target:
             target_script = condition.target
@@ -127,7 +129,7 @@ class Waiter(BaseController):
 
         elif condition.type == "element" and condition.target:
             by, value = self._parse_selector(condition.target)
-            await loop.run_in_executor(None, wait.until, EC.presence_of_element_located((by, value)))
+            await loop.run_in_executor(None, wait.until, expected_conditions.presence_of_element_located((by, value)))
 
         elif condition.type == "function" and condition.target:
             target_script = condition.target

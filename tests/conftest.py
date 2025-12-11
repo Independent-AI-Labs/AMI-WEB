@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+from collections.abc import AsyncIterator, Iterator
 import contextlib
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
-from collections.abc import AsyncIterator, Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 import pytest_asyncio
 
 from base.scripts.env.paths import setup_imports
+
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -25,6 +26,7 @@ from loguru import logger  # noqa: E402
 from browser.backend.core.management.manager import ChromeManager  # noqa: E402
 from browser.tests.fixtures.test_server import HTMLTestServer  # noqa: E402
 from browser.tests.fixtures.threaded_server import ThreadedHTMLServer  # noqa: E402
+
 
 # Configure logging for pytest-xdist parallel execution
 # Use diagnose=False to suppress internal loguru errors during pytest teardown
@@ -45,6 +47,7 @@ if not TEST_CONFIG_FILE.exists():
 
 # Detect Chrome/Chromedriver availability and auto-install if missing
 from browser.backend.utils.config import Config as _Config  # noqa: E402
+
 
 _cfg = _Config()
 
@@ -120,12 +123,13 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     # Individual tests will fail appropriately if Chrome cannot be launched
     # This prevents the issue where entire test suites get skipped due to preflight failures
     # that happen in resource-constrained parallel execution environments
-    pass  # Do nothing - let individual tests handle launch failure cases
+    # Do nothing - let individual tests handle launch failure cases
 
 
 # Import heavy browser modules only after environment check
 from browser.backend.core.browser.instance import BrowserInstance  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
+
 
 # NO GLOBAL STATE - Each test gets its own manager instance
 

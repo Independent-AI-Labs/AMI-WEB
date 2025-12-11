@@ -1,18 +1,19 @@
 """Browser options builder - handles Chrome options configuration."""
 
 import os
+from pathlib import Path
 import shutil
 import socket
 import tempfile
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import psutil
 from loguru import logger
+import psutil
 from selenium.webdriver.chrome.options import Options
 
 from base.scripts.env.paths import setup_imports
+
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
@@ -27,6 +28,7 @@ from browser.backend.models.browser_properties import BrowserProperties  # noqa:
 from browser.backend.models.security import SecurityConfig  # noqa: E402
 from browser.backend.utils.compute_profile import get_compute_profile  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
+
 
 if TYPE_CHECKING:
     pass

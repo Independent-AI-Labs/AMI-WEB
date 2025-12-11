@@ -1,10 +1,11 @@
 """Browser properties model for runtime configuration."""
 
-import json
 from enum import Enum
+import json
 from typing import Any
 
 from base.scripts.env.paths import setup_imports
+
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 

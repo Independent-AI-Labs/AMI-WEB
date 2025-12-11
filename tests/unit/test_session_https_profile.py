@@ -10,6 +10,7 @@ from browser.backend.core.browser.instance import BrowserInstance
 from browser.backend.core.management.profile_manager import ProfileManager
 from browser.backend.core.management.session_manager import SessionManager
 
+
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 
 

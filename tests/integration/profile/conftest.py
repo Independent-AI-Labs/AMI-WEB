@@ -1,12 +1,13 @@
 """Shared fixtures for profile management tests."""
 
-import os
 from collections.abc import AsyncIterator
+import os
 
-import pytest_asyncio
 from loguru import logger
+import pytest_asyncio
 
 from browser.backend.core.management.manager import ChromeManager
+
 
 # Test configuration
 HEADLESS = os.environ.get("TEST_HEADLESS", "true").lower() == "true"

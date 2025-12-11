@@ -1,14 +1,15 @@
 """Integration tests for kill_orphaned flag when restoring sessions with profile locks."""
 
 import os
-import time
 from pathlib import Path
+import time
 
-import pytest
 from loguru import logger
+import pytest
 
 from browser.backend.core.management.manager import ChromeManager
 from browser.backend.utils.exceptions import InstanceError
+
 
 pytestmark = pytest.mark.xdist_group(name="browser_lifecycle")
 

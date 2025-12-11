@@ -3,6 +3,7 @@
 # Use standard import setup
 from base.scripts.env.paths import setup_imports
 
+
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
 from datetime import datetime  # noqa: E402
@@ -17,6 +18,7 @@ from browser.backend.core.browser.properties_manager import PropertiesManager  #
 from browser.backend.core.management.profile_manager import ProfileManager  # noqa: E402
 from browser.backend.models.browser import ChromeOptions  # noqa: E402
 from browser.backend.utils.config import Config  # noqa: E402
+
 
 if TYPE_CHECKING:
     pass

@@ -1,13 +1,14 @@
 """Test suite for antidetection scripts."""
 
 import json
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 import pytest
 
 from base.scripts.env.paths import setup_imports
+
 
 ORCHESTRATOR_ROOT, MODULE_ROOT = setup_imports()
 
